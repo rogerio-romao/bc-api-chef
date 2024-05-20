@@ -8,6 +8,12 @@ dependencies:
   consola:
     specifier: ^3.2.3
     version: 3.2.3
+  tchef:
+    specifier: ^0.4.4
+    version: 0.4.4
+  valibot:
+    specifier: ^0.30.0
+    version: 0.30.0
 
 devDependencies:
   '@types/node':
@@ -2726,6 +2732,13 @@ packages:
     engines: {node: '>= 0.4'}
     dev: true
 
+  /tchef@0.4.4:
+    resolution: {integrity: sha512-rpAQ8zz3tB9pKJehiodbrXQjRtk8EjqGIXceAmN45SQf106Rl2Av9IeRAds0l+LfOKfMRTsh3pPUzqOduJNapA==}
+    engines: {node: '>=21.0.0'}
+    dependencies:
+      valibot: 0.30.0
+    dev: false
+
   /text-table@0.2.0:
     resolution: {integrity: sha512-N+8UisAXDGk8PFXP4HAzVR9nbfmVJ3zYLAWiTIoqC5v5isinhr+r5uaO8+7r3BMfuNIufIsA7RdpVgacC2cSpw==}
     dev: true
@@ -2898,6 +2911,10 @@ packages:
     dependencies:
       punycode: 2.3.1
     dev: true
+
+  /valibot@0.30.0:
+    resolution: {integrity: sha512-5POBdbSkM+3nvJ6ZlyQHsggisfRtyT4tVTo1EIIShs6qCdXJnyWU5TJ68vr8iTg5zpOLjXLRiBqNx+9zwZz/rA==}
+    dev: false
 
   /validate-npm-package-license@3.0.4:
     resolution: {integrity: sha512-DpKm2Ui/xN7/HQKCtpZxoRWBhZ9Z0kqtygG8XCgNQ8ZlDnxuQmWhj566j8fN4Cu3/JmbhsDo7fcAJq4s9h27Ew==}
