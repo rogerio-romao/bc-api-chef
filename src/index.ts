@@ -37,12 +37,22 @@ export default async function fetchTodo(): Promise<TchefResult<Todo>> {
 
 const bcApi = new BcApiChef(STORE_HASH, ACCESS_TOKEN);
 
-const products = await bcApi.v3().products().getAllProducts();
+const products = await bcApi
+    .v3()
+    .products()
+    .getAllProducts({
+        includes: {
+            variants: true,
+        },
+        query: {
+            id: 111,
+        },
+    });
 if (!products.ok) {
     consola.error('Failed to fetch products');
 } else {
     consola.success('Successfully fetched products');
     for (const product of products.data) {
-        consola.info(product.id);
+        consola.info(product);
     }
 }

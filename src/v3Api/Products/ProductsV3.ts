@@ -1,7 +1,10 @@
 import tchef from 'tchef';
 
 import type { TchefResult } from 'tchef/dist/src/types';
-import type { ApiProductQuery } from '../../types/bigcommerce/api-types';
+import type {
+    ApiProductQuery,
+    GetProductsOptions,
+} from '../../types/bigcommerce/api-types';
 import type { BaseProduct } from '../../types/bigcommerce/product-types';
 
 export default class ProductsV3 {
@@ -23,9 +26,11 @@ export default class ProductsV3 {
     }
 
     public async getAllProducts(
-        query: ApiProductQuery = {}
+        options: GetProductsOptions
     ): Promise<TchefResult<BaseProduct[]>> {
-        return await this.getMultiPage('catalog/products');
+        const includes = this.generateIncludes(options.includes);
+        const queryString = this.generateQueryString(options.query, includes);
+        return await this.getMultiPage('catalog/products', queryString);
     }
 
     public async get(endpoint: string): Promise<TchefResult<unknown>> {
@@ -37,7 +42,8 @@ export default class ProductsV3 {
     }
 
     public async getMultiPage(
-        endpoint: string
+        endpoint: string,
+        queryString: string
     ): Promise<TchefResult<BaseProduct[]>> {
         const results: BaseProduct[] = [];
 
@@ -45,15 +51,17 @@ export default class ProductsV3 {
         const limit = 250;
         let totalPages = 1;
 
+        const url =
+            `${this.baseUrlWithVersion}${endpoint}?page=${page}&limit=${limit}` +
+            (queryString ? `&${queryString}` : '');
+
         do {
-            const res = await tchef(
-                `${this.baseUrlWithVersion}${endpoint}?page=${page}&limit=${limit}`,
-                {
-                    headers: {
-                        'X-Auth-Token': this.accessToken,
-                    },
-                }
-            );
+            const res = await tchef(url, {
+                headers: {
+                    'X-Auth-Token': this.accessToken,
+                },
+            });
+
             if (!res.ok) {
                 return res;
             }
@@ -69,5 +77,34 @@ export default class ProductsV3 {
         } while (page <= totalPages);
 
         return { ok: true, data: results };
+    }
+
+    private generateIncludes(includes: GetProductsOptions['includes']): string {
+        if (!includes) {
+            return '';
+        }
+
+        let includeString = '';
+
+        for (const key in includes) {
+            includeString += `${key},`;
+        }
+
+        return includeString.slice(0, -1);
+    }
+
+    private generateQueryString(
+        query: GetProductsOptions['query'],
+        includes: string
+    ): string {
+        if (!query) {
+            return '';
+        }
+
+        const fromQuery = Object.entries(query)
+            .map(([key, value]) => `${key}=${value}`)
+            .join('&');
+
+        return includes ? `${fromQuery}&include=${includes}` : fromQuery;
     }
 }

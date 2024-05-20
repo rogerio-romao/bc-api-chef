@@ -104,7 +104,7 @@ export default tseslint.config({
             { requireReturnForObjectLiteral: true },
         ],
         'block-scoped-var': 'error',
-        camelcase: 'error',
+        camelcase: ['error', { properties: 'never' }],
         'class-methods-use-this': 'off',
         complexity: ['warn', { max: 20 }],
         curly: ['warn', 'all'],
