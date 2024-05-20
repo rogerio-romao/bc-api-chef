@@ -1,7 +1,7 @@
 {
-    "name": "typescript-backend-starter",
-    "version": "1.1.0",
-    "description": "Starter config and linting for typescript backend",
+    "name": "bc-api-chef",
+    "version": "0.0.1",
+    "description": "Node application to serve the BigCommerce API",
     "main": "index.js",
     "type": "module",
     "scripts": {
