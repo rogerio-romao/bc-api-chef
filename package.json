@@ -34,6 +34,8 @@
         "vitest": "^1.6.0"
     },
     "dependencies": {
-        "consola": "^3.2.3"
+        "consola": "^3.2.3",
+        "tchef": "^0.4.4",
+        "valibot": "^0.30.0"
     }
 }

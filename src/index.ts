@@ -1,13 +1,30 @@
 // packages
 import { consola } from 'consola';
+import tchef from 'tchef';
+import type { TchefResult } from 'tchef/dist/src/types';
+import { number, object, string, type Output } from 'valibot';
 
-export default function sum(a: number, b: number): number {
-    return a + b;
+const TodoSchema = object({
+    userId: number(),
+    id: number(),
+    title: string(),
+    body: string(),
+});
+
+type Todo = Output<typeof TodoSchema>;
+
+export default async function fetchTodo(): Promise<TchefResult<Todo>> {
+    const res = await tchef<Todo>(
+        'https://jsonplaceholder.typicode.com/posts/1',
+        {
+            validateSchema: TodoSchema,
+        }
+    );
+
+    if (!res.ok) {
+        consola.error('Failed to fetch todo');
+        return res;
+    }
+    consola.success('Successfully fetched todo');
+    return res;
 }
-
-consola.info('Using consola 3.0.0');
-consola.start('Building project...');
-consola.warn('A new version of consola is available: 3.0.1');
-consola.success('Project built!');
-consola.error(new Error('This is an example error. Everything is fine!'));
-consola.box('I am a simple box');
