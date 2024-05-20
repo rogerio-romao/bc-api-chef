@@ -1,3 +1,3 @@
-# typescript-backend-starter
+# BigCommerce API Chef 🍛
 
-[![Build Status](https://app.travis-ci.com/rogerio-romao/typescript-backend-starter.svg?token=q1y9rjFCNJpSjtuz4pWy&branch=main)](https://app.travis-ci.com/rogerio-romao/typescript-backend-starter)
+![Build Status](https://img.shields.io/github/actions/workflow/status/rogerio-romao/bc-api-chef/ci.yml)
