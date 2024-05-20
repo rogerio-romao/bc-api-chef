@@ -1,6 +1,6 @@
 {
     "name": "bc-api-chef",
-    "version": "0.0.1",
+    "version": "0.0.2",
     "description": "Node application to serve the BigCommerce API",
     "main": "index.js",
     "type": "module",
