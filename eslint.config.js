@@ -420,7 +420,7 @@ export default tseslint.config({
             'warn',
             { assertionStyle: 'as', objectLiteralTypeAssertions: 'allow' },
         ],
-        '@typescript-eslint/consistent-type-definitions': ['warn', 'interface'],
+        '@typescript-eslint/consistent-type-definitions': 'off',
         '@typescript-eslint/consistent-type-exports': 'error',
         '@typescript-eslint/consistent-type-imports': 'error',
         '@typescript-eslint/explicit-module-boundary-types': [

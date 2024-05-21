@@ -42,7 +42,11 @@ const products = await bcApi
     .products()
     .getAllProducts({
         includes: {
-            variants: true,
+            custom_fields: true,
+            bulk_pricing_rules: true,
+            primary_image: true,
+
+            videos: true,
         },
         query: {
             id: 111,

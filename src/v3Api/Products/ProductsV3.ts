@@ -3,9 +3,12 @@ import tchef from 'tchef';
 import type { TchefResult } from 'tchef/dist/src/types';
 import type {
     ApiProductQuery,
+    BcGetProductsResponse,
     GetProductsOptions,
+    GetProductsReturnType,
+    ProductIncludes,
 } from '../../types/bigcommerce/api-types';
-import type { BaseProduct } from '../../types/bigcommerce/product-types';
+import type { FullProduct } from '../../types/bigcommerce/product-types';
 
 export default class ProductsV3 {
     private baseUrlWithVersion: string;
@@ -25,12 +28,19 @@ export default class ProductsV3 {
         this.retries = retries;
     }
 
-    public async getAllProducts(
-        options: GetProductsOptions
-    ): Promise<TchefResult<BaseProduct[]>> {
-        const includes = this.generateIncludes(options.includes);
-        const queryString = this.generateQueryString(options.query, includes);
-        return await this.getMultiPage('catalog/products', queryString);
+    public async getAllProducts<T extends ProductIncludes>(options: {
+        includes: T;
+        query: ApiProductQuery;
+    }): Promise<TchefResult<GetProductsReturnType<T>[]>> {
+        const includesString = this.generateIncludes(options.includes);
+        const queryString = this.generateQueryString(
+            options.query,
+            includesString
+        );
+        return (await this.getMultiPage(
+            'catalog/products',
+            queryString
+        )) as TchefResult<GetProductsReturnType<T>[]>;
     }
 
     public async get(endpoint: string): Promise<TchefResult<unknown>> {
@@ -44,8 +54,8 @@ export default class ProductsV3 {
     public async getMultiPage(
         endpoint: string,
         queryString: string
-    ): Promise<TchefResult<BaseProduct[]>> {
-        const results: BaseProduct[] = [];
+    ): Promise<TchefResult<FullProduct[]>> {
+        const results: FullProduct[] = [];
 
         let page = 1;
         const limit = 250;
@@ -66,10 +76,7 @@ export default class ProductsV3 {
                 return res;
             }
 
-            const { data, meta } = res.data as {
-                data: BaseProduct[];
-                meta: { pagination: { total_pages: number } };
-            };
+            const { data, meta } = res.data as BcGetProductsResponse;
 
             results.push(...data);
             totalPages = meta.pagination.total_pages;

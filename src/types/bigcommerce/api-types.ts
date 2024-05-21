@@ -1,3 +1,5 @@
+import type { BaseProductWithIncludes, FullProduct } from './product-types';
+
 export interface ApiProductQuery {
     id?: number;
     'id:in'?: string;
@@ -16,7 +18,29 @@ export interface ProductIncludes {
     videos?: boolean;
 }
 
+export type GetProductsReturnType<T extends ProductIncludes> = Array<
+    BaseProductWithIncludes<T>
+>;
+
 export interface GetProductsOptions {
     includes?: ProductIncludes;
     query?: ApiProductQuery;
+}
+
+export interface BcGetProductsResponse {
+    data: FullProduct[];
+    meta: {
+        pagination: {
+            total: number;
+            count: number;
+            per_page: number;
+            current_page: number;
+            total_pages: number;
+            links: {
+                previous: string;
+                current: string;
+                next: string;
+            };
+        };
+    };
 }
