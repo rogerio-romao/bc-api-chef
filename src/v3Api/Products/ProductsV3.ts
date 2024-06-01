@@ -33,7 +33,7 @@ export default class ProductsV3 {
     public async getAllProducts<T extends ProductIncludes>(options: {
         includes: T;
         query: ApiProductQuery;
-    }): Promise<TchefResult<BaseProductWithIncludes<T>[]>> {
+    }): Promise<TchefResult<GetProductsReturnType<T>>> {
         const includesString = this.generateIncludes(options.includes);
         const queryString = this.generateQueryString(
             options.query,
@@ -42,7 +42,7 @@ export default class ProductsV3 {
         return (await this.getMultiPage(
             'catalog/products',
             queryString
-        )) as TchefResult<BaseProductWithIncludes<T>[]>;
+        )) as TchefResult<GetProductsReturnType<T>>;
     }
 
     public async get(endpoint: string): Promise<TchefResult<unknown>> {
