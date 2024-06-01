@@ -35,7 +35,7 @@
     },
     "dependencies": {
         "consola": "^3.2.3",
-        "tchef": "^0.4.4",
+        "tchef": "^0.4.6",
         "valibot": "^0.30.0"
     }
 }

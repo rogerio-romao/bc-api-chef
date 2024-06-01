@@ -9,8 +9,8 @@ dependencies:
     specifier: ^3.2.3
     version: 3.2.3
   tchef:
-    specifier: ^0.4.4
-    version: 0.4.4
+    specifier: ^0.4.6
+    version: 0.4.6
   valibot:
     specifier: ^0.30.0
     version: 0.30.0
@@ -2732,8 +2732,8 @@ packages:
     engines: {node: '>= 0.4'}
     dev: true
 
-  /tchef@0.4.4:
-    resolution: {integrity: sha512-rpAQ8zz3tB9pKJehiodbrXQjRtk8EjqGIXceAmN45SQf106Rl2Av9IeRAds0l+LfOKfMRTsh3pPUzqOduJNapA==}
+  /tchef@0.4.6:
+    resolution: {integrity: sha512-79joiU1NTZ+MW+cLYoriv+43BQHyjf9Ffo0QTsT/T0Lnvm+wugh8AbAOKxaTruUdLXRBRYRZykSHYlIxDy5t3Q==}
     engines: {node: '>=21.0.0'}
     dependencies:
       valibot: 0.30.0

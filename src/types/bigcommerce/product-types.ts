@@ -307,17 +307,17 @@ export interface FullProduct extends BaseProduct {
 }
 
 export type BaseProductWithIncludes<T extends ProductIncludes> = BaseProduct &
-    (T['variants'] extends true ? { variants: ProductVariant[] } : never) &
-    (T['images'] extends true ? { images: ProductImage[] } : never) &
+    (T['variants'] extends true ? { variants: ProductVariant[] } : object) &
+    (T['images'] extends true ? { images: ProductImage[] } : object) &
     (T['custom_fields'] extends true
         ? { custom_fields: ProductCustomField[] }
-        : never) &
+        : object) &
     (T['bulk_pricing_rules'] extends true
         ? { bulk_pricing_rules: ProductBulkPricingRule[] }
-        : never) &
+        : object) &
     (T['primary_image'] extends true
         ? { primary_image: ProductImage }
-        : never) &
-    (T['modifiers'] extends true ? { modifiers: ProductModifier[] } : never) &
-    (T['options'] extends true ? { options: ProductOption[] } : never) &
-    (T['videos'] extends true ? { videos: ProductVideo[] } : never);
+        : object) &
+    (T['modifiers'] extends true ? { modifiers: ProductModifier[] } : object) &
+    (T['options'] extends true ? { options: ProductOption[] } : object) &
+    (T['videos'] extends true ? { videos: ProductVideo[] } : object);

@@ -1,6 +1,5 @@
-import tchef from 'tchef';
+import tchef, { type TchefResult } from 'tchef';
 
-import type { TchefResult } from 'tchef/dist/src/types';
 import type {
     ApiProductQuery,
     BcGetProductsResponse,
@@ -8,7 +7,10 @@ import type {
     GetProductsReturnType,
     ProductIncludes,
 } from '../../types/bigcommerce/api-types';
-import type { FullProduct } from '../../types/bigcommerce/product-types';
+import type {
+    BaseProductWithIncludes,
+    FullProduct,
+} from '../../types/bigcommerce/product-types';
 
 export default class ProductsV3 {
     private baseUrlWithVersion: string;
@@ -31,7 +33,7 @@ export default class ProductsV3 {
     public async getAllProducts<T extends ProductIncludes>(options: {
         includes: T;
         query: ApiProductQuery;
-    }): Promise<TchefResult<GetProductsReturnType<T>[]>> {
+    }): Promise<TchefResult<BaseProductWithIncludes<T>[]>> {
         const includesString = this.generateIncludes(options.includes);
         const queryString = this.generateQueryString(
             options.query,
@@ -40,7 +42,7 @@ export default class ProductsV3 {
         return (await this.getMultiPage(
             'catalog/products',
             queryString
-        )) as TchefResult<GetProductsReturnType<T>[]>;
+        )) as TchefResult<BaseProductWithIncludes<T>[]>;
     }
 
     public async get(endpoint: string): Promise<TchefResult<unknown>> {
