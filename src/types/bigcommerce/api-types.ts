@@ -20,42 +20,14 @@ export interface ProductIncludes {
     videos?: boolean;
 }
 
-export interface ApiOptions {
-    includes?: ProductIncludes;
-    query?: ApiProductQuery;
-}
-
-type PickFields<T, K extends keyof T> = {
-    [P in K]: T[P];
-};
-
-type ExcludeFields<T, K extends keyof T> = Omit<T, K>;
-
-type ParseFields<F extends string> = F extends `${infer Head},${infer Tail}`
-    ? Head | ParseFields<Tail>
-    : F;
-
-type ApplyQueryOptions<T, Q extends ApiOptions['query']> = Q extends {
-    include_fields: string;
-}
-    ? Pick<T, Extract<ParseFields<Q['include_fields']>, keyof T>>
-    : Q extends { exclude_fields: string }
-    ? Omit<T, Extract<ParseFields<Q['exclude_fields']>, keyof T>>
-    : T;
-
-export type GetProductsReturnType<T extends ProductIncludes> = Array<
-    BaseProductWithIncludes<T>
->;
-
-// export type GetProductsReturnType<
-//     T extends ProductIncludes,
-//     Q extends ApiOptions['query']
-// > = Array<ApplyQueryOptions<BaseProductWithIncludes<T>, Q>>;
-
 export interface GetProductsOptions {
     includes?: ProductIncludes;
     query?: ApiProductQuery;
 }
+
+export type GetProductsReturnType<T extends ProductIncludes> = Array<
+    BaseProductWithIncludes<T>
+>;
 
 export interface BcGetProductsResponse {
     data: FullProduct[];

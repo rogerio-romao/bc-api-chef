@@ -50,6 +50,7 @@ const products = await bcApi
         },
         query: {
             id: 111,
+            include_fields: 'id,name',
         },
     });
 if (!products.ok) {
