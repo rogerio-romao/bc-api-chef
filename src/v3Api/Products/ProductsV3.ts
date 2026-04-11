@@ -7,10 +7,7 @@ import type {
     GetProductsReturnType,
     ProductIncludes,
 } from '../../types/bigcommerce/api-types';
-import type {
-    BaseProductWithIncludes,
-    FullProduct,
-} from '../../types/bigcommerce/product-types';
+import type { FullProduct } from '../../types/bigcommerce/product-types';
 
 export default class ProductsV3 {
     private baseUrlWithVersion: string;
@@ -63,9 +60,9 @@ export default class ProductsV3 {
         const limit = 250;
         let totalPages = 1;
 
-        const url =
-            `${this.baseUrlWithVersion}${endpoint}?page=${page}&limit=${limit}` +
-            (queryString ? `&${queryString}` : '');
+        const url = `${this.baseUrlWithVersion}${endpoint}?page=${page}&limit=${limit}${
+            queryString ? `&${queryString}` : ''
+        }`;
 
         do {
             const res = await tchef(url, {
@@ -96,7 +93,9 @@ export default class ProductsV3 {
         let includeString = '';
 
         for (const key in includes) {
-            includeString += `${key},`;
+            if (Object.hasOwn(includes, key)) {
+                includeString += `${key},`;
+            }
         }
 
         return includeString.slice(0, -1);

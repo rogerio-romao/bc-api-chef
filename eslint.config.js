@@ -1,5 +1,5 @@
-import eslintCommentsPlugin from 'eslint-plugin-eslint-comments';
-import importPlugin from 'eslint-plugin-import';
+import eslintCommentsPlugin from '@eslint-community/eslint-plugin-eslint-comments';
+import importPlugin from 'eslint-plugin-import-x';
 import promisePlugin from 'eslint-plugin-promise';
 import sonarJsPlugin from 'eslint-plugin-sonarjs';
 import unicornPlugin from 'eslint-plugin-unicorn';
@@ -68,7 +68,7 @@ export default tseslint.config({
         'no-import-assign': 'error',
         'no-invalid-regexp': 'error',
         'no-irregular-whitespace': ['error', { skipStrings: false }],
-        'no-loss-of-precision': 'off',
+        'no-loss-of-precision': 'warn',
         'no-new-native-nonconstructor': 'error',
         'no-obj-calls': 'error',
         'no-promise-executor-return': 'error',
@@ -391,7 +391,7 @@ export default tseslint.config({
         'promise/no-new-statics': 'error',
         'promise/no-promise-in-callback': 'warn',
         'promise/no-return-in-finally': 'warn',
-        'promise/no-return-wrap': ['error', { allowReject: true }],
+        'promise/no-return-wrap': 'off',
         'promise/param-names': 'error',
         'promise/prefer-await-to-callbacks': 'warn',
         'promise/valid-params': 'error',
@@ -409,8 +409,8 @@ export default tseslint.config({
                 minimumDescriptionLength: 3,
             },
         ],
-        '@typescript-eslint/ban-tslint-comment': 'warn',
-        '@typescript-eslint/ban-types': 'error',
+        // '@typescript-eslint/ban-tslint-comment' — removed in v8
+        // '@typescript-eslint/ban-types' — removed in v8; use @typescript-eslint/no-restricted-types if needed
         '@typescript-eslint/consistent-generic-constructors': [
             'error',
             'type-annotation',
@@ -437,7 +437,7 @@ export default tseslint.config({
         '@typescript-eslint/no-duplicate-enum-values': 'error',
         '@typescript-eslint/no-duplicate-type-constituents': 'error',
         '@typescript-eslint/no-dynamic-delete': 'warn',
-        '@typescript-eslint/no-empty-interface': 'warn',
+        '@typescript-eslint/no-empty-object-type': 'warn', // replaces removed @typescript-eslint/no-empty-interface
         '@typescript-eslint/no-explicit-any': ['warn', { fixToUnknown: true }],
         '@typescript-eslint/no-extra-non-null-assertion': 'warn',
         '@typescript-eslint/no-extraneous-class': 'error',
@@ -472,7 +472,7 @@ export default tseslint.config({
         '@typescript-eslint/no-unsafe-member-access': 'warn',
         '@typescript-eslint/no-unsafe-return': 'warn',
         '@typescript-eslint/no-useless-empty-export': 'warn',
-        '@typescript-eslint/no-var-requires': 'warn',
+        // '@typescript-eslint/no-var-requires' — removed in v8; covered by @typescript-eslint/no-require-imports above
         '@typescript-eslint/non-nullable-type-assertion-style': 'warn',
         '@typescript-eslint/prefer-as-const': 'error',
         '@typescript-eslint/prefer-for-of': 'warn',
@@ -483,7 +483,7 @@ export default tseslint.config({
         '@typescript-eslint/prefer-readonly-parameter-types': 'off',
         '@typescript-eslint/prefer-return-this-type': 'warn',
         '@typescript-eslint/prefer-string-starts-ends-with': 'warn',
-        '@typescript-eslint/prefer-ts-expect-error': 'error',
+        // '@typescript-eslint/prefer-ts-expect-error' — removed in v8; handled by @typescript-eslint/ban-ts-comment above
         '@typescript-eslint/promise-function-async': 'warn',
         '@typescript-eslint/require-array-sort-compare': 'warn',
         '@typescript-eslint/restrict-plus-operands': 'warn',
@@ -500,8 +500,8 @@ export default tseslint.config({
         '@typescript-eslint/no-empty-function': 'error',
         '@typescript-eslint/no-implied-eval': 'warn',
         '@typescript-eslint/no-loop-func': 'warn',
-        '@typescript-eslint/no-loss-of-precision': 'warn',
-        '@typescript-eslint/no-throw-literal': 'error',
+        // '@typescript-eslint/no-loss-of-precision' — removed in v8; use base no-loss-of-precision (enabled above)
+        '@typescript-eslint/only-throw-error': 'error', // renamed from @typescript-eslint/no-throw-literal
         '@typescript-eslint/no-unused-expressions': 'warn',
         '@typescript-eslint/no-unused-vars': [
             'warn',

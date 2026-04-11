@@ -49,12 +49,14 @@ const products = await bcApi
             videos: true,
         },
         query: {
-            id: 111,
+            id: 642,
             include_fields: 'id,name',
         },
     });
 if (!products.ok) {
     consola.error('Failed to fetch products');
+    consola.error(products.error);
+    consola.error(products.statusCode);
 } else {
     consola.success('Successfully fetched products');
     for (const product of products.data) {
