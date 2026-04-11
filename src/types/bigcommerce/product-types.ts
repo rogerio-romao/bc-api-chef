@@ -1,4 +1,4 @@
-import type { ProductIncludes } from './api-types';
+export type BaseProductField = keyof BaseProduct;
 
 export interface BaseProduct {
     id: number;
@@ -306,18 +306,3 @@ export interface FullProduct extends BaseProduct {
     videos: ProductVideo[];
 }
 
-export type BaseProductWithIncludes<T extends ProductIncludes> = BaseProduct &
-    (T['variants'] extends true ? { variants: ProductVariant[] } : object) &
-    (T['images'] extends true ? { images: ProductImage[] } : object) &
-    (T['custom_fields'] extends true
-        ? { custom_fields: ProductCustomField[] }
-        : object) &
-    (T['bulk_pricing_rules'] extends true
-        ? { bulk_pricing_rules: ProductBulkPricingRule[] }
-        : object) &
-    (T['primary_image'] extends true
-        ? { primary_image: ProductImage }
-        : object) &
-    (T['modifiers'] extends true ? { modifiers: ProductModifier[] } : object) &
-    (T['options'] extends true ? { options: ProductOption[] } : object) &
-    (T['videos'] extends true ? { videos: ProductVideo[] } : object);

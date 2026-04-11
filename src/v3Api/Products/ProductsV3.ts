@@ -3,11 +3,10 @@ import tchef, { type TchefResult } from 'tchef';
 import type {
     ApiProductQuery,
     BcGetProductsResponse,
-    GetProductsOptions,
     GetProductsReturnType,
     ProductIncludes,
-} from '../../types/bigcommerce/api-types';
-import type { FullProduct } from '../../types/bigcommerce/product-types';
+} from '../../types/bigcommerce/api-types.ts';
+import type { BaseProductField } from '../../types/bigcommerce/product-types.ts';
 
 export default class ProductsV3 {
     private baseUrlWithVersion: string;
@@ -27,19 +26,24 @@ export default class ProductsV3 {
         this.retries = retries;
     }
 
-    public async getAllProducts<T extends ProductIncludes>(options: {
-        includes: T;
-        query: ApiProductQuery;
-    }): Promise<TchefResult<GetProductsReturnType<T>>> {
-        const includesString = this.generateIncludes(options.includes);
-        const queryString = this.generateQueryString(
-            options.query,
-            includesString
-        );
+    public async getAllProducts<
+        T extends ProductIncludes = Record<string, never>,
+        F extends readonly BaseProductField[] | undefined = undefined,
+    >(options?: {
+        includes?: T;
+        query?: Omit<ApiProductQuery, 'include_fields'> & {
+            include_fields?: F;
+        };
+    }): Promise<TchefResult<GetProductsReturnType<T, F>>> {
+        const query = options?.query as ApiProductQuery | undefined;
+        const includesString = this.generateIncludes(options?.includes);
+        const queryString = this.generateQueryString(query, includesString);
         return (await this.getMultiPage(
             'catalog/products',
-            queryString
-        )) as TchefResult<GetProductsReturnType<T>>;
+            queryString,
+            query?.page ?? 1,
+            query?.limit ?? 250
+        )) as TchefResult<GetProductsReturnType<T, F>>;
     }
 
     public async get(endpoint: string): Promise<TchefResult<unknown>> {
@@ -52,19 +56,20 @@ export default class ProductsV3 {
 
     public async getMultiPage(
         endpoint: string,
-        queryString: string
-    ): Promise<TchefResult<FullProduct[]>> {
-        const results: FullProduct[] = [];
+        queryString: string,
+        initialPage = 1,
+        limit = 250
+    ): Promise<TchefResult<unknown[]>> {
+        const results: unknown[] = [];
 
-        let page = 1;
-        const limit = 250;
+        let page = initialPage;
         let totalPages = 1;
 
-        const url = `${this.baseUrlWithVersion}${endpoint}?page=${page}&limit=${limit}${
-            queryString ? `&${queryString}` : ''
-        }`;
-
         do {
+            const url = `${this.baseUrlWithVersion}${endpoint}?page=${page}&limit=${limit}${
+                queryString ? `&${queryString}` : ''
+            }`;
+
             const res = await tchef(url, {
                 headers: {
                     'X-Auth-Token': this.accessToken,
@@ -85,34 +90,38 @@ export default class ProductsV3 {
         return { ok: true, data: results };
     }
 
-    private generateIncludes(includes: GetProductsOptions['includes']): string {
+    private generateIncludes(includes: ProductIncludes | undefined): string {
         if (!includes) {
             return '';
         }
 
-        let includeString = '';
-
-        for (const key in includes) {
-            if (Object.hasOwn(includes, key)) {
-                includeString += `${key},`;
-            }
-        }
-
-        return includeString.slice(0, -1);
+        return Object.entries(includes)
+            .filter(([, value]) => value === true)
+            .map(([key]) => key)
+            .join(',');
     }
 
     private generateQueryString(
-        query: GetProductsOptions['query'],
+        query: ApiProductQuery | undefined,
         includes: string
     ): string {
-        if (!query) {
-            return '';
+        const params = new URLSearchParams();
+
+        if (query) {
+            for (const [key, value] of Object.entries(query)) {
+                if (value !== undefined && key !== 'page' && key !== 'limit') {
+                    params.set(
+                        key,
+                        Array.isArray(value) ? value.join(',') : String(value)
+                    );
+                }
+            }
         }
 
-        const fromQuery = Object.entries(query)
-            .map(([key, value]) => `${key}=${value}`)
-            .join('&');
+        if (includes) {
+            params.set('include', includes);
+        }
 
-        return includes ? `${fromQuery}&include=${includes}` : fromQuery;
+        return params.toString();
     }
 }

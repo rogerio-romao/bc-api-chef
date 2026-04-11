@@ -1,65 +1,21 @@
-// packages
-import { consola } from 'consola';
-import tchef from 'tchef';
-import type { TchefResult } from 'tchef/dist/src/types';
-import { number, object, string, type Output } from 'valibot';
+export { default as BcApiChef } from './BcApiChef.ts';
 
-// config
-import { ACCESS_TOKEN, STORE_HASH } from './config.ts';
+export type {
+    ApiProductQuery,
+    ProductIncludes,
+    GetProductsOptions,
+    GetProductsReturnType,
+    BcGetProductsResponse,
+} from './types/bigcommerce/api-types.ts';
 
-// local
-import BcApiChef from './BcApiChef.ts';
-
-const TodoSchema = object({
-    userId: number(),
-    id: number(),
-    title: string(),
-    body: string(),
-});
-
-type Todo = Output<typeof TodoSchema>;
-
-export default async function fetchTodo(): Promise<TchefResult<Todo>> {
-    const res = await tchef<Todo>(
-        'https://jsonplaceholder.typicode.com/posts/1',
-        {
-            validateSchema: TodoSchema,
-        }
-    );
-
-    if (!res.ok) {
-        consola.error('Failed to fetch todo');
-        return res;
-    }
-    consola.success('Successfully fetched todo');
-    return res;
-}
-
-const bcApi = new BcApiChef(STORE_HASH, ACCESS_TOKEN);
-
-const products = await bcApi
-    .v3()
-    .products()
-    .getAllProducts({
-        includes: {
-            custom_fields: true,
-            bulk_pricing_rules: true,
-            primary_image: true,
-
-            videos: true,
-        },
-        query: {
-            id: 642,
-            include_fields: 'id,name',
-        },
-    });
-if (!products.ok) {
-    consola.error('Failed to fetch products');
-    consola.error(products.error);
-    consola.error(products.statusCode);
-} else {
-    consola.success('Successfully fetched products');
-    for (const product of products.data) {
-        consola.info(product);
-    }
-}
+export type {
+    BaseProduct,
+    FullProduct,
+    ProductVariant,
+    ProductImage,
+    ProductCustomField,
+    ProductBulkPricingRule,
+    ProductModifier,
+    ProductOption,
+    ProductVideo,
+} from './types/bigcommerce/product-types.ts';

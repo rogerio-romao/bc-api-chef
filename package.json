@@ -10,11 +10,13 @@
         "build": "esbuild src/index.ts --bundle --platform=node --outfile=dist/index.js --format=esm --target=es2022 --minify --sourcemap",
         "test": "vitest",
         "test:ci": "vitest --run",
+        "test:integration": "vitest --run --config vitest.integration.config.ts",
         "start": "node --env-file=.env dist/index.js",
         "dev:tsc": "tsc --watch --preserveWatchOutput --noEmit",
         "dev:node": "node --env-file=.env --watch dist/index.js",
         "dev:esbuild": "pnpm run build --watch",
-        "dev": "run-p dev:*"
+        "dev": "run-p dev:*",
+        "typecheck": "tsc --noEmit"
     },
     "author": "Rogerio Romao",
     "license": "ISC",
