@@ -35,6 +35,14 @@ function getCallHeaders(callIndex: number): Record<string, string> {
     return options.headers;
 }
 
+function getCallOptions(callIndex: number): Record<string, unknown> {
+    const call = mockTchef.mock.calls[callIndex];
+    if (!call) {
+        throw new Error(`No mock call at index ${callIndex}`);
+    }
+    return call[1] as Record<string, unknown>;
+}
+
 function makePageResponse(
     products: object[],
     currentPage: number,
@@ -285,6 +293,59 @@ describe('ProductsV3', () => {
             const url = getCallUrl(0);
             expect(url.searchParams.get('name')).toBe('Test');
             expect(url.searchParams.get('include')).toBe('images');
+        });
+    });
+
+    describe('deleteProduct', () => {
+        it('makes exactly one HTTP call', async () => {
+            mockTchef.mockResolvedValue({ ok: true, data: '' });
+            await products.deleteProduct(42);
+            expect(mockTchef).toHaveBeenCalledTimes(1);
+        });
+
+        it('uses the DELETE method', async () => {
+            mockTchef.mockResolvedValue({ ok: true, data: '' });
+            await products.deleteProduct(42);
+            expect(getCallOptions(0).method).toBe('DELETE');
+        });
+
+        it('includes the product ID in the URL path', async () => {
+            mockTchef.mockResolvedValue({ ok: true, data: '' });
+            await products.deleteProduct(42);
+            expect(getCallUrl(0).href).toContain('catalog/products/42');
+        });
+
+        it('sends the access token as X-Auth-Token', async () => {
+            mockTchef.mockResolvedValue({ ok: true, data: '' });
+            await products.deleteProduct(42);
+            expect(getCallHeaders(0)['X-Auth-Token']).toBe('test-token');
+        });
+
+        it('uses responseFormat: text to handle the empty 204 body', async () => {
+            mockTchef.mockResolvedValue({ ok: true, data: '' });
+            await products.deleteProduct(42);
+            expect(getCallOptions(0).responseFormat).toBe('text');
+        });
+
+        it('returns { ok: true, data: null } on success', async () => {
+            mockTchef.mockResolvedValue({ ok: true, data: '' });
+            const result = await products.deleteProduct(42);
+            expect(result).toEqual({ ok: true, data: null });
+        });
+
+        it('returns the error result immediately on failure', async () => {
+            mockTchef.mockResolvedValue({
+                ok: false,
+                error: 'Not Found',
+                statusCode: 404,
+            });
+            const result = await products.deleteProduct(999);
+            expect(result.ok).toBe(false);
+            if (result.ok) {
+                return;
+            }
+            expect(result.statusCode).toBe(404);
+            expect(result.error).toBe('Not Found');
         });
     });
 

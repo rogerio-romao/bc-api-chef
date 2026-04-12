@@ -17,6 +17,7 @@ import {
 } from '../constants.ts';
 
 export default class ProductsV3 {
+    private readonly baseEndpoint = 'catalog/products';
     private baseUrlWithVersion: string;
     private accessToken: string;
     private validate: boolean;
@@ -34,6 +35,23 @@ export default class ProductsV3 {
         this.retries = retries;
     }
 
+    public async deleteProduct(productId: number): Promise<TchefResult<null>> {
+        const endpoint = `${this.baseEndpoint}/${productId}`;
+        const res = await tchef(`${this.baseUrlWithVersion}/${endpoint}`, {
+            method: 'DELETE',
+            headers: {
+                'X-Auth-Token': this.accessToken,
+            },
+            responseFormat: 'text', // BigCommerce returns an empty string on successful delete, so we use 'text' to avoid JSON parsing errors
+        });
+
+        if (!res.ok) {
+            return res;
+        }
+
+        return { ok: true, data: null };
+    }
+
     public async getAllProducts<
         T extends ProductIncludes = Record<string, never>,
         F extends readonly BaseProductField[] | undefined = undefined,
@@ -47,7 +65,7 @@ export default class ProductsV3 {
         const includesString = this.generateIncludes(options?.includes);
         const queryString = this.generateQueryString(query, includesString);
         return (await this.getMultiPage(
-            'catalog/products',
+            this.baseEndpoint,
             queryString,
             query?.page ?? DEFAULT_START_PAGE,
             this.clampLimit(query?.limit ?? DEFAULT_LIMIT)
@@ -70,7 +88,7 @@ export default class ProductsV3 {
         const includesString = this.generateIncludes(options?.includes);
         const queryString = this.generateQueryString(query, includesString);
         const querySuffix = queryString ? `?${queryString}` : '';
-        const endpoint = `catalog/products/${id}${querySuffix}`;
+        const endpoint = `${this.baseEndpoint}/${id}${querySuffix}`;
 
         return (await this.get(endpoint)) as TchefResult<
             GetProductReturnType<T, F>
