@@ -29,13 +29,21 @@ export interface ProductIncludes {
 /** Expands included sub-resources onto the base product type. */
 export type IncludeExpansion<T extends ProductIncludes> =
     (T['variants'] extends true ? { variants: ProductVariant[] } : object) &
-    (T['images'] extends true ? { images: ProductImage[] } : object) &
-    (T['custom_fields'] extends true ? { custom_fields: ProductCustomField[] } : object) &
-    (T['bulk_pricing_rules'] extends true ? { bulk_pricing_rules: ProductBulkPricingRule[] } : object) &
-    (T['primary_image'] extends true ? { primary_image: ProductImage } : object) &
-    (T['modifiers'] extends true ? { modifiers: ProductModifier[] } : object) &
-    (T['options'] extends true ? { options: ProductOption[] } : object) &
-    (T['videos'] extends true ? { videos: ProductVideo[] } : object);
+        (T['images'] extends true ? { images: ProductImage[] } : object) &
+        (T['custom_fields'] extends true
+            ? { custom_fields: ProductCustomField[] }
+            : object) &
+        (T['bulk_pricing_rules'] extends true
+            ? { bulk_pricing_rules: ProductBulkPricingRule[] }
+            : object) &
+        (T['primary_image'] extends true
+            ? { primary_image: ProductImage }
+            : object) &
+        (T['modifiers'] extends true
+            ? { modifiers: ProductModifier[] }
+            : object) &
+        (T['options'] extends true ? { options: ProductOption[] } : object) &
+        (T['videos'] extends true ? { videos: ProductVideo[] } : object);
 
 // ---------------------------------------------------------------------------
 // Sort / direction
@@ -151,7 +159,7 @@ export type GetProductsReturnType<
     (F extends readonly BaseProductField[]
         ? Pick<BaseProduct, F[number]>
         : BaseProduct) &
-    IncludeExpansion<T>
+        IncludeExpansion<T>
 >;
 
 export interface BcGetProductsResponse {
@@ -170,4 +178,16 @@ export interface BcGetProductsResponse {
             };
         };
     };
+}
+
+export type GetProductReturnType<
+    T extends ProductIncludes,
+    F extends readonly BaseProductField[] | undefined = undefined,
+> = (F extends readonly BaseProductField[]
+    ? Pick<BaseProduct, F[number]>
+    : BaseProduct) &
+    IncludeExpansion<T>;
+
+export interface BcGetProductResponse {
+    data: FullProduct;
 }

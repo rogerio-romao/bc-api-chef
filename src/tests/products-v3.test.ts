@@ -288,6 +288,49 @@ describe('ProductsV3', () => {
         });
     });
 
+    describe('getProduct', () => {
+        beforeEach(() => {
+            mockTchef.mockResolvedValue({
+                ok: true,
+                data: { data: { id: 42, name: 'Widget' } },
+            });
+        });
+
+        it('makes exactly one HTTP call', async () => {
+            await products.getProduct(42);
+            expect(mockTchef).toHaveBeenCalledTimes(1);
+        });
+
+        it('includes the product ID in the URL path', async () => {
+            await products.getProduct(42);
+            expect(getCallUrl(0).href).toContain('catalog/products/42');
+        });
+
+        it('sends the access token as X-Auth-Token', async () => {
+            await products.getProduct(42);
+            expect(getCallHeaders(0)['X-Auth-Token']).toBe('test-token');
+        });
+
+        it('appends includes to the URL', async () => {
+            await products.getProduct(42, { includes: { variants: true } });
+            expect(getCallUrl(0).searchParams.get('include')).toBe('variants');
+        });
+
+        it('returns the error result immediately on failure', async () => {
+            mockTchef.mockResolvedValue({
+                ok: false,
+                error: 'Not Found',
+                statusCode: 404,
+            });
+            const result = await products.getProduct(999);
+            expect(result.ok).toBe(false);
+            if (result.ok) {
+                return;
+            }
+            expect(result.statusCode).toBe(404);
+        });
+    });
+
     describe('getAllProducts -- limit clamping', () => {
         beforeEach(() => {
             mockTchef.mockResolvedValue(makePageResponse([], 1, 1));

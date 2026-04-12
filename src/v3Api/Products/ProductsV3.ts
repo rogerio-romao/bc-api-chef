@@ -2,7 +2,9 @@ import tchef, { type TchefResult } from 'tchef';
 
 import type {
     ApiProductQuery,
+    BcGetProductResponse,
     BcGetProductsResponse,
+    GetProductReturnType,
     GetProductsReturnType,
     ProductIncludes,
 } from '../../types/bigcommerce/api-types.ts';
@@ -52,13 +54,41 @@ export default class ProductsV3 {
         )) as TchefResult<GetProductsReturnType<T, F>>;
     }
 
+    public async getProduct<
+        T extends ProductIncludes = Record<string, never>,
+        F extends readonly BaseProductField[] | undefined = undefined,
+    >(
+        id: number,
+        options?: {
+            includes?: T;
+            query?: Omit<ApiProductQuery, 'include_fields'> & {
+                include_fields?: F;
+            };
+        }
+    ): Promise<TchefResult<GetProductReturnType<T, F>>> {
+        const query = options?.query as ApiProductQuery | undefined;
+        const includesString = this.generateIncludes(options?.includes);
+        const queryString = this.generateQueryString(query, includesString);
+        const querySuffix = queryString ? `?${queryString}` : '';
+        const endpoint = `catalog/products/${id}${querySuffix}`;
+
+        return (await this.get(endpoint)) as TchefResult<
+            GetProductReturnType<T, F>
+        >;
+    }
+
     public async get(endpoint: string): Promise<TchefResult<unknown>> {
-        return await tchef(`${this.baseUrlWithVersion}/${endpoint}`, {
+        const res = await tchef(`${this.baseUrlWithVersion}/${endpoint}`, {
             headers: {
                 'X-Auth-Token': this.accessToken,
                 Accept: 'application/json',
             },
         });
+        if (!res.ok) {
+            return res;
+        }
+        const { data } = res.data as BcGetProductResponse;
+        return { ok: true, data };
     }
 
     public async getMultiPage(
@@ -73,9 +103,8 @@ export default class ProductsV3 {
         let totalPages = 1;
 
         do {
-            const url = `${this.baseUrlWithVersion}/${endpoint}?page=${page}&limit=${limit}${
-                queryString ? `&${queryString}` : ''
-            }`;
+            const querySuffix = queryString ? `&${queryString}` : '';
+            const url = `${this.baseUrlWithVersion}/${endpoint}?page=${page}&limit=${limit}${querySuffix}`;
 
             const res = await tchef(url, {
                 headers: {

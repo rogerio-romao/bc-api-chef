@@ -114,6 +114,31 @@ describe.runIf(hasCredentials)('Products API — integration', () => {
         );
     });
 
+    it('fetches a single product by ID and returns a product object', async () => {
+        const first = await client
+            .v3()
+            .products()
+            .getAllProducts({ query: { limit: 20 } });
+        expect(first.ok).toBe(true);
+        if (!first.ok) {
+            return;
+        }
+
+        const firstProduct = first.data[0];
+        if (!firstProduct) {
+            return;
+        }
+
+        const result = await client.v3().products().getProduct(firstProduct.id);
+
+        expect(result.ok).toBe(true);
+        if (!result.ok) {
+            return;
+        }
+        expect(typeof result.data.id).toBe('number');
+        expect(result.data.id).toBe(firstProduct.id);
+    });
+
     it('filters by id:in correctly', async () => {
         // First get any product ID
         const first = await client
