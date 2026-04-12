@@ -3,7 +3,7 @@
         /* Base Options: */
         "esModuleInterop": true, // smooths out differences between CommonJS and ES Modules
         "skipLibCheck": true, // skips checking of all declaration files (*.d.ts) (node_modules wont be checked)
-        "target": "es2022", // most browsers will support
+        "target": "es2023", // most browsers will support
         "verbatimModuleSyntax": true, // ensure use of right syntax for import/export
         "allowJs": true, // allow JavaScript files to be imported
         "allowImportingTsExtensions": true,
