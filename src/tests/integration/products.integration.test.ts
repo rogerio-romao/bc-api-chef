@@ -18,16 +18,14 @@ const ACCESS_TOKEN = process.env.ACCESS_TOKEN ?? '';
 
 const hasCredentials = STORE_HASH.length > 0 && ACCESS_TOKEN.length > 0;
 
+// Beef with heart and liver at Purrform
+const TEST_PRODUCT_ID = 642;
+
 describe.runIf(hasCredentials)('Products API — integration', () => {
     const client = new BcApiChef(STORE_HASH, ACCESS_TOKEN);
 
     it('fetches at least one product with default options', async () => {
-        const result = await client
-            .v3()
-            .products()
-            .getAllProducts({
-                query: { limit: 150 },
-            });
+        const result = await client.v3().products().getAllProducts();
 
         expect(result.ok).toBe(true);
         if (!result.ok) {
@@ -48,7 +46,6 @@ describe.runIf(hasCredentials)('Products API — integration', () => {
             .products()
             .getAllProducts({
                 query: {
-                    limit: 150,
                     include_fields: ['id', 'name'] as const,
                 },
             });
@@ -73,7 +70,6 @@ describe.runIf(hasCredentials)('Products API — integration', () => {
             .products()
             .getAllProducts({
                 includes: { custom_fields: true, images: true },
-                query: { limit: 150 },
             });
 
         expect(result.ok).toBe(true);
@@ -89,77 +85,28 @@ describe.runIf(hasCredentials)('Products API — integration', () => {
     });
 
     it('paginates through multiple pages and returns all results', async () => {
-        // Fetch with a high limit first to know how many products exist
-        const countResult = await client
+        // limit=60 forces multiple pages against a store with 100+ products.
+        // getAllProducts should transparently collect all of them.
+        const result = await client
             .v3()
             .products()
-            .getAllProducts({
-                query: { limit: 150 },
-            });
-        expect(countResult.ok).toBe(true);
-        if (!countResult.ok) {
-            return;
-        }
-
-        // Now fetch all with default pagination (limit=250)
-        const allResult = await client.v3().products().getAllProducts();
-        expect(allResult.ok).toBe(true);
-        if (!allResult.ok) {
-            return;
-        }
-
-        // Should have fetched at least as many as we know exist
-        expect(allResult.data.length).toBeGreaterThanOrEqual(
-            countResult.data.length
-        );
-    });
-
-    it('fetches a single product by ID and returns a product object', async () => {
-        const first = await client
-            .v3()
-            .products()
-            .getAllProducts({ query: { limit: 20 } });
-        expect(first.ok).toBe(true);
-        if (!first.ok) {
-            return;
-        }
-
-        const firstProduct = first.data[0];
-        if (!firstProduct) {
-            return;
-        }
-
-        const result = await client.v3().products().getProduct(firstProduct.id);
+            .getAllProducts({ query: { limit: 60 } });
 
         expect(result.ok).toBe(true);
         if (!result.ok) {
             return;
         }
-        expect(typeof result.data.id).toBe('number');
-        expect(result.data.id).toBe(firstProduct.id);
+
+        // More than one page worth means pagination actually ran
+        expect(result.data.length).toBeGreaterThan(60);
     });
 
     it('filters by id:in correctly', async () => {
-        // First get any product ID
-        const first = await client
-            .v3()
-            .products()
-            .getAllProducts({ query: { limit: 150 } });
-        expect(first.ok).toBe(true);
-        if (!first.ok) {
-            return;
-        }
-
-        const firstProduct = first.data[0];
-        if (!firstProduct) {
-            return;
-        }
-
         const filtered = await client
             .v3()
             .products()
             .getAllProducts({
-                query: { 'id:in': [firstProduct.id] },
+                query: { 'id:in': [TEST_PRODUCT_ID] },
             });
 
         expect(filtered.ok).toBe(true);
@@ -167,7 +114,18 @@ describe.runIf(hasCredentials)('Products API — integration', () => {
             return;
         }
         expect(filtered.data).toHaveLength(1);
-        expect(filtered.data[0]?.id).toBe(firstProduct.id);
+        expect(filtered.data[0]?.id).toBe(TEST_PRODUCT_ID);
+    });
+
+    it('fetches a single product by ID and returns a correct product object', async () => {
+        const result = await client.v3().products().getProduct(TEST_PRODUCT_ID);
+
+        expect(result.ok).toBe(true);
+        if (!result.ok) {
+            return;
+        }
+        expect(typeof result.data.id).toBe('number');
+        expect(result.data.name).toBe('Beef with heart and liver');
     });
 });
 
