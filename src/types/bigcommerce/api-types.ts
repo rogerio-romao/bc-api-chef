@@ -191,3 +191,67 @@ export type GetProductReturnType<
 export interface BcGetProductResponse {
     data: FullProduct;
 }
+
+// ---------------------------------------------------------------------------
+// Create product
+// ---------------------------------------------------------------------------
+
+type ServerComputedProductFields =
+    | 'id'
+    | 'calculated_price'
+    | 'option_set_id'
+    | 'option_set_display'
+    | 'reviews_rating_sum'
+    | 'reviews_count'
+    | 'total_sold'
+    | 'date_created'
+    | 'date_modified'
+    | 'date_last_imported'
+    | 'view_count'
+    | 'base_variant_id';
+
+type RequiredCreateProductFields = 'name' | 'type' | 'weight' | 'price';
+
+/**
+ * Payload for POST /v3/catalog/products.
+ * Required: name, type, weight, price (per BigCommerce API spec).
+ * Optional: all other creatable BaseProduct fields plus creatable
+ * sub-resources (custom_fields, bulk_pricing_rules, images, videos).
+ * Server-computed fields (id, calculated_price, etc.) are excluded.
+ */
+export type CreateProductPayload = Pick<
+    BaseProduct,
+    RequiredCreateProductFields
+> &
+    Partial<
+        Omit<
+            BaseProduct,
+            ServerComputedProductFields | RequiredCreateProductFields
+        >
+    > & {
+        custom_fields?: Array<Omit<ProductCustomField, 'id'>>;
+        bulk_pricing_rules?: Array<Omit<ProductBulkPricingRule, 'id'>>;
+        images?: Array<{
+            image_file?: string;
+            image_url?: string;
+            is_thumbnail?: boolean;
+            sort_order?: number;
+            description?: string;
+        }>;
+        videos?: Array<Omit<ProductVideo, 'id' | 'product_id' | 'length'>>;
+    };
+
+export interface BcCreateProductResponse {
+    data: BaseProduct;
+}
+
+/**
+ * Resolves the return type of createProduct based on requested include_fields.
+ * Narrows to Pick<BaseProduct, F[number]> when include_fields is provided;
+ * otherwise returns the full BaseProduct.
+ */
+export type CreateProductReturnType<
+    F extends readonly BaseProductField[] | undefined = undefined,
+> = F extends readonly BaseProductField[]
+    ? Pick<BaseProduct, F[number]>
+    : BaseProduct;

@@ -392,6 +392,124 @@ describe('ProductsV3', () => {
         });
     });
 
+    describe('createProduct', () => {
+        const minPayload = {
+            name: 'Test Widget',
+            type: 'physical' as const,
+            weight: 1.5,
+            price: 29.99,
+        };
+
+        const mockProduct = {
+            id: 123,
+            name: 'Test Widget',
+            type: 'physical',
+            weight: 1.5,
+            price: 29.99,
+        };
+
+        beforeEach(() => {
+            mockTchef.mockResolvedValue({
+                ok: true,
+                data: { data: mockProduct },
+            });
+        });
+
+        it('makes exactly one HTTP call', async () => {
+            await products.createProduct(minPayload);
+            expect(mockTchef).toHaveBeenCalledTimes(1);
+        });
+
+        it('uses the POST method', async () => {
+            await products.createProduct(minPayload);
+            expect(getCallOptions(0).method).toBe('POST');
+        });
+
+        it('targets the catalog/products path (no ID in URL)', async () => {
+            await products.createProduct(minPayload);
+            const url = getCallUrl(0);
+            expect(url.pathname).toMatch(/catalog\/products$/);
+        });
+
+        it('sends X-Auth-Token header', async () => {
+            await products.createProduct(minPayload);
+            expect(getCallHeaders(0)['X-Auth-Token']).toBe('test-token');
+        });
+
+        it('sends Content-Type: application/json header', async () => {
+            await products.createProduct(minPayload);
+            expect(getCallHeaders(0)['Content-Type']).toBe('application/json');
+        });
+
+        it('sends Accept: application/json header', async () => {
+            await products.createProduct(minPayload);
+            expect(getCallHeaders(0).Accept).toBe('application/json');
+        });
+
+        it('serializes the payload as a JSON string in the body', async () => {
+            await products.createProduct(minPayload);
+            const body = getCallOptions(0).body;
+            expect(typeof body).toBe('string');
+            expect(JSON.parse(body as string)).toEqual(minPayload);
+        });
+
+        it('unwraps the response envelope and returns data.data', async () => {
+            const result = await products.createProduct(minPayload);
+            expect(result).toEqual({ ok: true, data: mockProduct });
+        });
+
+        it('includes all optional fields in the body when provided', async () => {
+            const fullPayload = {
+                ...minPayload,
+                sku: 'SKU-001',
+                description: '<p>A widget</p>',
+                width: 10,
+                depth: 5,
+                height: 3,
+                inventory_level: 100,
+                categories: [1, 2],
+                is_visible: true,
+                custom_fields: [{ name: 'material', value: 'steel' }],
+                bulk_pricing_rules: [
+                    { quantity_min: 10, quantity_max: 50, type: 'price' as const, amount: 2 },
+                ],
+                images: [{ image_url: 'https://example.com/img.jpg', is_thumbnail: true }],
+                videos: [{ title: 'Demo', description: '', sort_order: 0, type: 'youtube' as const, video_id: 'abc123' }],
+            };
+
+            await products.createProduct(fullPayload);
+
+            const body = JSON.parse(getCallOptions(0).body as string);
+            expect(body).toEqual(fullPayload);
+        });
+
+        it('appends include_fields to the URL when provided', async () => {
+            await products.createProduct(minPayload, {
+                query: { include_fields: ['id', 'name'] as const },
+            });
+
+            const url = getCallUrl(0);
+            const includeFields = url.searchParams.get('include_fields');
+            expect(includeFields).toBe('id,name');
+        });
+
+        it('returns the error result immediately on failure', async () => {
+            mockTchef.mockResolvedValue({
+                ok: false,
+                error: 'Unprocessable Entity',
+                statusCode: 422,
+            });
+
+            const result = await products.createProduct(minPayload);
+            expect(result.ok).toBe(false);
+            if (result.ok) {
+                return;
+            }
+            expect(result.statusCode).toBe(422);
+            expect(result.error).toBe('Unprocessable Entity');
+        });
+    });
+
     describe('getAllProducts -- limit clamping', () => {
         beforeEach(() => {
             mockTchef.mockResolvedValue(makePageResponse([], 1, 1));

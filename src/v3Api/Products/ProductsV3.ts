@@ -2,8 +2,11 @@ import tchef, { type TchefResult } from 'tchef';
 
 import type {
     ApiProductQuery,
+    BcCreateProductResponse,
     BcGetProductResponse,
     BcGetProductsResponse,
+    CreateProductPayload,
+    CreateProductReturnType,
     GetProductReturnType,
     GetProductsReturnType,
     ProductIncludes,
@@ -93,6 +96,37 @@ export default class ProductsV3 {
         return (await this.get(endpoint)) as TchefResult<
             GetProductReturnType<T, F>
         >;
+    }
+
+    public async createProduct<
+        F extends readonly BaseProductField[] | undefined = undefined,
+    >(
+        payload: CreateProductPayload,
+        options?: {
+            query?: { include_fields?: F };
+        }
+    ): Promise<TchefResult<CreateProductReturnType<F>>> {
+        const query = options?.query as ApiProductQuery | undefined;
+        const queryString = this.generateQueryString(query, '');
+        const querySuffix = queryString ? `?${queryString}` : '';
+        const endpoint = `${this.baseEndpoint}${querySuffix}`;
+
+        const res = await tchef(`${this.baseUrlWithVersion}/${endpoint}`, {
+            method: 'POST',
+            headers: {
+                'X-Auth-Token': this.accessToken,
+                'Content-Type': 'application/json',
+                Accept: 'application/json',
+            },
+            body: JSON.stringify(payload),
+        });
+
+        if (!res.ok) {
+            return res;
+        }
+
+        const { data } = res.data as BcCreateProductResponse;
+        return { ok: true, data: data as CreateProductReturnType<F> };
     }
 
     public async get(endpoint: string): Promise<TchefResult<unknown>> {

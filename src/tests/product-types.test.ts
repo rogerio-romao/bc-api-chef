@@ -2,6 +2,8 @@ import { describe, expect, expectTypeOf, it } from 'vitest';
 
 import type {
     ApiProductQuery,
+    CreateProductPayload,
+    CreateProductReturnType,
     GetProductsReturnType,
     ProductIncludes,
     ProductSortField,
@@ -105,6 +107,94 @@ describe('ProductSortField', () => {
 describe('SortDirection', () => {
     it('is exactly asc | desc', () => {
         expectTypeOf<SortDirection>().toEqualTypeOf<'asc' | 'desc'>();
+    });
+});
+
+describe('CreateProductPayload', () => {
+    it('accepts a minimum valid payload (required fields only)', () => {
+        const payload: CreateProductPayload = {
+            name: 'Widget',
+            type: 'physical',
+            weight: 1.5,
+            price: 29.99,
+        };
+        expect(payload).toBeDefined();
+    });
+
+    it('accepts optional fields alongside required ones', () => {
+        const payload: CreateProductPayload = {
+            name: 'Widget',
+            type: 'physical',
+            weight: 1.5,
+            price: 29.99,
+            sku: 'SKU-001',
+            description: '<p>A widget</p>',
+            categories: [1, 2],
+            is_visible: true,
+            custom_fields: [{ name: 'material', value: 'steel' }],
+        };
+        expect(payload).toBeDefined();
+    });
+
+    it('does not allow server-computed field id', () => {
+        const payload: CreateProductPayload = {
+            name: 'Widget',
+            type: 'physical',
+            weight: 1.5,
+            price: 29.99,
+            // @ts-expect-error id is server-computed and excluded from CreateProductPayload
+            id: 5,
+        };
+        expect(payload).toBeDefined();
+    });
+
+    it('does not allow server-computed field calculated_price', () => {
+        const payload: CreateProductPayload = {
+            name: 'Widget',
+            type: 'physical',
+            weight: 1.5,
+            price: 29.99,
+            // @ts-expect-error calculated_price is server-computed and excluded from CreateProductPayload
+            calculated_price: 25,
+        };
+        expect(payload).toBeDefined();
+    });
+
+    it('requires name', () => {
+        // @ts-expect-error name is required
+        const payload: CreateProductPayload = {
+            type: 'physical',
+            weight: 1.5,
+            price: 29.99,
+        };
+        expect(payload).toBeDefined();
+    });
+
+    it('requires price', () => {
+        // @ts-expect-error price is required
+        const payload: CreateProductPayload = {
+            name: 'Widget',
+            type: 'physical',
+            weight: 1.5,
+        };
+        expect(payload).toBeDefined();
+    });
+});
+
+describe('CreateProductReturnType', () => {
+    it('returns BaseProduct when no include_fields provided', () => {
+        expectTypeOf<CreateProductReturnType>().toHaveProperty('id');
+        expectTypeOf<CreateProductReturnType>().toHaveProperty('name');
+        expectTypeOf<CreateProductReturnType>().toHaveProperty('sku');
+        expectTypeOf<CreateProductReturnType>().toHaveProperty('price');
+    });
+
+    it('narrows to Pick<BaseProduct, F[number]> when include_fields is provided', () => {
+        type Narrowed = CreateProductReturnType<readonly ['id', 'name']>;
+        expectTypeOf<Narrowed>().toHaveProperty('id');
+        expectTypeOf<Narrowed>().toHaveProperty('name');
+        expectTypeOf<Narrowed>().not.toHaveProperty('sku');
+        expectTypeOf<Narrowed>().not.toHaveProperty('price');
     });
 });
 
