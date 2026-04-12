@@ -5,6 +5,7 @@
     "main": "index.js",
     "type": "module",
     "scripts": {
+        "check": "pnpm run lint && pnpm run test:ci && pnpm run test:integration && pnpm run typecheck && pnpm run build",
         "lint": "eslint .",
         "lint:fix": "eslint --fix .",
         "build": "esbuild src/index.ts --bundle --platform=node --outfile=dist/index.js --format=esm --target=es2022 --minify --sourcemap",
@@ -16,20 +17,22 @@
         "dev:node": "node --env-file=.env --watch dist/index.js",
         "dev:esbuild": "pnpm run build --watch",
         "dev": "run-p dev:*",
-        "typecheck": "tsc --noEmit"
+        "typecheck": "tsc --noEmit",
+        "prepare": "husky"
     },
     "author": "Rogerio Romao",
     "license": "ISC",
     "devDependencies": {
+        "@eslint-community/eslint-plugin-eslint-comments": "^4.7.1",
         "@types/node": "^20.12.11",
         "esbuild": "^0.25.0",
         "eslint": "^9.0.0",
-        "@eslint-community/eslint-plugin-eslint-comments": "^4.7.1",
         "eslint-plugin-import-x": "^4.16.2",
         "eslint-plugin-promise": "^6.1.1",
         "eslint-plugin-sonarjs": "^1.0.3",
         "eslint-plugin-unicorn": "^52.0.0",
         "globals": "^15.2.0",
+        "husky": "^9.1.7",
         "npm-run-all2": "^6.1.2",
         "typescript": "^5.3.3",
         "typescript-eslint": "^8.58.0",
