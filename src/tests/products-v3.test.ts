@@ -428,7 +428,7 @@ describe('ProductsV3', () => {
         it('targets the catalog/products path (no ID in URL)', async () => {
             await products.createProduct(minPayload);
             const url = getCallUrl(0);
-            expect(url.pathname).toMatch(/catalog\/products$/);
+            expect(url.pathname).toMatch(/catalog\/products$/u);
         });
 
         it('sends X-Auth-Token header', async () => {
@@ -471,15 +471,33 @@ describe('ProductsV3', () => {
                 is_visible: true,
                 custom_fields: [{ name: 'material', value: 'steel' }],
                 bulk_pricing_rules: [
-                    { quantity_min: 10, quantity_max: 50, type: 'price' as const, amount: 2 },
+                    {
+                        quantity_min: 10,
+                        quantity_max: 50,
+                        type: 'price' as const,
+                        amount: 2,
+                    },
                 ],
-                images: [{ image_url: 'https://example.com/img.jpg', is_thumbnail: true }],
-                videos: [{ title: 'Demo', description: '', sort_order: 0, type: 'youtube' as const, video_id: 'abc123' }],
+                images: [
+                    {
+                        image_url: 'https://example.com/img.jpg',
+                        is_thumbnail: true,
+                    },
+                ],
+                videos: [
+                    {
+                        title: 'Demo',
+                        description: '',
+                        sort_order: 0,
+                        type: 'youtube' as const,
+                        video_id: 'abc123',
+                    },
+                ],
             };
 
             await products.createProduct(fullPayload);
 
-            const body = JSON.parse(getCallOptions(0).body as string);
+            const body: unknown = JSON.parse(getCallOptions(0).body as string);
             expect(body).toEqual(fullPayload);
         });
 
@@ -507,6 +525,256 @@ describe('ProductsV3', () => {
             }
             expect(result.statusCode).toBe(422);
             expect(result.error).toBe('Unprocessable Entity');
+        });
+
+        it('returns a 400 error without calling the API when name is empty', async () => {
+            const result = await products.createProduct({
+                ...minPayload,
+                name: '',
+            });
+
+            expect(result.ok).toBe(false);
+            if (result.ok) {
+                return;
+            }
+            expect(result.statusCode).toBe(400);
+            expect(result.error).toBe('Product name must not be empty');
+            expect(mockTchef).not.toHaveBeenCalled();
+        });
+
+        it('returns a 400 error when price is negative', async () => {
+            const result = await products.createProduct({
+                ...minPayload,
+                price: -1,
+            });
+            expect(result.ok).toBe(false);
+            if (result.ok) {
+                return;
+            }
+            expect(result.statusCode).toBe(400);
+            expect(result.error).toBe('price must be >= 0');
+            expect(mockTchef).not.toHaveBeenCalled();
+        });
+
+        it('returns a 400 error when weight exceeds maximum', async () => {
+            const result = await products.createProduct({
+                ...minPayload,
+                weight: 10_000_000_000,
+            });
+            expect(result.ok).toBe(false);
+            if (result.ok) {
+                return;
+            }
+            expect(result.statusCode).toBe(400);
+            expect(result.error).toBe('weight must be <= 9999999999');
+            expect(mockTchef).not.toHaveBeenCalled();
+        });
+
+        it('returns a 400 error when an optional string field exceeds its maxLength', async () => {
+            const result = await products.createProduct({
+                ...minPayload,
+                upc: 'a'.repeat(33),
+            });
+            expect(result.ok).toBe(false);
+            if (result.ok) {
+                return;
+            }
+            expect(result.statusCode).toBe(400);
+            expect(result.error).toBe('upc must not exceed 32 characters');
+            expect(mockTchef).not.toHaveBeenCalled();
+        });
+
+        it('returns a 400 error when an optional number field is out of range', async () => {
+            const result = await products.createProduct({
+                ...minPayload,
+                tax_class_id: 256,
+            });
+            expect(result.ok).toBe(false);
+            if (result.ok) {
+                return;
+            }
+            expect(result.statusCode).toBe(400);
+            expect(result.error).toBe('tax_class_id must be <= 255');
+            expect(mockTchef).not.toHaveBeenCalled();
+        });
+
+        it('returns a 400 error when sort_order is below minimum', async () => {
+            const result = await products.createProduct({
+                ...minPayload,
+                sort_order: -2_147_483_649,
+            });
+            expect(result.ok).toBe(false);
+            if (result.ok) {
+                return;
+            }
+            expect(result.statusCode).toBe(400);
+            expect(result.error).toBe('sort_order must be >= -2147483648');
+            expect(mockTchef).not.toHaveBeenCalled();
+        });
+
+        it('returns a 400 error when categories exceeds 1000 items', async () => {
+            const result = await products.createProduct({
+                ...minPayload,
+                categories: Array.from({ length: 1001 }, (_, i) => i),
+            });
+            expect(result.ok).toBe(false);
+            if (result.ok) {
+                return;
+            }
+            expect(result.statusCode).toBe(400);
+            expect(result.error).toBe(
+                'categories must not contain more than 1000 items'
+            );
+            expect(mockTchef).not.toHaveBeenCalled();
+        });
+
+        it('returns a 400 error when custom_fields exceeds 200 items', async () => {
+            const result = await products.createProduct({
+                ...minPayload,
+                custom_fields: Array.from({ length: 201 }, (_, i) => {
+                    return {
+                        name: `f${i}`,
+                        value: 'v',
+                    };
+                }),
+            });
+            expect(result.ok).toBe(false);
+            if (result.ok) {
+                return;
+            }
+            expect(result.statusCode).toBe(400);
+            expect(result.error).toBe(
+                'custom_fields must not contain more than 200 items'
+            );
+            expect(mockTchef).not.toHaveBeenCalled();
+        });
+
+        it('returns a 400 error when a custom_field name is empty', async () => {
+            const result = await products.createProduct({
+                ...minPayload,
+                custom_fields: [{ name: '', value: 'some value' }],
+            });
+            expect(result.ok).toBe(false);
+            if (result.ok) {
+                return;
+            }
+            expect(result.statusCode).toBe(400);
+            expect(result.error).toBe(
+                'custom_fields[0].name must be between 1 and 250 characters'
+            );
+            expect(mockTchef).not.toHaveBeenCalled();
+        });
+
+        it('returns a 400 error when a custom_field name exceeds 250 characters', async () => {
+            const result = await products.createProduct({
+                ...minPayload,
+                custom_fields: [{ name: 'a'.repeat(251), value: 'some value' }],
+            });
+            expect(result.ok).toBe(false);
+            if (result.ok) {
+                return;
+            }
+            expect(result.statusCode).toBe(400);
+            expect(result.error).toBe(
+                'custom_fields[0].name must be between 1 and 250 characters'
+            );
+            expect(mockTchef).not.toHaveBeenCalled();
+        });
+
+        it('returns a 400 error when a custom_field value is empty', async () => {
+            const result = await products.createProduct({
+                ...minPayload,
+                custom_fields: [{ name: 'ISBN', value: '' }],
+            });
+            expect(result.ok).toBe(false);
+            if (result.ok) {
+                return;
+            }
+            expect(result.statusCode).toBe(400);
+            expect(result.error).toBe(
+                'custom_fields[0].value must be between 1 and 250 characters'
+            );
+            expect(mockTchef).not.toHaveBeenCalled();
+        });
+
+        it('reports the correct index when a later custom_field item is invalid', async () => {
+            const result = await products.createProduct({
+                ...minPayload,
+                custom_fields: [
+                    { name: 'valid', value: 'ok' },
+                    { name: 'also valid', value: 'b'.repeat(251) },
+                ],
+            });
+            expect(result.ok).toBe(false);
+            if (result.ok) {
+                return;
+            }
+            expect(result.error).toBe(
+                'custom_fields[1].value must be between 1 and 250 characters'
+            );
+            expect(mockTchef).not.toHaveBeenCalled();
+        });
+
+        it('returns a 400 error without calling the API when name exceeds 250 characters', async () => {
+            const result = await products.createProduct({
+                ...minPayload,
+                name: 'a'.repeat(251),
+            });
+
+            expect(result.ok).toBe(false);
+            if (result.ok) {
+                return;
+            }
+            expect(result.statusCode).toBe(400);
+            expect(result.error).toBe(
+                'Product name must not exceed 250 characters'
+            );
+            expect(mockTchef).not.toHaveBeenCalled();
+        });
+
+        it('returns a 400 error without calling the API when sku exceeds 255 characters', async () => {
+            const result = await products.createProduct({
+                ...minPayload,
+                sku: 'a'.repeat(256),
+            });
+
+            expect(result.ok).toBe(false);
+            if (result.ok) {
+                return;
+            }
+            expect(result.statusCode).toBe(400);
+            expect(result.error).toBe('sku must not exceed 255 characters');
+            expect(mockTchef).not.toHaveBeenCalled();
+        });
+
+        it('accepts a sku of exactly 255 characters', async () => {
+            const result = await products.createProduct({
+                ...minPayload,
+                sku: 'a'.repeat(255),
+            });
+
+            expect(result.ok).toBe(true);
+            expect(mockTchef).toHaveBeenCalledTimes(1);
+        });
+
+        it('accepts an empty sku', async () => {
+            const result = await products.createProduct({
+                ...minPayload,
+                sku: '',
+            });
+
+            expect(result.ok).toBe(true);
+            expect(mockTchef).toHaveBeenCalledTimes(1);
+        });
+
+        it('accepts a name of exactly 250 characters', async () => {
+            const result = await products.createProduct({
+                ...minPayload,
+                name: 'a'.repeat(250),
+            });
+
+            expect(result.ok).toBe(true);
+            expect(mockTchef).toHaveBeenCalledTimes(1);
         });
     });
 

@@ -106,6 +106,11 @@ export default class ProductsV3 {
             query?: { include_fields?: F };
         }
     ): Promise<TchefResult<CreateProductReturnType<F>>> {
+        const validationError = this.validateCreatePayload(payload);
+        if (validationError !== null) {
+            return { ok: false, error: validationError, statusCode: 400 };
+        }
+
         const query = options?.query as ApiProductQuery | undefined;
         const queryString = this.generateQueryString(query, '');
         const querySuffix = queryString ? `?${queryString}` : '';
@@ -216,5 +221,82 @@ export default class ProductsV3 {
         }
 
         return params.toString();
+    }
+
+    private validateCreatePayload(payload: CreateProductPayload): string | null {
+        // name (required, minLength 1, maxLength 250)
+        if (payload.name.length === 0) {return 'Product name must not be empty';}
+        if (payload.name.length > 250) {return 'Product name must not exceed 250 characters';}
+
+        // price (required, minimum 0)
+        if (payload.price < 0) {return 'price must be >= 0';}
+
+        // weight (required, minimum 0, maximum 9999999999)
+        if (payload.weight < 0) {return 'weight must be >= 0';}
+        if (payload.weight > 9999999999) {return 'weight must be <= 9999999999';}
+
+        // optional string fields with maxLength
+        const strChecks: Array<[string | undefined, string, number]> = [
+            [payload.sku, 'sku', 255],
+            [payload.product_tax_code, 'product_tax_code', 255],
+            [payload.warranty, 'warranty', 65535],
+            [payload.bin_picking_number, 'bin_picking_number', 255],
+            [payload.layout_file, 'layout_file', 500],
+            [payload.upc, 'upc', 32],
+            [payload.search_keywords, 'search_keywords', 65535],
+            [payload.availability_description, 'availability_description', 255],
+            [payload.page_title, 'page_title', 255],
+            [payload.meta_description, 'meta_description', 65535],
+            [payload.preorder_message, 'preorder_message', 255],
+            [payload.price_hidden_label, 'price_hidden_label', 200],
+        ];
+        for (const [value, field, max] of strChecks) {
+            if (value !== undefined && value.length > max) {
+                return `${field} must not exceed ${max} characters`;
+            }
+        }
+
+        // optional number fields with min and/or max
+        const numChecks: Array<[number | undefined, string, number, number | undefined]> = [
+            [payload.width,                    'width',                    0,           9999999999],
+            [payload.depth,                    'depth',                    0,           9999999999],
+            [payload.height,                   'height',                   0,           9999999999],
+            [payload.cost_price,               'cost_price',               0,           undefined],
+            [payload.retail_price,             'retail_price',             0,           undefined],
+            [payload.sale_price,               'sale_price',               0,           undefined],
+            [payload.fixed_cost_shipping_price,'fixed_cost_shipping_price',0,           undefined],
+            [payload.tax_class_id,             'tax_class_id',             0,           255],
+            [payload.brand_id,                 'brand_id',                 0,           1_000_000_000],
+            [payload.inventory_level,          'inventory_level',          0,           2_147_483_647],
+            [payload.inventory_warning_level,  'inventory_warning_level',  0,           2_147_483_647],
+            [payload.sort_order,               'sort_order',               -2_147_483_648, 2_147_483_647],
+            [payload.order_quantity_minimum,   'order_quantity_minimum',   0,           1_000_000_000],
+            [payload.order_quantity_maximum,   'order_quantity_maximum',   0,           1_000_000_000],
+        ];
+        for (const [value, field, min, max] of numChecks) {
+            if (value === undefined) {continue;}
+            if (value < min) {return `${field} must be >= ${min}`;}
+            if (max !== undefined && value > max) {return `${field} must be <= ${max}`;}
+        }
+
+        // array length constraints
+        if (payload.categories !== undefined && payload.categories.length > 1000) {
+            return 'categories must not contain more than 1000 items';
+        }
+        if (payload.custom_fields !== undefined) {
+            if (payload.custom_fields.length > 200) {
+                return 'custom_fields must not contain more than 200 items';
+            }
+            for (const [i, cf] of payload.custom_fields.entries()) {
+                if (cf.name.length === 0 || cf.name.length > 250) {
+                    return `custom_fields[${i}].name must be between 1 and 250 characters`;
+                }
+                if (cf.value.length === 0 || cf.value.length > 250) {
+                    return `custom_fields[${i}].value must be between 1 and 250 characters`;
+                }
+            }
+        }
+
+        return null;
     }
 }

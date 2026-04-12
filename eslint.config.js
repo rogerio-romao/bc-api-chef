@@ -106,7 +106,7 @@ export default tseslint.config({
         'block-scoped-var': 'error',
         camelcase: ['error', { properties: 'never' }],
         'class-methods-use-this': 'off',
-        complexity: ['warn', { max: 20 }],
+        complexity: ['warn', { max: 25 }],
         curly: ['warn', 'all'],
         'default-case': 'error',
         'default-case-last': 'error',
