@@ -23,6 +23,18 @@ function getCallUrl(callIndex: number): URL {
     return new URL(urlArg);
 }
 
+function getCallHeaders(callIndex: number): Record<string, string> {
+    const call = mockTchef.mock.calls[callIndex];
+    if (!call) {
+        throw new Error(`No mock call at index ${callIndex}`);
+    }
+    const options = call[1] as { headers?: Record<string, string> };
+    if (!options.headers) {
+        throw new Error(`Call ${callIndex} has no headers`);
+    }
+    return options.headers;
+}
+
 function makePageResponse(
     products: object[],
     currentPage: number,
@@ -55,6 +67,22 @@ describe('ProductsV3', () => {
             'https://api.bigcommerce.com/stores/test-hash/v3/',
             'test-token'
         );
+    });
+
+    describe('getAllProducts — request headers', () => {
+        beforeEach(() => {
+            mockTchef.mockResolvedValue(makePageResponse([], 1, 1));
+        });
+
+        it('sends the access token as X-Auth-Token', async () => {
+            await products.getAllProducts();
+            expect(getCallHeaders(0)['X-Auth-Token']).toBe('test-token');
+        });
+
+        it('sends Accept: application/json', async () => {
+            await products.getAllProducts();
+            expect(getCallHeaders(0).Accept).toBe('application/json');
+        });
     });
 
     describe('getAllProducts — pagination', () => {
@@ -108,7 +136,7 @@ describe('ProductsV3', () => {
                 .mockResolvedValueOnce(makePageResponse([{ id: 3 }], 3, 3));
 
             const result = await products.getAllProducts({
-                query: { page: 2, limit: 10 },
+                query: { page: 2, limit: 50 },
             });
 
             expect(result.ok).toBe(true);
@@ -117,9 +145,9 @@ describe('ProductsV3', () => {
             }
             expect(result.data).toHaveLength(2);
             expect(getCallUrl(0).searchParams.getAll('page')).toEqual(['2']);
-            expect(getCallUrl(0).searchParams.getAll('limit')).toEqual(['10']);
+            expect(getCallUrl(0).searchParams.getAll('limit')).toEqual(['50']);
             expect(getCallUrl(1).searchParams.getAll('page')).toEqual(['3']);
-            expect(getCallUrl(1).searchParams.getAll('limit')).toEqual(['10']);
+            expect(getCallUrl(1).searchParams.getAll('limit')).toEqual(['50']);
         });
 
         it('returns the error result immediately when a page fetch fails', async () => {
@@ -257,6 +285,42 @@ describe('ProductsV3', () => {
             const url = getCallUrl(0);
             expect(url.searchParams.get('name')).toBe('Test');
             expect(url.searchParams.get('include')).toBe('images');
+        });
+    });
+
+    describe('getAllProducts -- limit clamping', () => {
+        beforeEach(() => {
+            mockTchef.mockResolvedValue(makePageResponse([], 1, 1));
+        });
+
+        it('clamps limit above 250 down to 250', async () => {
+            await products.getAllProducts({ query: { limit: 500 } });
+            expect(getCallUrl(0).searchParams.get('limit')).toBe('250');
+        });
+
+        it('clamps limit below 20 up to 20', async () => {
+            await products.getAllProducts({ query: { limit: 1 } });
+            expect(getCallUrl(0).searchParams.get('limit')).toBe('20');
+        });
+
+        it('passes through a limit within the valid range unchanged', async () => {
+            await products.getAllProducts({ query: { limit: 100 } });
+            expect(getCallUrl(0).searchParams.get('limit')).toBe('100');
+        });
+
+        it('uses 250 as the default when no limit is provided', async () => {
+            await products.getAllProducts();
+            expect(getCallUrl(0).searchParams.get('limit')).toBe('250');
+        });
+
+        it('passes through limit of exactly 20 (lower boundary) unchanged', async () => {
+            await products.getAllProducts({ query: { limit: 20 } });
+            expect(getCallUrl(0).searchParams.get('limit')).toBe('20');
+        });
+
+        it('passes through limit of exactly 250 (upper boundary) unchanged', async () => {
+            await products.getAllProducts({ query: { limit: 250 } });
+            expect(getCallUrl(0).searchParams.get('limit')).toBe('250');
         });
     });
 });

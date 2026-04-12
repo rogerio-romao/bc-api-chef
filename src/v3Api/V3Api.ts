@@ -18,7 +18,7 @@ export default class V3Api {
         this.accessToken = accessToken;
         this.validate = validate;
         this.retries = retries;
-        this.baseUrlWithVersion = `${this.baseUrl}${this.version}/`;
+        this.baseUrlWithVersion = `${this.baseUrl}/${this.version}`;
     }
 
     public products(): ProductsV3 {

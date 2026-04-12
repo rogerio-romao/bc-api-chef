@@ -1,5 +1,7 @@
 import V3Api from './v3Api/V3Api.ts';
 
+const BC_API_BASE_URL = 'https://api.bigcommerce.com/stores';
+
 export default class BcApiChef {
     private baseUrl: string;
     private accessToken: string;
@@ -12,7 +14,7 @@ export default class BcApiChef {
         validate = false,
         retries = 0
     ) {
-        this.baseUrl = `https://api.bigcommerce.com/stores/${storeHash}/`;
+        this.baseUrl = `${BC_API_BASE_URL}/${storeHash}`;
         this.accessToken = accessToken;
         this.validate = validate;
         this.retries = retries;
