@@ -6,14 +6,14 @@ import type {
     ProductIncludes,
     ProductSortField,
     SortDirection,
-} from '@/types/bigcommerce/api-types.ts';
+} from '@/types/api-types';
 import type {
     BaseProduct,
     BaseProductField,
     ProductCustomField,
     ProductImage,
     ProductVariant,
-} from '@/types/bigcommerce/product-types.ts';
+} from '@/types/product-types';
 
 vi.setConfig({ testTimeout: 1000 });
 

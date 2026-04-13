@@ -1,4 +1,4 @@
-import ProductsV3 from '@/v3Api/Products/ProductsV3.ts';
+import ProductsV3 from '@/v3Api/Products/Products';
 
 vi.setConfig({ testTimeout: 1000 });
 
@@ -46,7 +46,7 @@ describe('query param serialization', () => {
     beforeEach(() => {
         mockTchef.mockReset();
         mockTchef.mockResolvedValue(makePageResponse());
-        products = new ProductsV3('https://api.bigcommerce.com/stores/test/v3/', 'test-token');
+        products = new ProductsV3('https://api.bigcommerce.com/stores/test/v3/', 'test-token', {});
     });
 
     describe('number array params', () => {

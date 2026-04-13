@@ -7,6 +7,7 @@ import { DEFAULT_LIMIT, DEFAULT_START_PAGE, MAX_LIMIT, MIN_LIMIT } from '@/v3Api
 import type { TchefResult } from 'tchef';
 import type {
     ApiProductQuery,
+    BcApiChefOptions,
     BcCreateProductResponse,
     BcGetProductResponse,
     BcGetProductsResponse,
@@ -19,25 +20,61 @@ import type {
     ProductIncludes,
     UpdateProductPayload,
     UpdateProductReturnType,
-} from '@/types/bigcommerce/api-types.ts';
-import type { BaseProduct, BaseProductField } from '@/types/bigcommerce/product-types.ts';
+} from '@/types/api-types';
+import type { BaseProduct, BaseProductField } from '@/types/product-types';
 
 type CommonProductValidationPayload = Partial<BaseProduct> & {
     custom_fields?: ProductCustomFieldsPayload;
 };
 
+/**
+ * Wrapper around the BigCommerce V3 `catalog/products` endpoint.
+ *
+ * Not intended to be instantiated directly by package consumers — obtain an
+ * instance via `BcApiChef.v3().products()`. All methods return a
+ * {@link TchefResult}, so callers must check `result.ok` before using
+ * `result.data`.
+ *
+ * Public methods:
+ * - {@link ProductsV3.getAllProducts} — paginated list, auto-collects every page.
+ * - {@link ProductsV3.getProduct} — fetch a single product by id.
+ * - {@link ProductsV3.createProduct} — `POST` a new product.
+ * - {@link ProductsV3.updateProduct} — `PUT` an existing product.
+ * - {@link ProductsV3.deleteProduct} — `DELETE` a product by id.
+ *
+ * The read methods are generic over `ProductIncludes` and
+ * `BaseProductField[]` so the return type is narrowed by the requested
+ * `include` and `include_fields` query params at compile time.
+ */
 export default class ProductsV3 {
     private readonly baseEndpoint = 'catalog/products';
     private baseUrlWithVersion: string;
     private accessToken: string;
-    private validate: boolean;
-    private retries: number;
+    private options: Required<BcApiChefOptions>;
 
-    constructor(baseUrlWithVersion: string, accessToken: string, validate = false, retries = 0) {
+    /**
+     * @param baseUrlWithVersion - Store base URL including the `/v3` version segment.
+     * @param accessToken        - BigCommerce API access token, sent as `X-Auth-Token`
+     *                             on every request.
+     * @param options            - Shared client options propagated from `BcApiChef`.
+     *                             `validate` controls client-side payload validation
+     *                             on mutating requests (`createProduct`,
+     *                             `updateProduct`) before they are sent to
+     *                             BigCommerce, and `retries` is reserved for retry
+     *                             support in downstream HTTP calls.
+     *
+     * @todo Gate `validateCreatePayload` / `validateUpdatePayload` on
+     *       `this.options.validate`; they currently run unconditionally.
+     * @todo Forward `this.options.retries` to every `tchef()` call in this class.
+     */
+    constructor(baseUrlWithVersion: string, accessToken: string, options: BcApiChefOptions = {}) {
         this.baseUrlWithVersion = baseUrlWithVersion;
         this.accessToken = accessToken;
-        this.validate = validate;
-        this.retries = retries;
+        this.options = {
+            retries: 0,
+            validate: false,
+            ...options,
+        };
     }
 
     public async deleteProduct(productId: number): Promise<TchefResult<null>> {

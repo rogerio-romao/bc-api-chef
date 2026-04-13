@@ -6,7 +6,7 @@ export type {
     GetProductsOptions,
     GetProductsReturnType,
     ProductIncludes,
-} from './types/bigcommerce/api-types.ts';
+} from './types/api-types.ts';
 
 export type {
     BaseProduct,
@@ -19,4 +19,4 @@ export type {
     ProductOption,
     ProductVariant,
     ProductVideo,
-} from './types/bigcommerce/product-types.ts';
+} from './types/product-types.ts';

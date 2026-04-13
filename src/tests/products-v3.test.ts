@@ -1,7 +1,7 @@
 // oxlint-disable max-lines-per-function
 
 import { DEFAULT_LIMIT, MAX_LIMIT, MIN_LIMIT } from '@/v3Api/constants.ts';
-import ProductsV3 from '@/v3Api/Products/ProductsV3.ts';
+import ProductsV3 from '@/v3Api/Products/Products';
 
 import { assertErr, assertOk } from './helpers';
 
@@ -72,7 +72,11 @@ describe('ProductsV3 class', () => {
 
     beforeEach(() => {
         mockTchef.mockReset();
-        products = new ProductsV3('https://api.bigcommerce.com/stores/test-hash/v3/', 'test-token');
+        products = new ProductsV3(
+            'https://api.bigcommerce.com/stores/test-hash/v3/',
+            'test-token',
+            {},
+        );
     });
 
     describe('getAllProducts — request headers', () => {

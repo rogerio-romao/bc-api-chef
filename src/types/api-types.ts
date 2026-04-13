@@ -135,6 +135,11 @@ export interface ApiProductQuery {
 // Options and return types
 // ---------------------------------------------------------------------------
 
+export interface BcApiChefOptions {
+    validate?: boolean;
+    retries?: number;
+}
+
 export interface GetProductsOptions {
     includes?: ProductIncludes;
     query?: ApiProductQuery;

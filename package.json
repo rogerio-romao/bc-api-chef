@@ -26,9 +26,7 @@
         "typecheck": "tsc --noEmit"
     },
     "dependencies": {
-        "consola": "^3.2.3",
-        "tchef": "^0.4.6",
-        "valibot": "^0.30.0"
+        "tchef": "^0.4.14"
     },
     "devDependencies": {
         "@types/node": "^20.12.11",

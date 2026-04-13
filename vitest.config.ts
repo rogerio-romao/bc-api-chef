@@ -21,7 +21,7 @@ export default defineConfig({
                     exclude: ['src/tests/integration/**'],
                     globals: true,
                     include: ['src/tests/**/*.test.ts'],
-                    name: 'unit',
+                    name: { color: 'cyan', label: 'unit' },
                     testTimeout: 1000,
                 },
             },
@@ -30,7 +30,7 @@ export default defineConfig({
                 test: {
                     globals: true,
                     include: ['src/tests/integration/**/*.test.ts'],
-                    name: 'integration',
+                    name: { color: 'magenta', label: 'integration' },
                     testTimeout: 5000,
                 },
             },

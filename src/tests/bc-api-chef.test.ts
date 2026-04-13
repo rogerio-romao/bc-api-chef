@@ -1,5 +1,5 @@
 import BcApiChef from '@/BcApiChef.ts';
-import ProductsV3 from '@/v3Api/Products/ProductsV3.ts';
+import ProductsV3 from '@/v3Api/Products/Products';
 import V3Api from '@/v3Api/V3Api.ts';
 
 vi.setConfig({ testTimeout: 1000 });
