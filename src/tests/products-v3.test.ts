@@ -778,6 +778,171 @@ describe('ProductsV3', () => {
         });
     });
 
+    describe('updateProduct', () => {
+        const mockProduct = {
+            id: 42,
+            name: 'Updated Widget',
+            type: 'physical',
+            weight: 2,
+            price: 19.99,
+        };
+
+        beforeEach(() => {
+            mockTchef.mockResolvedValue({
+                ok: true,
+                data: { data: mockProduct },
+            });
+        });
+
+        it('makes exactly one HTTP call', async () => {
+            await products.updateProduct(42, { name: 'Updated Widget' });
+            expect(mockTchef).toHaveBeenCalledTimes(1);
+        });
+
+        it('uses the PUT method', async () => {
+            await products.updateProduct(42, { name: 'Updated Widget' });
+            expect(getCallOptions(0).method).toBe('PUT');
+        });
+
+        it('includes the product ID in the URL path', async () => {
+            await products.updateProduct(42, { name: 'Updated Widget' });
+            expect(getCallUrl(0).href).toContain('catalog/products/42');
+        });
+
+        it('sends X-Auth-Token header', async () => {
+            await products.updateProduct(42, {});
+            expect(getCallHeaders(0)['X-Auth-Token']).toBe('test-token');
+        });
+
+        it('sends Content-Type: application/json header', async () => {
+            await products.updateProduct(42, {});
+            expect(getCallHeaders(0)['Content-Type']).toBe('application/json');
+        });
+
+        it('sends Accept: application/json header', async () => {
+            await products.updateProduct(42, {});
+            expect(getCallHeaders(0).Accept).toBe('application/json');
+        });
+
+        it('serializes the payload as a JSON string in the body', async () => {
+            const payload = { name: 'New Name', price: 9.99 };
+            await products.updateProduct(42, payload);
+            const body = getCallOptions(0).body;
+            expect(typeof body).toBe('string');
+            expect(JSON.parse(body as string)).toEqual(payload);
+        });
+
+        it('accepts an empty payload without error', async () => {
+            const result = await products.updateProduct(42, {});
+            expect(result.ok).toBe(true);
+            expect(mockTchef).toHaveBeenCalledTimes(1);
+        });
+
+        it('accepts a payload missing name/price/weight/type', async () => {
+            const result = await products.updateProduct(42, { sku: 'NEW-SKU' });
+            expect(result.ok).toBe(true);
+            expect(mockTchef).toHaveBeenCalledTimes(1);
+        });
+
+        it('unwraps the response envelope and returns data.data', async () => {
+            const result = await products.updateProduct(42, {});
+            expect(result).toEqual({ ok: true, data: mockProduct });
+        });
+
+        it('appends include_fields to the URL when provided', async () => {
+            await products.updateProduct(42, {}, {
+                query: { include_fields: ['id', 'name'] as const },
+            });
+            expect(getCallUrl(0).searchParams.get('include_fields')).toBe('id,name');
+        });
+
+        it('appends include param for sub-resources when provided', async () => {
+            await products.updateProduct(42, {}, {
+                includes: { variants: true },
+            });
+            expect(getCallUrl(0).searchParams.get('include')).toBe('variants');
+        });
+
+        it('combines include_fields and include in the same URL', async () => {
+            await products.updateProduct(42, {}, {
+                includes: { images: true },
+                query: { include_fields: ['id', 'name'] as const },
+            });
+            const url = getCallUrl(0);
+            expect(url.searchParams.get('include')).toBe('images');
+            expect(url.searchParams.get('include_fields')).toBe('id,name');
+        });
+
+        it('returns the error result immediately on failure', async () => {
+            mockTchef.mockResolvedValue({
+                ok: false,
+                error: 'Not Found',
+                statusCode: 404,
+            });
+            const result = await products.updateProduct(999, { name: 'Ghost' });
+            expect(result.ok).toBe(false);
+            if (result.ok) { return; }
+            expect(result.statusCode).toBe(404);
+            expect(result.error).toBe('Not Found');
+        });
+
+        it('returns a 400 error without calling the API when name is empty', async () => {
+            const result = await products.updateProduct(42, { name: '' });
+            expect(result.ok).toBe(false);
+            if (result.ok) { return; }
+            expect(result.statusCode).toBe(400);
+            expect(result.error).toBe('Product name must not be empty');
+            expect(mockTchef).not.toHaveBeenCalled();
+        });
+
+        it('returns a 400 error when name exceeds 250 characters', async () => {
+            const result = await products.updateProduct(42, { name: 'a'.repeat(251) });
+            expect(result.ok).toBe(false);
+            if (result.ok) { return; }
+            expect(result.statusCode).toBe(400);
+            expect(result.error).toBe('Product name must not exceed 250 characters');
+            expect(mockTchef).not.toHaveBeenCalled();
+        });
+
+        it('returns a 400 error when price is negative', async () => {
+            const result = await products.updateProduct(42, { price: -1 });
+            expect(result.ok).toBe(false);
+            if (result.ok) { return; }
+            expect(result.statusCode).toBe(400);
+            expect(result.error).toBe('price must be >= 0');
+            expect(mockTchef).not.toHaveBeenCalled();
+        });
+
+        it('returns a 400 error when weight exceeds maximum', async () => {
+            const result = await products.updateProduct(42, { weight: 10_000_000_000 });
+            expect(result.ok).toBe(false);
+            if (result.ok) { return; }
+            expect(result.statusCode).toBe(400);
+            expect(result.error).toBe('weight must be <= 9999999999');
+            expect(mockTchef).not.toHaveBeenCalled();
+        });
+
+        it('returns a 400 error when upc exceeds 32 characters', async () => {
+            const result = await products.updateProduct(42, { upc: 'a'.repeat(33) });
+            expect(result.ok).toBe(false);
+            if (result.ok) { return; }
+            expect(result.statusCode).toBe(400);
+            expect(result.error).toBe('upc must not exceed 32 characters');
+            expect(mockTchef).not.toHaveBeenCalled();
+        });
+
+        it('returns a 400 error when a custom_field is invalid', async () => {
+            const result = await products.updateProduct(42, {
+                custom_fields: [{ name: '', value: 'val' }],
+            });
+            expect(result.ok).toBe(false);
+            if (result.ok) { return; }
+            expect(result.statusCode).toBe(400);
+            expect(result.error).toBe('custom_fields[0].name must be between 1 and 250 characters');
+            expect(mockTchef).not.toHaveBeenCalled();
+        });
+    });
+
     describe('getAllProducts -- limit clamping', () => {
         beforeEach(() => {
             mockTchef.mockResolvedValue(makePageResponse([], 1, 1));

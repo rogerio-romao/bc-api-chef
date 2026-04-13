@@ -255,3 +255,38 @@ export type CreateProductReturnType<
 > = F extends readonly BaseProductField[]
     ? Pick<BaseProduct, F[number]>
     : BaseProduct;
+
+// ---------------------------------------------------------------------------
+// Update product
+// ---------------------------------------------------------------------------
+
+/**
+ * Payload for PUT /v3/catalog/products/{productId}.
+ * All fields are optional. Server-computed fields are excluded.
+ */
+export type UpdateProductPayload = Partial<
+    Omit<BaseProduct, ServerComputedProductFields>
+> & {
+    custom_fields?: Array<Omit<ProductCustomField, 'id'>>;
+    bulk_pricing_rules?: Array<Omit<ProductBulkPricingRule, 'id'>>;
+    images?: Array<{
+        image_file?: string;
+        image_url?: string;
+        is_thumbnail?: boolean;
+        sort_order?: number;
+        description?: string;
+    }>;
+    videos?: Array<Omit<ProductVideo, 'id' | 'product_id' | 'length'>>;
+};
+
+export interface BcUpdateProductResponse {
+    data: BaseProduct;
+}
+
+export type UpdateProductReturnType<
+    T extends ProductIncludes,
+    F extends readonly BaseProductField[] | undefined = undefined,
+> = (F extends readonly BaseProductField[]
+    ? Pick<BaseProduct, F[number]>
+    : BaseProduct) &
+    IncludeExpansion<T>;
