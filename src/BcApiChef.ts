@@ -8,12 +8,7 @@ export default class BcApiChef {
     private validate: boolean;
     private retries: number;
 
-    constructor(
-        storeHash: string,
-        accessToken: string,
-        validate = false,
-        retries = 0
-    ) {
+    constructor(storeHash: string, accessToken: string, validate = false, retries = 0) {
         this.baseUrl = `${BC_API_BASE_URL}/${storeHash}`;
         this.accessToken = accessToken;
         this.validate = validate;
@@ -21,11 +16,6 @@ export default class BcApiChef {
     }
 
     public v3(): V3Api {
-        return new V3Api(
-            this.baseUrl,
-            this.accessToken,
-            this.validate,
-            this.retries
-        );
+        return new V3Api(this.baseUrl, this.accessToken, this.validate, this.retries);
     }
 }

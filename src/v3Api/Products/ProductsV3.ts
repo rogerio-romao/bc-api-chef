@@ -1,5 +1,10 @@
-import tchef, { type TchefResult } from 'tchef';
+// oxlint-disable max-lines
 
+import tchef from 'tchef';
+
+import { DEFAULT_LIMIT, DEFAULT_START_PAGE, MAX_LIMIT, MIN_LIMIT } from '@/v3Api/constants.ts';
+
+import type { TchefResult } from 'tchef';
 import type {
     ApiProductQuery,
     BcCreateProductResponse,
@@ -13,14 +18,8 @@ import type {
     ProductIncludes,
     UpdateProductPayload,
     UpdateProductReturnType,
-} from '../../types/bigcommerce/api-types.ts';
-import type { BaseProductField } from '../../types/bigcommerce/product-types.ts';
-import {
-    DEFAULT_LIMIT,
-    DEFAULT_START_PAGE,
-    MAX_LIMIT,
-    MIN_LIMIT,
-} from '../constants.ts';
+} from '@/types/bigcommerce/api-types.ts';
+import type { BaseProductField } from '@/types/bigcommerce/product-types.ts';
 
 export default class ProductsV3 {
     private readonly baseEndpoint = 'catalog/products';
@@ -29,12 +28,7 @@ export default class ProductsV3 {
     private validate: boolean;
     private retries: number;
 
-    constructor(
-        baseUrlWithVersion: string,
-        accessToken: string,
-        validate = false,
-        retries = 0
-    ) {
+    constructor(baseUrlWithVersion: string, accessToken: string, validate = false, retries = 0) {
         this.baseUrlWithVersion = baseUrlWithVersion;
         this.accessToken = accessToken;
         this.validate = validate;
@@ -44,18 +38,19 @@ export default class ProductsV3 {
     public async deleteProduct(productId: number): Promise<TchefResult<null>> {
         const endpoint = `${this.baseEndpoint}/${productId}`;
         const res = await tchef(`${this.baseUrlWithVersion}/${endpoint}`, {
-            method: 'DELETE',
             headers: {
                 'X-Auth-Token': this.accessToken,
             },
-            responseFormat: 'text', // BigCommerce returns an empty string on successful delete, so we use 'text' to avoid JSON parsing errors
+            method: 'DELETE',
+            // BigCommerce returns an empty string on successful delete, so we use 'text' to avoid JSON parsing errors
+            responseFormat: 'text',
         });
 
         if (!res.ok) {
             return res;
         }
 
-        return { ok: true, data: null };
+        return { data: null, ok: true };
     }
 
     public async getAllProducts<
@@ -68,13 +63,13 @@ export default class ProductsV3 {
         };
     }): Promise<TchefResult<GetProductsReturnType<T, F>>> {
         const query = options?.query as ApiProductQuery | undefined;
-        const includesString = this.generateIncludes(options?.includes);
-        const queryString = this.generateQueryString(query, includesString);
+        const includesString = ProductsV3.generateIncludes(options?.includes);
+        const queryString = ProductsV3.generateQueryString(query, includesString);
         return (await this.getMultiPage(
             this.baseEndpoint,
             queryString,
             query?.page ?? DEFAULT_START_PAGE,
-            this.clampLimit(query?.limit ?? DEFAULT_LIMIT)
+            ProductsV3.clampLimit(query?.limit ?? DEFAULT_LIMIT),
         )) as TchefResult<GetProductsReturnType<T, F>>;
     }
 
@@ -88,45 +83,41 @@ export default class ProductsV3 {
             query?: Omit<ApiProductQuery, 'include_fields'> & {
                 include_fields?: F;
             };
-        }
+        },
     ): Promise<TchefResult<GetProductReturnType<T, F>>> {
         const query = options?.query as ApiProductQuery | undefined;
-        const includesString = this.generateIncludes(options?.includes);
-        const queryString = this.generateQueryString(query, includesString);
+        const includesString = ProductsV3.generateIncludes(options?.includes);
+        const queryString = ProductsV3.generateQueryString(query, includesString);
         const querySuffix = queryString ? `?${queryString}` : '';
         const endpoint = `${this.baseEndpoint}/${id}${querySuffix}`;
 
-        return (await this.get(endpoint)) as TchefResult<
-            GetProductReturnType<T, F>
-        >;
+        return (await this.get(endpoint)) as TchefResult<GetProductReturnType<T, F>>;
     }
 
-    public async createProduct<
-        F extends readonly BaseProductField[] | undefined = undefined,
-    >(
+    public async createProduct<F extends readonly BaseProductField[] | undefined = undefined>(
         payload: CreateProductPayload,
         options?: {
             query?: { include_fields?: F };
-        }
+        },
     ): Promise<TchefResult<CreateProductReturnType<F>>> {
-        const validationError = this.validateCreatePayload(payload);
+        const validationError = ProductsV3.validateCreatePayload(payload);
         if (validationError !== null) {
-            return { ok: false, error: validationError, statusCode: 400 };
+            return { error: validationError, ok: false, statusCode: 400 };
         }
 
         const query = options?.query as ApiProductQuery | undefined;
-        const queryString = this.generateQueryString(query, '');
+        const queryString = ProductsV3.generateQueryString(query, '');
         const querySuffix = queryString ? `?${queryString}` : '';
         const endpoint = `${this.baseEndpoint}${querySuffix}`;
 
         const res = await tchef(`${this.baseUrlWithVersion}/${endpoint}`, {
-            method: 'POST',
-            headers: {
-                'X-Auth-Token': this.accessToken,
-                'Content-Type': 'application/json',
-                Accept: 'application/json',
-            },
             body: JSON.stringify(payload),
+            headers: {
+                Accept: 'application/json',
+                'Content-Type': 'application/json',
+                'X-Auth-Token': this.accessToken,
+            },
+            method: 'POST',
         });
 
         if (!res.ok) {
@@ -134,7 +125,7 @@ export default class ProductsV3 {
         }
 
         const { data } = res.data as BcCreateProductResponse;
-        return { ok: true, data: data as CreateProductReturnType<F> };
+        return { data: data as CreateProductReturnType<F>, ok: true };
     }
 
     public async updateProduct<
@@ -146,27 +137,27 @@ export default class ProductsV3 {
         options?: {
             includes?: T;
             query?: { include_fields?: F };
-        }
+        },
     ): Promise<TchefResult<UpdateProductReturnType<T, F>>> {
-        const validationError = this.validateUpdatePayload(payload);
+        const validationError = ProductsV3.validateUpdatePayload(payload);
         if (validationError !== null) {
-            return { ok: false, error: validationError, statusCode: 400 };
+            return { error: validationError, ok: false, statusCode: 400 };
         }
 
         const query = options?.query as ApiProductQuery | undefined;
-        const includesString = this.generateIncludes(options?.includes);
-        const queryString = this.generateQueryString(query, includesString);
+        const includesString = ProductsV3.generateIncludes(options?.includes);
+        const queryString = ProductsV3.generateQueryString(query, includesString);
         const querySuffix = queryString ? `?${queryString}` : '';
         const endpoint = `${this.baseEndpoint}/${productId}${querySuffix}`;
 
         const res = await tchef(`${this.baseUrlWithVersion}/${endpoint}`, {
-            method: 'PUT',
-            headers: {
-                'X-Auth-Token': this.accessToken,
-                'Content-Type': 'application/json',
-                Accept: 'application/json',
-            },
             body: JSON.stringify(payload),
+            headers: {
+                Accept: 'application/json',
+                'Content-Type': 'application/json',
+                'X-Auth-Token': this.accessToken,
+            },
+            method: 'PUT',
         });
 
         if (!res.ok) {
@@ -174,28 +165,28 @@ export default class ProductsV3 {
         }
 
         const { data } = res.data as BcUpdateProductResponse;
-        return { ok: true, data: data as UpdateProductReturnType<T, F> };
+        return { data: data as UpdateProductReturnType<T, F>, ok: true };
     }
 
     public async get(endpoint: string): Promise<TchefResult<unknown>> {
         const res = await tchef(`${this.baseUrlWithVersion}/${endpoint}`, {
             headers: {
-                'X-Auth-Token': this.accessToken,
                 Accept: 'application/json',
+                'X-Auth-Token': this.accessToken,
             },
         });
         if (!res.ok) {
             return res;
         }
         const { data } = res.data as BcGetProductResponse;
-        return { ok: true, data };
+        return { data, ok: true };
     }
 
     public async getMultiPage(
         endpoint: string,
         queryString: string,
         initialPage = DEFAULT_START_PAGE,
-        limit = DEFAULT_LIMIT
+        limit = DEFAULT_LIMIT,
     ): Promise<TchefResult<unknown[]>> {
         const results: unknown[] = [];
 
@@ -208,8 +199,8 @@ export default class ProductsV3 {
 
             const res = await tchef(url, {
                 headers: {
-                    'X-Auth-Token': this.accessToken,
                     Accept: 'application/json',
+                    'X-Auth-Token': this.accessToken,
                 },
             });
 
@@ -224,14 +215,14 @@ export default class ProductsV3 {
             page += 1;
         } while (page <= totalPages);
 
-        return { ok: true, data: results };
+        return { data: results, ok: true };
     }
 
-    private clampLimit(limit: number): number {
+    private static clampLimit(limit: number): number {
         return Math.min(Math.max(limit, MIN_LIMIT), MAX_LIMIT);
     }
 
-    private generateIncludes(includes: ProductIncludes | undefined): string {
+    private static generateIncludes(includes: ProductIncludes | undefined): string {
         if (!includes) {
             return '';
         }
@@ -242,19 +233,16 @@ export default class ProductsV3 {
             .join(',');
     }
 
-    private generateQueryString(
+    private static generateQueryString(
         query: ApiProductQuery | undefined,
-        includes: string
+        includes: string,
     ): string {
         const params = new URLSearchParams();
 
         if (query) {
             for (const [key, value] of Object.entries(query)) {
                 if (value !== undefined && key !== 'page' && key !== 'limit') {
-                    params.set(
-                        key,
-                        Array.isArray(value) ? value.join(',') : String(value)
-                    );
+                    params.set(key, Array.isArray(value) ? value.join(',') : String(value));
                 }
             }
         }
@@ -266,30 +254,41 @@ export default class ProductsV3 {
         return params.toString();
     }
 
-    private validateCreatePayload(payload: CreateProductPayload): string | null {
+    // oxlint-disable-next-line max-statements
+    private static validateCreatePayload(payload: CreateProductPayload): string | null {
         // name (required, minLength 1, maxLength 250)
-        if (payload.name.length === 0) {return 'Product name must not be empty';}
-        if (payload.name.length > 250) {return 'Product name must not exceed 250 characters';}
+        if (payload.name.length === 0) {
+            return 'Product name must not be empty';
+        }
+        if (payload.name.length > 250) {
+            return 'Product name must not exceed 250 characters';
+        }
 
         // price (required, minimum 0)
-        if (payload.price < 0) {return 'price must be >= 0';}
+        if (payload.price < 0) {
+            return 'price must be >= 0';
+        }
 
         // weight (required, minimum 0, maximum 9999999999)
-        if (payload.weight < 0) {return 'weight must be >= 0';}
-        if (payload.weight > 9999999999) {return 'weight must be <= 9999999999';}
+        if (payload.weight < 0) {
+            return 'weight must be >= 0';
+        }
+        if (payload.weight > 9_999_999_999) {
+            return 'weight must be <= 9999999999';
+        }
 
         // optional string fields with maxLength
-        const strChecks: Array<[string | undefined, string, number]> = [
+        const strChecks: [string | undefined, string, number][] = [
             [payload.sku, 'sku', 255],
             [payload.product_tax_code, 'product_tax_code', 255],
-            [payload.warranty, 'warranty', 65535],
+            [payload.warranty, 'warranty', 65_535],
             [payload.bin_picking_number, 'bin_picking_number', 255],
             [payload.layout_file, 'layout_file', 500],
             [payload.upc, 'upc', 32],
-            [payload.search_keywords, 'search_keywords', 65535],
+            [payload.search_keywords, 'search_keywords', 65_535],
             [payload.availability_description, 'availability_description', 255],
             [payload.page_title, 'page_title', 255],
-            [payload.meta_description, 'meta_description', 65535],
+            [payload.meta_description, 'meta_description', 65_535],
             [payload.preorder_message, 'preorder_message', 255],
             [payload.price_hidden_label, 'price_hidden_label', 200],
         ];
@@ -300,26 +299,32 @@ export default class ProductsV3 {
         }
 
         // optional number fields with min and/or max
-        const numChecks: Array<[number | undefined, string, number, number | undefined]> = [
-            [payload.width,                    'width',                    0,           9999999999],
-            [payload.depth,                    'depth',                    0,           9999999999],
-            [payload.height,                   'height',                   0,           9999999999],
-            [payload.cost_price,               'cost_price',               0,           undefined],
-            [payload.retail_price,             'retail_price',             0,           undefined],
-            [payload.sale_price,               'sale_price',               0,           undefined],
-            [payload.fixed_cost_shipping_price,'fixed_cost_shipping_price',0,           undefined],
-            [payload.tax_class_id,             'tax_class_id',             0,           255],
-            [payload.brand_id,                 'brand_id',                 0,           1_000_000_000],
-            [payload.inventory_level,          'inventory_level',          0,           2_147_483_647],
-            [payload.inventory_warning_level,  'inventory_warning_level',  0,           2_147_483_647],
-            [payload.sort_order,               'sort_order',               -2_147_483_648, 2_147_483_647],
-            [payload.order_quantity_minimum,   'order_quantity_minimum',   0,           1_000_000_000],
-            [payload.order_quantity_maximum,   'order_quantity_maximum',   0,           1_000_000_000],
+        const numChecks: [number | undefined, string, number, number | undefined][] = [
+            [payload.width, 'width', 0, 9_999_999_999],
+            [payload.depth, 'depth', 0, 9_999_999_999],
+            [payload.height, 'height', 0, 9_999_999_999],
+            [payload.cost_price, 'cost_price', 0, undefined],
+            [payload.retail_price, 'retail_price', 0, undefined],
+            [payload.sale_price, 'sale_price', 0, undefined],
+            [payload.fixed_cost_shipping_price, 'fixed_cost_shipping_price', 0, undefined],
+            [payload.tax_class_id, 'tax_class_id', 0, 255],
+            [payload.brand_id, 'brand_id', 0, 1_000_000_000],
+            [payload.inventory_level, 'inventory_level', 0, 2_147_483_647],
+            [payload.inventory_warning_level, 'inventory_warning_level', 0, 2_147_483_647],
+            [payload.sort_order, 'sort_order', -2_147_483_648, 2_147_483_647],
+            [payload.order_quantity_minimum, 'order_quantity_minimum', 0, 1_000_000_000],
+            [payload.order_quantity_maximum, 'order_quantity_maximum', 0, 1_000_000_000],
         ];
         for (const [value, field, min, max] of numChecks) {
-            if (value === undefined) {continue;}
-            if (value < min) {return `${field} must be >= ${min}`;}
-            if (max !== undefined && value > max) {return `${field} must be <= ${max}`;}
+            if (value === undefined) {
+                continue;
+            }
+            if (value < min) {
+                return `${field} must be >= ${min}`;
+            }
+            if (max !== undefined && value > max) {
+                return `${field} must be <= ${max}`;
+            }
         }
 
         // array length constraints
@@ -343,10 +348,15 @@ export default class ProductsV3 {
         return null;
     }
 
-    private validateUpdatePayload(payload: UpdateProductPayload): string | null {
+    // oxlint-disable-next-line max-statements
+    private static validateUpdatePayload(payload: UpdateProductPayload): string | null {
         if (payload.name !== undefined) {
-            if (payload.name.length === 0) {return 'Product name must not be empty';}
-            if (payload.name.length > 250) {return 'Product name must not exceed 250 characters';}
+            if (payload.name.length === 0) {
+                return 'Product name must not be empty';
+            }
+            if (payload.name.length > 250) {
+                return 'Product name must not exceed 250 characters';
+            }
         }
 
         if (payload.price !== undefined && payload.price < 0) {
@@ -354,21 +364,25 @@ export default class ProductsV3 {
         }
 
         if (payload.weight !== undefined) {
-            if (payload.weight < 0) {return 'weight must be >= 0';}
-            if (payload.weight > 9999999999) {return 'weight must be <= 9999999999';}
+            if (payload.weight < 0) {
+                return 'weight must be >= 0';
+            }
+            if (payload.weight > 9_999_999_999) {
+                return 'weight must be <= 9999999999';
+            }
         }
 
-        const strChecks: Array<[string | undefined, string, number]> = [
+        const strChecks: [string | undefined, string, number][] = [
             [payload.sku, 'sku', 255],
             [payload.product_tax_code, 'product_tax_code', 255],
-            [payload.warranty, 'warranty', 65535],
+            [payload.warranty, 'warranty', 65_535],
             [payload.bin_picking_number, 'bin_picking_number', 255],
             [payload.layout_file, 'layout_file', 500],
             [payload.upc, 'upc', 32],
-            [payload.search_keywords, 'search_keywords', 65535],
+            [payload.search_keywords, 'search_keywords', 65_535],
             [payload.availability_description, 'availability_description', 255],
             [payload.page_title, 'page_title', 255],
-            [payload.meta_description, 'meta_description', 65535],
+            [payload.meta_description, 'meta_description', 65_535],
             [payload.preorder_message, 'preorder_message', 255],
             [payload.price_hidden_label, 'price_hidden_label', 200],
         ];
@@ -378,26 +392,32 @@ export default class ProductsV3 {
             }
         }
 
-        const numChecks: Array<[number | undefined, string, number, number | undefined]> = [
-            [payload.width,                    'width',                    0,           9999999999],
-            [payload.depth,                    'depth',                    0,           9999999999],
-            [payload.height,                   'height',                   0,           9999999999],
-            [payload.cost_price,               'cost_price',               0,           undefined],
-            [payload.retail_price,             'retail_price',             0,           undefined],
-            [payload.sale_price,               'sale_price',               0,           undefined],
-            [payload.fixed_cost_shipping_price,'fixed_cost_shipping_price',0,           undefined],
-            [payload.tax_class_id,             'tax_class_id',             0,           255],
-            [payload.brand_id,                 'brand_id',                 0,           1_000_000_000],
-            [payload.inventory_level,          'inventory_level',          0,           2_147_483_647],
-            [payload.inventory_warning_level,  'inventory_warning_level',  0,           2_147_483_647],
-            [payload.sort_order,               'sort_order',               -2_147_483_648, 2_147_483_647],
-            [payload.order_quantity_minimum,   'order_quantity_minimum',   0,           1_000_000_000],
-            [payload.order_quantity_maximum,   'order_quantity_maximum',   0,           1_000_000_000],
+        const numChecks: [number | undefined, string, number, number | undefined][] = [
+            [payload.width, 'width', 0, 9_999_999_999],
+            [payload.depth, 'depth', 0, 9_999_999_999],
+            [payload.height, 'height', 0, 9_999_999_999],
+            [payload.cost_price, 'cost_price', 0, undefined],
+            [payload.retail_price, 'retail_price', 0, undefined],
+            [payload.sale_price, 'sale_price', 0, undefined],
+            [payload.fixed_cost_shipping_price, 'fixed_cost_shipping_price', 0, undefined],
+            [payload.tax_class_id, 'tax_class_id', 0, 255],
+            [payload.brand_id, 'brand_id', 0, 1_000_000_000],
+            [payload.inventory_level, 'inventory_level', 0, 2_147_483_647],
+            [payload.inventory_warning_level, 'inventory_warning_level', 0, 2_147_483_647],
+            [payload.sort_order, 'sort_order', -2_147_483_648, 2_147_483_647],
+            [payload.order_quantity_minimum, 'order_quantity_minimum', 0, 1_000_000_000],
+            [payload.order_quantity_maximum, 'order_quantity_maximum', 0, 1_000_000_000],
         ];
         for (const [value, field, min, max] of numChecks) {
-            if (value === undefined) {continue;}
-            if (value < min) {return `${field} must be >= ${min}`;}
-            if (max !== undefined && value > max) {return `${field} must be <= ${max}`;}
+            if (value === undefined) {
+                continue;
+            }
+            if (value < min) {
+                return `${field} must be >= ${min}`;
+            }
+            if (max !== undefined && value > max) {
+                return `${field} must be <= ${max}`;
+            }
         }
 
         if (payload.categories !== undefined && payload.categories.length > 1000) {

@@ -8,12 +8,7 @@ export default class V3Api {
     private retries: number;
     private baseUrlWithVersion: string;
 
-    constructor(
-        baseUrl: string,
-        accessToken: string,
-        validate = false,
-        retries = 0
-    ) {
+    constructor(baseUrl: string, accessToken: string, validate = false, retries = 0) {
         this.baseUrl = baseUrl;
         this.accessToken = accessToken;
         this.validate = validate;
@@ -26,7 +21,7 @@ export default class V3Api {
             this.baseUrlWithVersion,
             this.accessToken,
             this.validate,
-            this.retries
+            this.retries,
         );
     }
 }

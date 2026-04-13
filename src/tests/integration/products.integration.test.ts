@@ -1,3 +1,5 @@
+// oxlint-disable max-lines
+
 /**
  * Integration tests — hit the real BigCommerce API.
  *
@@ -9,19 +11,17 @@
  * API — something unit tests with mocked HTTP cannot confirm.
  */
 
-import { afterAll, describe, expect, it } from 'vitest';
-
-import { MIN_LIMIT } from '../../v3Api/constants.ts';
-
-import BcApiChef from '../../BcApiChef.ts';
-
-const STORE_HASH = process.env.STORE_HASH ?? '';
-const ACCESS_TOKEN = process.env.ACCESS_TOKEN ?? '';
+import BcApiChef from '@/BcApiChef.ts';
+import { ACCESS_TOKEN, STORE_HASH } from '@/config.ts';
+import { assertOk } from '@/tests/helpers.ts';
+import { MIN_LIMIT } from '@/v3Api/constants.ts';
 
 const hasCredentials = STORE_HASH.length > 0 && ACCESS_TOKEN.length > 0;
 
 // [Sample] Smith Journal 13 at my Bc Dev Sandbox store
 const TEST_PRODUCT_ID = 111;
+
+vi.setConfig({ testTimeout: 3000 });
 
 describe.runIf(hasCredentials)('Products API — integration', () => {
     const client = new BcApiChef(STORE_HASH, ACCESS_TOKEN);
@@ -29,17 +29,13 @@ describe.runIf(hasCredentials)('Products API — integration', () => {
     it('fetches at least one product with default options', async () => {
         const result = await client.v3().products().getAllProducts();
 
-        expect(result.ok).toBe(true);
-        if (!result.ok) {
-            return;
-        }
+        assertOk(result);
         expect(Array.isArray(result.data)).toBe(true);
 
-        const product = result.data[0];
-        if (product) {
-            expect(typeof product.id).toBe('number');
-            expect(typeof product.name).toBe('string');
-        }
+        const [product] = result.data;
+        assert(product !== undefined, 'Expected at least one product');
+        expectTypeOf(product.id).toBeNumber();
+        expectTypeOf(product.name).toBeString();
     });
 
     it('respects include_fields — only requested fields are present', async () => {
@@ -52,18 +48,14 @@ describe.runIf(hasCredentials)('Products API — integration', () => {
                 },
             });
 
-        expect(result.ok).toBe(true);
-        if (!result.ok) {
-            return;
-        }
+        assertOk(result);
 
-        const product = result.data[0];
-        if (product) {
-            // The type is narrowed to Pick<BaseProduct, 'id'|'name'> — other
-            // fields may be absent at runtime, but we only assert the ones we requested.
-            expect(typeof product.id).toBe('number');
-            expect(typeof product.name).toBe('string');
-        }
+        const [product] = result.data;
+        // The type is narrowed to Pick<BaseProduct, 'id'|'name'> — other
+        // fields may be absent at runtime, but we only assert the ones we requested.
+        assert(product !== undefined, 'Expected at least one product');
+        expectTypeOf(product.id).toBeNumber();
+        expectTypeOf(product.name).toBeString();
     });
 
     it('returns sub-resources when includes are requested', async () => {
@@ -74,16 +66,12 @@ describe.runIf(hasCredentials)('Products API — integration', () => {
                 includes: { custom_fields: true, images: true },
             });
 
-        expect(result.ok).toBe(true);
-        if (!result.ok) {
-            return;
-        }
+        assertOk(result);
 
-        const product = result.data[0];
-        if (product) {
-            expect(Array.isArray(product.custom_fields)).toBe(true);
-            expect(Array.isArray(product.images)).toBe(true);
-        }
+        const [product] = result.data;
+        assert(product !== undefined, 'Expected at least one product');
+        expect(product.custom_fields).toBeInstanceOf(Array);
+        expect(product.images).toBeInstanceOf(Array);
     });
 
     it('paginates through multiple pages and returns all results', async () => {
@@ -92,10 +80,7 @@ describe.runIf(hasCredentials)('Products API — integration', () => {
             .products()
             .getAllProducts({ query: { limit: MIN_LIMIT } });
 
-        expect(result.ok).toBe(true);
-        if (!result.ok) {
-            return;
-        }
+        assertOk(result);
 
         // More than one page worth means pagination actually ran
         expect(result.data.length).toBeGreaterThan(MIN_LIMIT);
@@ -109,10 +94,7 @@ describe.runIf(hasCredentials)('Products API — integration', () => {
                 query: { 'id:in': [TEST_PRODUCT_ID] },
             });
 
-        expect(filtered.ok).toBe(true);
-        if (!filtered.ok) {
-            return;
-        }
+        assertOk(filtered);
         expect(filtered.data).toHaveLength(1);
         expect(filtered.data[0]?.id).toBe(TEST_PRODUCT_ID);
     });
@@ -120,15 +102,13 @@ describe.runIf(hasCredentials)('Products API — integration', () => {
     it('fetches a single product by ID and returns a correct product object', async () => {
         const result = await client.v3().products().getProduct(TEST_PRODUCT_ID);
 
-        expect(result.ok).toBe(true);
-        if (!result.ok) {
-            return;
-        }
-        expect(typeof result.data.id).toBe('number');
+        assertOk(result);
+        expectTypeOf(result.data.id).toBeNumber();
         expect(result.data.name).toBe('[Sample] Smith Journal 13');
     });
 });
 
+// oxlint-disable-next-line max-lines-per-function
 describe.runIf(hasCredentials)('Products API — write integration', () => {
     const client = new BcApiChef(STORE_HASH, ACCESS_TOKEN);
     const createdIds: number[] = [];
@@ -151,17 +131,14 @@ describe.runIf(hasCredentials)('Products API — write integration', () => {
             const name = `bc-api-chef integration ${suffix}-1`;
             const result = await client.v3().products().createProduct({
                 name,
+                price: 29.99,
                 type: 'physical',
                 weight: 1.5,
-                price: 29.99,
             });
 
-            expect(result.ok).toBe(true);
-            if (!result.ok) {
-                return;
-            }
+            assertOk(result);
 
-            expect(typeof result.data.id).toBe('number');
+            expectTypeOf(result.data.id).toBeNumber();
             expect(result.data.name).toBe(name);
             expect(result.data.price).toBe(29.99);
             expect(result.data.type).toBe('physical');
@@ -171,23 +148,23 @@ describe.runIf(hasCredentials)('Products API — write integration', () => {
 
         it('creates a product and narrows response via include_fields', async () => {
             const name = `bc-api-chef integration ${suffix}-2`;
-            const result = await client.v3().products().createProduct(
-                {
-                    name,
-                    type: 'physical',
-                    weight: 1.5,
-                    price: 19.99,
-                    description: 'integration test description',
-                },
-                { query: { include_fields: ['id', 'name'] as const } }
-            );
+            const result = await client
+                .v3()
+                .products()
+                .createProduct(
+                    {
+                        description: 'integration test description',
+                        name,
+                        price: 19.99,
+                        type: 'physical',
+                        weight: 1.5,
+                    },
+                    { query: { include_fields: ['id', 'name'] as const } },
+                );
 
-            expect(result.ok).toBe(true);
-            if (!result.ok) {
-                return;
-            }
+            assertOk(result);
 
-            expect(typeof result.data.id).toBe('number');
+            expectTypeOf(result.data.id).toBeNumber();
             expect(result.data.name).toBe(name);
 
             createdIds.push(result.data.id);
@@ -197,17 +174,15 @@ describe.runIf(hasCredentials)('Products API — write integration', () => {
     describe('updateProduct', () => {
         it('updates name and price on an existing product', async () => {
             const id = createdIds[0];
+            assert(id, 'Expected a product ID from the createProduct test');
             const updatedName = `bc-api-chef integration ${suffix}-1 UPDATED`;
 
             const result = await client
                 .v3()
                 .products()
-                .updateProduct(id!, { name: updatedName, price: 39.99 });
+                .updateProduct(id, { name: updatedName, price: 39.99 });
 
-            expect(result.ok).toBe(true);
-            if (!result.ok) {
-                return;
-            }
+            assertOk(result);
 
             expect(result.data.name).toBe(updatedName);
             expect(result.data.price).toBe(39.99);
@@ -215,24 +190,22 @@ describe.runIf(hasCredentials)('Products API — write integration', () => {
 
         it('returns narrowed response when include_fields is provided', async () => {
             const id = createdIds[1];
+            assert(id, 'Expected a product ID from the createProduct test');
 
             const result = await client
                 .v3()
                 .products()
                 .updateProduct(
-                    id!,
+                    id,
                     { description: 'updated description' },
                     {
                         query: {
                             include_fields: ['id', 'description'] as const,
                         },
-                    }
+                    },
                 );
 
-            expect(result.ok).toBe(true);
-            if (!result.ok) {
-                return;
-            }
+            assertOk(result);
 
             expect(result.data.id).toBe(id);
             expect(result.data.description).toBe('updated description');
@@ -241,47 +214,29 @@ describe.runIf(hasCredentials)('Products API — write integration', () => {
 
     describe('deleteProduct', () => {
         it('deletes a product and a subsequent getProduct returns not-found', async () => {
-            const id = createdIds.shift()!;
+            const id = createdIds.shift();
+            assert(id, 'Expected a product ID from the createProduct test');
 
-            const deleteResult = await client
-                .v3()
-                .products()
-                .deleteProduct(id);
+            const deleteResult = await client.v3().products().deleteProduct(id);
 
+            assertOk(deleteResult);
             expect(deleteResult.ok).toBe(true);
-            if (!deleteResult.ok) {
-                return;
-            }
             expect(deleteResult.data).toBeNull();
 
             // Confirm the product is truly gone server-side
-            const fetchResult = await client
-                .v3()
-                .products()
-                .getProduct(id);
+            const fetchResult = await client.v3().products().getProduct(id);
 
             expect(fetchResult.ok).toBe(false);
         });
 
         it('deletes the second created product', async () => {
-            const id = createdIds.shift()!;
+            const id = createdIds.shift();
+            assert(id, 'Expected a product ID from the createProduct test');
 
             const result = await client.v3().products().deleteProduct(id);
 
-            expect(result.ok).toBe(true);
-            if (!result.ok) {
-                return;
-            }
+            assertOk(result);
             expect(result.data).toBeNull();
         });
     });
 });
-
-describe.skipIf(hasCredentials)(
-    'Products API — skipped (no credentials)',
-    () => {
-        it('skips all integration tests when STORE_HASH / ACCESS_TOKEN are missing', () => {
-            // This test exists solely to make the "skipped" state visible in output.
-        });
-    }
-);

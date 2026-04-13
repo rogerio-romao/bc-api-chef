@@ -1,3 +1,5 @@
+// oxlint-disable max-lines
+
 export type BaseProductField = keyof BaseProduct;
 
 export interface BaseProduct {
@@ -110,12 +112,12 @@ export interface ProductVariant {
     inventory_level: number | null;
     inventory_warning_level: number | null;
     bin_picking_number: string | null;
-    option_values: Array<{
+    option_values: {
         id: number;
         label: string;
         option_id: number;
         option_display_name: string;
-    }>;
+    }[];
 }
 
 export interface ProductImage {
@@ -168,7 +170,7 @@ type ProductModifierConfig =
           type: 'file';
           config: {
               file_types_mode: 'all' | 'specific';
-              file_types_supported: Array<'images' | 'documents' | 'other'>;
+              file_types_supported: ('images' | 'documents' | 'other')[];
               file_types_other: string[];
               file_max_size: number;
           };
@@ -217,7 +219,7 @@ type ProductModifierConfig =
           config: never;
       };
 
-type ProductModifierOptionValue = {
+interface ProductModifierOptionValue {
     is_default: boolean;
     label: string;
     sort_order: number;
@@ -239,7 +241,7 @@ type ProductModifierOptionValue = {
     };
     id: number;
     option_id: number;
-};
+}
 
 type ProductOptionsConfig =
     | {
@@ -255,7 +257,7 @@ type ProductOptionsConfig =
           config: never;
       };
 
-type ProductModifierCommonFields = {
+interface ProductModifierCommonFields {
     required: boolean;
     sort_order: number;
     display_name: string;
@@ -263,24 +265,23 @@ type ProductModifierCommonFields = {
     product_id: number;
     name: string;
     option_values: ProductModifierOptionValue[];
-};
+}
 
-export type ProductModifier = ProductModifierCommonFields &
-    ProductModifierConfig;
+export type ProductModifier = ProductModifierCommonFields & ProductModifierConfig;
 
-export type ProductOptionsCommonFields = {
+export interface ProductOptionsCommonFields {
     id: number | null;
     product_id: number;
     display_name: string;
     sort_order: number;
-    option_values: Array<{
+    option_values: {
         id: number;
         label: string;
         sort_order: number;
         is_default: boolean;
         value_data: object | null;
-    }>;
-};
+    }[];
+}
 
 export type ProductOption = ProductOptionsCommonFields & ProductOptionsConfig;
 
@@ -305,4 +306,3 @@ export interface FullProduct extends BaseProduct {
     options: ProductOption[];
     videos: ProductVideo[];
 }
-

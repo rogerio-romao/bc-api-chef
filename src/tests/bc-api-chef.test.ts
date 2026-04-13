@@ -1,8 +1,8 @@
-import { describe, expect, it } from 'vitest';
+import BcApiChef from '@/BcApiChef.ts';
+import ProductsV3 from '@/v3Api/Products/ProductsV3.ts';
+import V3Api from '@/v3Api/V3Api.ts';
 
-import BcApiChef from '../BcApiChef.ts';
-import V3Api from '../v3Api/V3Api.ts';
-import ProductsV3 from '../v3Api/Products/ProductsV3.ts';
+vi.setConfig({ testTimeout: 1000 });
 
 describe('BcApiChef builder chain', () => {
     const client = new BcApiChef('test-hash', 'test-token');

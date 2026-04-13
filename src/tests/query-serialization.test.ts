@@ -1,47 +1,52 @@
-import { beforeEach, describe, expect, it, vi } from 'vitest';
+import ProductsV3 from '@/v3Api/Products/ProductsV3.ts';
 
-import ProductsV3 from '../v3Api/Products/ProductsV3.ts';
+vi.setConfig({ testTimeout: 1000 });
 
 const mockTchef = vi.hoisted(() => vi.fn());
-vi.mock('tchef', () => {return { default: mockTchef }});
+vi.mock(import('tchef'), () => ({
+    default: mockTchef,
+}));
 
+// oxlint-disable-next-line typescript/explicit-function-return-type
 function makePageResponse(products: object[] = []) {
     return {
-        ok: true,
         data: {
             data: products,
             meta: {
                 pagination: {
-                    total: 0,
                     count: 0,
-                    per_page: 250,
                     current_page: 1,
+                    links: { current: '', next: '', previous: '' },
+                    per_page: 250,
+                    total: 0,
                     total_pages: 1,
-                    links: { previous: '', current: '', next: '' },
                 },
             },
         },
+        ok: true,
     };
 }
 
 function getCallUrl(): URL {
     const call = mockTchef.mock.calls[0];
-    if (!call) {throw new Error('No mock calls recorded');}
+    if (!call) {
+        throw new Error('No mock calls recorded');
+    }
     const urlArg: unknown = call[0];
-    if (typeof urlArg !== 'string') {throw new TypeError('First argument is not a string');}
+    if (typeof urlArg !== 'string') {
+        throw new TypeError('First argument is not a string');
+    }
     return new URL(urlArg);
 }
 
+// oxlint-disable-next-line max-lines-per-function
 describe('query param serialization', () => {
     let products: ProductsV3;
 
     beforeEach(() => {
         mockTchef.mockReset();
         mockTchef.mockResolvedValue(makePageResponse());
-        products = new ProductsV3(
-            'https://api.bigcommerce.com/stores/test/v3/',
-            'test-token'
-        );
+        products = new ProductsV3('https://api.bigcommerce.com/stores/test/v3/', 'test-token');
     });
 
     describe('number array params', () => {
@@ -56,19 +61,25 @@ describe('query param serialization', () => {
         });
 
         it('serializes inventory_level:in as comma-separated numbers', async () => {
-            await products.getAllProducts({ query: { 'inventory_level:in': [0, 1, 2] } });
+            await products.getAllProducts({
+                query: { 'inventory_level:in': [0, 1, 2] },
+            });
             expect(getCallUrl().searchParams.get('inventory_level:in')).toBe('0,1,2');
         });
 
         it('serializes categories:in as comma-separated numbers', async () => {
-            await products.getAllProducts({ query: { 'categories:in': [100, 200] } });
+            await products.getAllProducts({
+                query: { 'categories:in': [100, 200] },
+            });
             expect(getCallUrl().searchParams.get('categories:in')).toBe('100,200');
         });
     });
 
     describe('string array params', () => {
         it('serializes sku:in as comma-separated strings', async () => {
-            await products.getAllProducts({ query: { 'sku:in': ['ABC-1', 'DEF-2'] } });
+            await products.getAllProducts({
+                query: { 'sku:in': ['ABC-1', 'DEF-2'] },
+            });
             expect(getCallUrl().searchParams.get('sku:in')).toBe('ABC-1,DEF-2');
         });
     });
@@ -95,18 +106,14 @@ describe('query param serialization', () => {
             await products.getAllProducts({
                 query: { 'date_modified:min': '2024-01-01T00:00:00Z' },
             });
-            expect(getCallUrl().searchParams.get('date_modified:min')).toBe(
-                '2024-01-01T00:00:00Z'
-            );
+            expect(getCallUrl().searchParams.get('date_modified:min')).toBe('2024-01-01T00:00:00Z');
         });
 
         it('serializes date_last_imported:max correctly', async () => {
             await products.getAllProducts({
                 query: { 'date_last_imported:max': '2024-12-31' },
             });
-            expect(getCallUrl().searchParams.get('date_last_imported:max')).toBe(
-                '2024-12-31'
-            );
+            expect(getCallUrl().searchParams.get('date_last_imported:max')).toBe('2024-12-31');
         });
     });
 
@@ -123,7 +130,7 @@ describe('query param serialization', () => {
 
         it('serializes sort and direction together', async () => {
             await products.getAllProducts({
-                query: { sort: 'date_modified', direction: 'asc' },
+                query: { direction: 'asc', sort: 'date_modified' },
             });
             const url = getCallUrl();
             expect(url.searchParams.get('sort')).toBe('date_modified');
@@ -144,7 +151,7 @@ describe('query param serialization', () => {
                 query: { exclude_fields: ['description', 'meta_description'] },
             });
             expect(getCallUrl().searchParams.get('exclude_fields')).toBe(
-                'description,meta_description'
+                'description,meta_description',
             );
         });
     });
@@ -161,12 +168,16 @@ describe('query param serialization', () => {
         });
 
         it('serializes availability correctly', async () => {
-            await products.getAllProducts({ query: { availability: 'preorder' } });
+            await products.getAllProducts({
+                query: { availability: 'preorder' },
+            });
             expect(getCallUrl().searchParams.get('availability')).toBe('preorder');
         });
 
         it('serializes keyword_context correctly', async () => {
-            await products.getAllProducts({ query: { keyword_context: 'shopper' } });
+            await products.getAllProducts({
+                query: { keyword_context: 'shopper' },
+            });
             expect(getCallUrl().searchParams.get('keyword_context')).toBe('shopper');
         });
     });
@@ -176,12 +187,12 @@ describe('query param serialization', () => {
             await products.getAllProducts({
                 includes: { custom_fields: true, images: true },
                 query: {
-                    'id:in': [1, 2, 3],
-                    name: 'Widget',
-                    is_visible: true,
-                    sort: 'price',
                     direction: 'desc',
+                    'id:in': [1, 2, 3],
                     include_fields: ['id', 'name', 'price'],
+                    is_visible: true,
+                    name: 'Widget',
+                    sort: 'price',
                 },
             });
 

@@ -27,23 +27,18 @@ export interface ProductIncludes {
 }
 
 /** Expands included sub-resources onto the base product type. */
-export type IncludeExpansion<T extends ProductIncludes> =
-    (T['variants'] extends true ? { variants: ProductVariant[] } : object) &
-        (T['images'] extends true ? { images: ProductImage[] } : object) &
-        (T['custom_fields'] extends true
-            ? { custom_fields: ProductCustomField[] }
-            : object) &
-        (T['bulk_pricing_rules'] extends true
-            ? { bulk_pricing_rules: ProductBulkPricingRule[] }
-            : object) &
-        (T['primary_image'] extends true
-            ? { primary_image: ProductImage }
-            : object) &
-        (T['modifiers'] extends true
-            ? { modifiers: ProductModifier[] }
-            : object) &
-        (T['options'] extends true ? { options: ProductOption[] } : object) &
-        (T['videos'] extends true ? { videos: ProductVideo[] } : object);
+export type IncludeExpansion<T extends ProductIncludes> = (T['variants'] extends true
+    ? { variants: ProductVariant[] }
+    : object) &
+    (T['images'] extends true ? { images: ProductImage[] } : object) &
+    (T['custom_fields'] extends true ? { custom_fields: ProductCustomField[] } : object) &
+    (T['bulk_pricing_rules'] extends true
+        ? { bulk_pricing_rules: ProductBulkPricingRule[] }
+        : object) &
+    (T['primary_image'] extends true ? { primary_image: ProductImage } : object) &
+    (T['modifiers'] extends true ? { modifiers: ProductModifier[] } : object) &
+    (T['options'] extends true ? { options: ProductOption[] } : object) &
+    (T['videos'] extends true ? { videos: ProductVideo[] } : object);
 
 // ---------------------------------------------------------------------------
 // Sort / direction
@@ -155,12 +150,8 @@ export interface GetProductsOptions {
 export type GetProductsReturnType<
     T extends ProductIncludes,
     F extends readonly BaseProductField[] | undefined = undefined,
-> = Array<
-    (F extends readonly BaseProductField[]
-        ? Pick<BaseProduct, F[number]>
-        : BaseProduct) &
-        IncludeExpansion<T>
->;
+> = ((F extends readonly BaseProductField[] ? Pick<BaseProduct, F[number]> : BaseProduct) &
+    IncludeExpansion<T>)[];
 
 export interface BcGetProductsResponse {
     data: FullProduct[];
@@ -183,9 +174,7 @@ export interface BcGetProductsResponse {
 export type GetProductReturnType<
     T extends ProductIncludes,
     F extends readonly BaseProductField[] | undefined = undefined,
-> = (F extends readonly BaseProductField[]
-    ? Pick<BaseProduct, F[number]>
-    : BaseProduct) &
+> = (F extends readonly BaseProductField[] ? Pick<BaseProduct, F[number]> : BaseProduct) &
     IncludeExpansion<T>;
 
 export interface BcGetProductResponse {
@@ -219,26 +208,18 @@ type RequiredCreateProductFields = 'name' | 'type' | 'weight' | 'price';
  * sub-resources (custom_fields, bulk_pricing_rules, images, videos).
  * Server-computed fields (id, calculated_price, etc.) are excluded.
  */
-export type CreateProductPayload = Pick<
-    BaseProduct,
-    RequiredCreateProductFields
-> &
-    Partial<
-        Omit<
-            BaseProduct,
-            ServerComputedProductFields | RequiredCreateProductFields
-        >
-    > & {
-        custom_fields?: Array<Omit<ProductCustomField, 'id'>>;
-        bulk_pricing_rules?: Array<Omit<ProductBulkPricingRule, 'id'>>;
-        images?: Array<{
+export type CreateProductPayload = Pick<BaseProduct, RequiredCreateProductFields> &
+    Partial<Omit<BaseProduct, ServerComputedProductFields | RequiredCreateProductFields>> & {
+        custom_fields?: Omit<ProductCustomField, 'id'>[];
+        bulk_pricing_rules?: Omit<ProductBulkPricingRule, 'id'>[];
+        images?: {
             image_file?: string;
             image_url?: string;
             is_thumbnail?: boolean;
             sort_order?: number;
             description?: string;
-        }>;
-        videos?: Array<Omit<ProductVideo, 'id' | 'product_id' | 'length'>>;
+        }[];
+        videos?: Omit<ProductVideo, 'id' | 'product_id' | 'length'>[];
     };
 
 export interface BcCreateProductResponse {
@@ -250,11 +231,8 @@ export interface BcCreateProductResponse {
  * Narrows to Pick<BaseProduct, F[number]> when include_fields is provided;
  * otherwise returns the full BaseProduct.
  */
-export type CreateProductReturnType<
-    F extends readonly BaseProductField[] | undefined = undefined,
-> = F extends readonly BaseProductField[]
-    ? Pick<BaseProduct, F[number]>
-    : BaseProduct;
+export type CreateProductReturnType<F extends readonly BaseProductField[] | undefined = undefined> =
+    F extends readonly BaseProductField[] ? Pick<BaseProduct, F[number]> : BaseProduct;
 
 // ---------------------------------------------------------------------------
 // Update product
@@ -264,19 +242,17 @@ export type CreateProductReturnType<
  * Payload for PUT /v3/catalog/products/{productId}.
  * All fields are optional. Server-computed fields are excluded.
  */
-export type UpdateProductPayload = Partial<
-    Omit<BaseProduct, ServerComputedProductFields>
-> & {
-    custom_fields?: Array<Omit<ProductCustomField, 'id'>>;
-    bulk_pricing_rules?: Array<Omit<ProductBulkPricingRule, 'id'>>;
-    images?: Array<{
+export type UpdateProductPayload = Partial<Omit<BaseProduct, ServerComputedProductFields>> & {
+    custom_fields?: Omit<ProductCustomField, 'id'>[];
+    bulk_pricing_rules?: Omit<ProductBulkPricingRule, 'id'>[];
+    images?: {
         image_file?: string;
         image_url?: string;
         is_thumbnail?: boolean;
         sort_order?: number;
         description?: string;
-    }>;
-    videos?: Array<Omit<ProductVideo, 'id' | 'product_id' | 'length'>>;
+    }[];
+    videos?: Omit<ProductVideo, 'id' | 'product_id' | 'length'>[];
 };
 
 export interface BcUpdateProductResponse {
@@ -286,7 +262,5 @@ export interface BcUpdateProductResponse {
 export type UpdateProductReturnType<
     T extends ProductIncludes,
     F extends readonly BaseProductField[] | undefined = undefined,
-> = (F extends readonly BaseProductField[]
-    ? Pick<BaseProduct, F[number]>
-    : BaseProduct) &
+> = (F extends readonly BaseProductField[] ? Pick<BaseProduct, F[number]> : BaseProduct) &
     IncludeExpansion<T>;
