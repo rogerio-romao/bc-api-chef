@@ -202,7 +202,9 @@ describe('query param serialization', () => {
             expect(url.searchParams.get('is_visible')).toBe('true');
             expect(url.searchParams.get('sort')).toBe('price');
             expect(url.searchParams.get('direction')).toBe('desc');
+            // oxlint-disable-next-line vitest/max-expects
             expect(url.searchParams.get('include_fields')).toBe('id,name,price');
+            // oxlint-disable-next-line vitest/max-expects
             expect(url.searchParams.get('include')).toBe('custom_fields,images');
         });
     });

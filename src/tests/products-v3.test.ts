@@ -20,7 +20,7 @@ function getCallUrl(callIndex: number): URL {
     if (!call) {
         throw new Error(`No mock call at index ${callIndex}`);
     }
-    const urlArg: unknown = call.at(0);
+    const urlArg: unknown = call[0];
     if (typeof urlArg !== 'string') {
         throw new TypeError(`Call ${callIndex} arg 0 is not a string`);
     }
@@ -356,6 +356,12 @@ describe('ProductsV3 class', () => {
         it('appends includes to the URL', async () => {
             await products.getProduct(42, { includes: { variants: true } });
             expect(getCallUrl(0).searchParams.get('include')).toBe('variants');
+        });
+
+        it('uses the GET method (or default)', async () => {
+            await products.getProduct(42);
+            const { method } = getCallOptions(0);
+            expect([undefined, 'GET']).toContain(method);
         });
 
         it('returns the error result immediately on failure', async () => {

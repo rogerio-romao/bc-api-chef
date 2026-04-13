@@ -22,6 +22,7 @@ export default defineConfig({
                     globals: true,
                     include: ['src/tests/**/*.test.ts'],
                     name: 'unit',
+                    testTimeout: 1000,
                 },
             },
             {
@@ -30,6 +31,7 @@ export default defineConfig({
                     globals: true,
                     include: ['src/tests/integration/**/*.test.ts'],
                     name: 'integration',
+                    testTimeout: 5000,
                 },
             },
         ],

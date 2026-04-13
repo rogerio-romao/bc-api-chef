@@ -21,7 +21,7 @@ const hasCredentials = STORE_HASH.length > 0 && ACCESS_TOKEN.length > 0;
 // [Sample] Smith Journal 13 at my Bc Dev Sandbox store
 const TEST_PRODUCT_ID = 111;
 
-vi.setConfig({ testTimeout: 3000 });
+vi.setConfig({ testTimeout: 5000 });
 
 describe.runIf(hasCredentials)('Products API — integration', () => {
     const client = new BcApiChef(STORE_HASH, ACCESS_TOKEN);
@@ -220,7 +220,6 @@ describe.runIf(hasCredentials)('Products API — write integration', () => {
             const deleteResult = await client.v3().products().deleteProduct(id);
 
             assertOk(deleteResult);
-            expect(deleteResult.ok).toBe(true);
             expect(deleteResult.data).toBeNull();
 
             // Confirm the product is truly gone server-side

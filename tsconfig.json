@@ -21,6 +21,6 @@
         "paths": {
             "@/*": ["./src/*"]
         },
-        "types": ["node", "vitest/globals"] // include types for Node.js and Vitest
+        "types": ["vitest/globals"] // include types for Node.js and Vitest
     }
 }

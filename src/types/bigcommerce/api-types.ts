@@ -201,6 +201,20 @@ type ServerComputedProductFields =
 
 type RequiredCreateProductFields = 'name' | 'type' | 'weight' | 'price';
 
+export type ProductCustomFieldsPayload = Omit<ProductCustomField, 'id'>[];
+
+export type ProductBulkPricingRulesPayload = Omit<ProductBulkPricingRule, 'id'>[];
+
+export type ProductImagePayload = {
+    image_file?: string;
+    image_url?: string;
+    is_thumbnail?: boolean;
+    sort_order?: number;
+    description?: string;
+}[];
+
+export type ProductVideoPayload = Omit<ProductVideo, 'id' | 'product_id' | 'length'>[];
+
 /**
  * Payload for POST /v3/catalog/products.
  * Required: name, type, weight, price (per BigCommerce API spec).
@@ -210,16 +224,10 @@ type RequiredCreateProductFields = 'name' | 'type' | 'weight' | 'price';
  */
 export type CreateProductPayload = Pick<BaseProduct, RequiredCreateProductFields> &
     Partial<Omit<BaseProduct, ServerComputedProductFields | RequiredCreateProductFields>> & {
-        custom_fields?: Omit<ProductCustomField, 'id'>[];
-        bulk_pricing_rules?: Omit<ProductBulkPricingRule, 'id'>[];
-        images?: {
-            image_file?: string;
-            image_url?: string;
-            is_thumbnail?: boolean;
-            sort_order?: number;
-            description?: string;
-        }[];
-        videos?: Omit<ProductVideo, 'id' | 'product_id' | 'length'>[];
+        custom_fields?: ProductCustomFieldsPayload;
+        bulk_pricing_rules?: ProductBulkPricingRulesPayload;
+        images?: ProductImagePayload;
+        videos?: ProductVideoPayload;
     };
 
 export interface BcCreateProductResponse {
@@ -243,16 +251,10 @@ export type CreateProductReturnType<F extends readonly BaseProductField[] | unde
  * All fields are optional. Server-computed fields are excluded.
  */
 export type UpdateProductPayload = Partial<Omit<BaseProduct, ServerComputedProductFields>> & {
-    custom_fields?: Omit<ProductCustomField, 'id'>[];
-    bulk_pricing_rules?: Omit<ProductBulkPricingRule, 'id'>[];
-    images?: {
-        image_file?: string;
-        image_url?: string;
-        is_thumbnail?: boolean;
-        sort_order?: number;
-        description?: string;
-    }[];
-    videos?: Omit<ProductVideo, 'id' | 'product_id' | 'length'>[];
+    custom_fields?: ProductCustomFieldsPayload;
+    bulk_pricing_rules?: ProductBulkPricingRulesPayload;
+    images?: ProductImagePayload;
+    videos?: ProductVideoPayload;
 };
 
 export interface BcUpdateProductResponse {

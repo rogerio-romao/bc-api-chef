@@ -1,4 +1,7 @@
 node_modules
 dist
 .env
-src/scratchpad.ts
+node_modules
+dist
+.env
+scratchpad.ts

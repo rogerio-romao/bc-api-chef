@@ -18,17 +18,17 @@
         "perf": "warn",
         "restriction": "warn",
         "style": "warn",
-        "suspicious": "warn"
+        "suspicious": "error"
     },
     "rules": {
         "eslint/capitalized-comments": "off",
-        "eslint/complexity": ["warn", { "max": 30 }],
+        "eslint/complexity": ["warn", { "max": 15 }],
         "eslint/func-style": ["warn", "declaration", { "allowArrowFunctions": true }],
         "eslint/id-length": "off",
         "eslint/init-declarations": "off",
-        "eslint/max-lines-per-function": ["warn", { "max": 150 }],
+        "eslint/max-lines-per-function": ["warn", { "max": 100 }],
         "eslint/max-params": ["warn", { "max": 4 }],
-        "eslint/max-statements": ["warn", { "max": 15 }],
+        "eslint/max-statements": ["warn", { "max": 24 }],
         "eslint/no-await-in-loop": "off",
         "eslint/no-continue": "off",
         "eslint/no-duplicate-imports": ["warn", { "allowSeparateTypeImports": true }],
@@ -57,7 +57,7 @@
         "vitest/prefer-to-be-falsy": "off",
         "vitest/prefer-called-times": "off",
         "vitest/require-mock-type-parameters": "off",
-        "vitest/max-expects": ["warn", { "max": 8 }],
+        "vitest/max-expects": ["warn", { "max": 5 }],
         "vitest/no-hooks": "off",
         "vitest/consistent-test-it": ["warn", { "fn": "it", "withinDescribe": "it" }]
     },
