@@ -1,11 +1,21 @@
-import { describe, expect, it } from 'vitest';
+import BcApiChef from '@/BcApiChef.ts';
+import ProductsV3 from '@/v3Api/Products/Products';
+import V3Api from '@/v3Api/V3Api.ts';
 
-import BcApiChef from '../BcApiChef.ts';
-import V3Api from '../v3Api/V3Api.ts';
-import ProductsV3 from '../v3Api/Products/ProductsV3.ts';
+import { getCallUrl, makeProductsPageResponse } from './helpers';
+
+const mockTchef = vi.hoisted(() => vi.fn());
+vi.mock(import('tchef'), () => ({
+    default: mockTchef,
+}));
 
 describe('BcApiChef builder chain', () => {
     const client = new BcApiChef('test-hash', 'test-token');
+
+    beforeEach(() => {
+        mockTchef.mockReset();
+        mockTchef.mockResolvedValue(makeProductsPageResponse());
+    });
 
     it('v3() returns a V3Api instance', () => {
         expect(client.v3()).toBeInstanceOf(V3Api);
@@ -15,10 +25,11 @@ describe('BcApiChef builder chain', () => {
         expect(client.v3().products()).toBeInstanceOf(ProductsV3);
     });
 
-    it('builds the correct base URL for the store', () => {
-        // The base URL should include the store hash
-        // We verify indirectly by checking the products instance is created
-        // without throwing — the URL is private, so we test behaviour not internals
-        expect(() => client.v3().products()).not.toThrow();
+    it('builds the correct base URL for the store', async () => {
+        await client.v3().products().getAllProducts();
+
+        expect(mockTchef).toHaveBeenCalledOnce();
+        expect(getCallUrl(mockTchef).origin).toBe('https://api.bigcommerce.com');
+        expect(getCallUrl(mockTchef).pathname).toBe('/stores/test-hash/v3/catalog/products');
     });
 });

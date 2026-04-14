@@ -1,3 +1,4 @@
+import { fileURLToPath } from 'node:url';
 import { defineConfig } from 'vitest/config';
 
 // Load .env into process.env so integration tests can read STORE_HASH / ACCESS_TOKEN.
@@ -9,22 +10,28 @@ try {
     // .env not present — integration tests will be skipped.
 }
 
+const alias = { '@': fileURLToPath(new URL('./src', import.meta.url)) };
+
 export default defineConfig({
     test: {
         projects: [
             {
-                extends: true,
+                resolve: { alias },
                 test: {
-                    name: 'unit',
-                    include: ['src/tests/**/*.test.ts'],
                     exclude: ['src/tests/integration/**'],
+                    globals: true,
+                    include: ['src/tests/**/*.test.ts'],
+                    name: { color: 'cyan', label: 'unit' },
+                    testTimeout: 1000,
                 },
             },
             {
-                extends: true,
+                resolve: { alias },
                 test: {
-                    name: 'integration',
+                    globals: true,
                     include: ['src/tests/integration/**/*.test.ts'],
+                    name: { color: 'magenta', label: 'integration' },
+                    testTimeout: 5000,
                 },
             },
         ],

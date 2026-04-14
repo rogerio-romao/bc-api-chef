@@ -2,20 +2,20 @@ export { default as BcApiChef } from './BcApiChef.ts';
 
 export type {
     ApiProductQuery,
-    ProductIncludes,
+    BcGetProductsResponse,
     GetProductsOptions,
     GetProductsReturnType,
-    BcGetProductsResponse,
-} from './types/bigcommerce/api-types.ts';
+    ProductIncludes,
+} from './types/api-types.ts';
 
 export type {
     BaseProduct,
     FullProduct,
-    ProductVariant,
-    ProductImage,
-    ProductCustomField,
     ProductBulkPricingRule,
+    ProductCustomField,
+    ProductImage,
     ProductModifier,
     ProductOption,
+    ProductVariant,
     ProductVideo,
-} from './types/bigcommerce/product-types.ts';
+} from './types/product-types.ts';

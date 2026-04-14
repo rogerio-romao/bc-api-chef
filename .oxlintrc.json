@@ -1,0 +1,72 @@
+{
+    "$schema": "./node_modules/oxlint/configuration_schema.json",
+    "plugins": [
+        "eslint",
+        "import",
+        "jsdoc",
+        "node",
+        "oxc",
+        "promise",
+        "typescript",
+        "unicorn",
+        "vitest"
+    ],
+    "categories": {
+        "correctness": "error",
+        "nursery": "warn",
+        "pedantic": "warn",
+        "perf": "warn",
+        "restriction": "warn",
+        "style": "warn",
+        "suspicious": "error"
+    },
+    "rules": {
+        "eslint/capitalized-comments": "off",
+        "eslint/complexity": ["warn", { "max": 18 }],
+        "eslint/func-style": ["warn", "declaration", { "allowArrowFunctions": true }],
+        "eslint/id-length": "off",
+        "eslint/init-declarations": "off",
+        "eslint/max-lines-per-function": ["warn", { "max": 100 }],
+        "eslint/max-params": ["warn", { "max": 4 }],
+        "eslint/max-statements": ["warn", { "max": 24 }],
+        "eslint/no-await-in-loop": "off",
+        "eslint/no-continue": "off",
+        "eslint/no-duplicate-imports": ["warn", { "allowSeparateTypeImports": true }],
+        "eslint/no-magic-numbers": "off",
+        "eslint/no-ternary": "off",
+        "eslint/no-undefined": "off",
+        "eslint/prefer-destructuring": ["warn", { "object": true, "array": false }],
+        "eslint/sort-imports": "off",
+
+        "import/group-exports": "off",
+        "import/no-nodejs-modules": "off",
+        "import/no-default-export": "off",
+        "import/no-named-export": "off",
+        "import/exports-last": "off",
+
+        "oxc/no-async-await": "off",
+        "oxc/no-optional-chaining": "off",
+        "oxc/no-rest-spread-properties": "off",
+
+        "unicorn/filename-case": "off",
+        "unicorn/no-null": "off",
+        "unicorn/relative-url-style": ["warn", "always"],
+
+        "vitest/prefer-lowercase-title": "off",
+        "vitest/prefer-to-be-truthy": "off",
+        "vitest/prefer-to-be-falsy": "off",
+        "vitest/prefer-called-times": "off",
+        "vitest/require-mock-type-parameters": "off",
+        "vitest/require-test-timeout": "off",
+        "vitest/max-expects": ["warn", { "max": 5 }],
+        "vitest/no-hooks": "off",
+        "vitest/consistent-test-it": ["warn", { "fn": "it", "withinDescribe": "it" }],
+
+        "jsdoc/require-param-type": "off"
+    },
+    "env": {
+        "builtin": true,
+        "node": true,
+        "vitest": true
+    }
+}

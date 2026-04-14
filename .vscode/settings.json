@@ -1,3 +1,4 @@
 {
-    "eslint.useFlatConfig": true
+    "oxc.enable": true,
+    "editor.defaultFormatter": "oxc.oxc-vscode"
 }
