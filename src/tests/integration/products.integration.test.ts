@@ -14,7 +14,7 @@
 import BcApiChef from '@/BcApiChef.ts';
 import { ACCESS_TOKEN, STORE_HASH } from '@/config.ts';
 import { assertOk } from '@/tests/helpers.ts';
-import { MIN_LIMIT } from '@/v3Api/constants.ts';
+import { PER_PAGE_MIN } from '@/v3Api/constants.ts';
 
 const hasCredentials = STORE_HASH.length > 0 && ACCESS_TOKEN.length > 0;
 
@@ -78,12 +78,12 @@ describe.runIf(hasCredentials)('Products API — integration', () => {
         const result = await client
             .v3()
             .products()
-            .getAllProducts({ query: { limit: MIN_LIMIT } });
+            .getAllProducts({ query: { limit: PER_PAGE_MIN } });
 
         assertOk(result);
 
         // More than one page worth means pagination actually ran
-        expect(result.data.length).toBeGreaterThan(MIN_LIMIT);
+        expect(result.data.length).toBeGreaterThan(PER_PAGE_MIN);
     });
 
     it('filters by id:in correctly', async () => {
@@ -146,21 +146,25 @@ describe.runIf(hasCredentials)('Products API — write integration', () => {
             createdIds.push(result.data.id);
         });
 
-        it('creates a product and narrows response via include_fields', async () => {
+        it('creates a product with more fields', async () => {
             const name = `bc-api-chef integration ${suffix}-2`;
             const result = await client
                 .v3()
                 .products()
-                .createProduct(
-                    {
-                        description: 'integration test description',
-                        name,
-                        price: 19.99,
-                        type: 'physical',
-                        weight: 1.5,
-                    },
-                    { query: { include_fields: ['id', 'name'] as const } },
-                );
+                .createProduct({
+                    custom_fields: [
+                        {
+                            name: 'Material',
+                            value: 'Cotton',
+                        },
+                    ],
+                    description: 'integration test description',
+                    inventory_level: 100,
+                    name,
+                    price: 19.99,
+                    type: 'physical',
+                    weight: 1.5,
+                });
 
             assertOk(result);
 

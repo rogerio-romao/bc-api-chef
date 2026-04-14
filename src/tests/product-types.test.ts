@@ -1,7 +1,6 @@
 import type {
     ApiProductQuery,
     CreateProductPayload,
-    CreateProductReturnType,
     GetProductsReturnType,
     ProductIncludes,
     ProductSortField,
@@ -174,23 +173,6 @@ describe('CreateProductPayload type', () => {
             weight: 1.5,
         };
         expect(payload).toBeDefined();
-    });
-});
-
-describe('CreateProductReturnType type', () => {
-    it('returns BaseProduct when no include_fields provided', () => {
-        expectTypeOf<CreateProductReturnType>().toHaveProperty('id');
-        expectTypeOf<CreateProductReturnType>().toHaveProperty('name');
-        expectTypeOf<CreateProductReturnType>().toHaveProperty('sku');
-        expectTypeOf<CreateProductReturnType>().toHaveProperty('price');
-    });
-
-    it('narrows to Pick<BaseProduct, F[number]> when include_fields is provided', () => {
-        type Narrowed = CreateProductReturnType<readonly ['id', 'name']>;
-        expectTypeOf<Narrowed>().toHaveProperty('id');
-        expectTypeOf<Narrowed>().toHaveProperty('name');
-        expectTypeOf<Narrowed>().not.toHaveProperty('sku');
-        expectTypeOf<Narrowed>().not.toHaveProperty('price');
     });
 });
 

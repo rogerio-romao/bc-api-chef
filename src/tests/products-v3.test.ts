@@ -1,6 +1,6 @@
 // oxlint-disable max-lines-per-function
 
-import { DEFAULT_LIMIT, MAX_LIMIT, MIN_LIMIT } from '@/v3Api/constants.ts';
+import { PER_PAGE_DEFAULT, PER_PAGE_MAX, PER_PAGE_MIN } from '@/v3Api/constants.ts';
 import ProductsV3 from '@/v3Api/Products/Products';
 
 import { assertErr, assertOk } from './helpers';
@@ -132,21 +132,33 @@ describe('ProductsV3 class', () => {
             expect(getCallUrl(2).searchParams.get('page')).toBe('3');
         });
 
-        it('starts from the user-supplied page and uses the user-supplied limit', async () => {
-            mockTchef
-                .mockResolvedValueOnce(makePageResponse([{ id: 2 }], 2, 3))
-                .mockResolvedValueOnce(makePageResponse([{ id: 3 }], 3, 3));
+        it('fetches only the user-supplied page and stops', async () => {
+            mockTchef.mockResolvedValueOnce(makePageResponse([{ id: 2 }], 2, 3));
 
             const result = await products.getAllProducts({
                 query: { limit: 50, page: 2 },
             });
 
             assertOk(result);
-            expect(result.data).toHaveLength(2);
+            expect(result.data).toHaveLength(1);
+            expect(mockTchef).toHaveBeenCalledOnce();
             expect(getCallUrl(0).searchParams.getAll('page')).toStrictEqual(['2']);
             expect(getCallUrl(0).searchParams.getAll('limit')).toStrictEqual(['50']);
-            expect(getCallUrl(1).searchParams.getAll('page')).toStrictEqual(['3']);
-            expect(getCallUrl(1).searchParams.getAll('limit')).toStrictEqual(['50']);
+        });
+
+        it('walks all pages when only limit is supplied (no page)', async () => {
+            mockTchef
+                .mockResolvedValueOnce(makePageResponse([{ id: 1 }], 1, 3))
+                .mockResolvedValueOnce(makePageResponse([{ id: 2 }], 2, 3))
+                .mockResolvedValueOnce(makePageResponse([{ id: 3 }], 3, 3));
+
+            const result = await products.getAllProducts({
+                query: { limit: 50 },
+            });
+
+            assertOk(result);
+            expect(result.data).toHaveLength(3);
+            expect(mockTchef).toHaveBeenCalledTimes(3);
         });
 
         it('returns the error result immediately when a page fetch fails', async () => {
@@ -488,16 +500,6 @@ describe('ProductsV3 class', () => {
 
             const body: unknown = JSON.parse(getCallOptions(0).body as string);
             expect(body).toStrictEqual(fullPayload);
-        });
-
-        it('appends include_fields to the URL when provided', async () => {
-            await products.createProduct(minPayload, {
-                query: { include_fields: ['id', 'name'] as const },
-            });
-
-            const url = getCallUrl(0);
-            const includeFields = url.searchParams.get('include_fields');
-            expect(includeFields).toBe('id,name');
         });
 
         it('returns the error result immediately on failure', async () => {
@@ -899,14 +901,14 @@ describe('ProductsV3 class', () => {
             mockTchef.mockResolvedValue(makePageResponse([], 1, 1));
         });
 
-        it(`clamps limit above ${MAX_LIMIT} down to ${MAX_LIMIT}`, async () => {
+        it(`clamps limit above ${PER_PAGE_MAX} down to ${PER_PAGE_MAX}`, async () => {
             await products.getAllProducts({ query: { limit: 500 } });
-            expect(getCallUrl(0).searchParams.get('limit')).toBe(`${MAX_LIMIT}`);
+            expect(getCallUrl(0).searchParams.get('limit')).toBe(`${PER_PAGE_MAX}`);
         });
 
-        it(`clamps limit below ${MIN_LIMIT} up to ${MIN_LIMIT}`, async () => {
+        it(`clamps limit below ${PER_PAGE_MIN} up to ${PER_PAGE_MIN}`, async () => {
             await products.getAllProducts({ query: { limit: 1 } });
-            expect(getCallUrl(0).searchParams.get('limit')).toBe(`${MIN_LIMIT}`);
+            expect(getCallUrl(0).searchParams.get('limit')).toBe(`${PER_PAGE_MIN}`);
         });
 
         it('passes through a limit within the valid range unchanged', async () => {
@@ -914,19 +916,19 @@ describe('ProductsV3 class', () => {
             expect(getCallUrl(0).searchParams.get('limit')).toBe('100');
         });
 
-        it(`uses ${DEFAULT_LIMIT} as the default when no limit is provided`, async () => {
+        it(`uses ${PER_PAGE_DEFAULT} as the default when no limit is provided`, async () => {
             await products.getAllProducts();
-            expect(getCallUrl(0).searchParams.get('limit')).toBe(`${DEFAULT_LIMIT}`);
+            expect(getCallUrl(0).searchParams.get('limit')).toBe(`${PER_PAGE_DEFAULT}`);
         });
 
-        it(`passes through limit of exactly ${MIN_LIMIT} (lower boundary) unchanged`, async () => {
-            await products.getAllProducts({ query: { limit: MIN_LIMIT } });
-            expect(getCallUrl(0).searchParams.get('limit')).toBe(`${MIN_LIMIT}`);
+        it(`passes through limit of exactly ${PER_PAGE_MIN} (lower boundary) unchanged`, async () => {
+            await products.getAllProducts({ query: { limit: PER_PAGE_MIN } });
+            expect(getCallUrl(0).searchParams.get('limit')).toBe(`${PER_PAGE_MIN}`);
         });
 
-        it(`passes through limit of exactly ${MAX_LIMIT} (upper boundary) unchanged`, async () => {
-            await products.getAllProducts({ query: { limit: MAX_LIMIT } });
-            expect(getCallUrl(0).searchParams.get('limit')).toBe(`${MAX_LIMIT}`);
+        it(`passes through limit of exactly ${PER_PAGE_MAX} (upper boundary) unchanged`, async () => {
+            await products.getAllProducts({ query: { limit: PER_PAGE_MAX } });
+            expect(getCallUrl(0).searchParams.get('limit')).toBe(`${PER_PAGE_MAX}`);
         });
     });
 });

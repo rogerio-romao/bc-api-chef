@@ -15,6 +15,7 @@
             ["value-parent", "value-sibling", "value-index"],
             { "newlinesBetween": true },
             "type-import",
+            { "newlinesBetween": true },
             "type-internal",
             ["type-parent", "type-sibling", "type-index"],
             { "newlinesBetween": true },

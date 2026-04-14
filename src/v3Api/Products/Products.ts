@@ -2,9 +2,15 @@
 
 import tchef from 'tchef';
 
-import { DEFAULT_LIMIT, DEFAULT_START_PAGE, MAX_LIMIT, MIN_LIMIT } from '@/v3Api/constants.ts';
+import {
+    DEFAULT_START_PAGE,
+    PER_PAGE_DEFAULT,
+    PER_PAGE_MAX,
+    PER_PAGE_MIN,
+} from '@/v3Api/constants.ts';
 
 import type { TchefResult } from 'tchef';
+
 import type {
     ApiProductQuery,
     BcApiChefOptions,
@@ -12,20 +18,15 @@ import type {
     BcGetProductResponse,
     BcGetProductsResponse,
     BcUpdateProductResponse,
+    CommonProductValidationPayload,
     CreateProductPayload,
-    CreateProductReturnType,
     GetProductReturnType,
     GetProductsReturnType,
-    ProductCustomFieldsPayload,
     ProductIncludes,
     UpdateProductPayload,
     UpdateProductReturnType,
 } from '@/types/api-types';
-import type { BaseProduct, BaseProductField } from '@/types/product-types';
-
-type CommonProductValidationPayload = Partial<BaseProduct> & {
-    custom_fields?: ProductCustomFieldsPayload;
-};
+import type { BaseProduct, BaseProductField, FullProduct } from '@/types/product-types';
 
 /**
  * Wrapper around the BigCommerce V3 `catalog/products` endpoint.
@@ -47,29 +48,31 @@ type CommonProductValidationPayload = Partial<BaseProduct> & {
  * `include` and `include_fields` query params at compile time.
  */
 export default class ProductsV3 {
-    private readonly baseEndpoint = 'catalog/products';
-    private baseUrlWithVersion: string;
     private accessToken: string;
+    /** The `Required` here makes typescript happy without having to check for undefined values upstream constantly, but the values are still optional at runtime */
     private options: Required<BcApiChefOptions>;
+    private readonly productsApiPath = 'catalog/products';
+    private productApiUrl: string;
 
     /**
      * @param baseUrlWithVersion - Store base URL including the `/v3` version segment.
-     * @param accessToken        - BigCommerce API access token, sent as `X-Auth-Token`
-     *                             on every request.
-     * @param options            - Shared client options propagated from `BcApiChef`.
-     *                             `validate` controls client-side payload validation
-     *                             on mutating requests (`createProduct`,
-     *                             `updateProduct`) before they are sent to
-     *                             BigCommerce, and `retries` is reserved for retry
-     *                             support in downstream HTTP calls.
-     *
-     * @todo Gate `validateCreatePayload` / `validateUpdatePayload` on
-     *       `this.options.validate`; they currently run unconditionally.
+     * @param accessToken - BigCommerce API access token, sent as `X-Auth-Token`
+     * on every request.
+     * @param options - Shared client options propagated from `BcApiChef`.
+     * `validate` controls runtime response validation before results are returned
+     * to callers, and `retries` is reserved for retry support in downstream HTTP
+     * calls.
+     * @param options.validate - When `true`, runtime validation runs on responses
+     * received from BigCommerce before they are returned to the caller. Defaults to `false`.
+     * @param options.retries  - Number of times to retry a failed HTTP request before
+     * surfacing the error. Forwarded to the underlying `tchef` HTTP client.
+     * Defaults to `0` (no retries).
+     * @todo Gate runtime response validation on `this.options.validate`.
      * @todo Forward `this.options.retries` to every `tchef()` call in this class.
      */
     constructor(baseUrlWithVersion: string, accessToken: string, options: BcApiChefOptions = {}) {
-        this.baseUrlWithVersion = baseUrlWithVersion;
         this.accessToken = accessToken;
+        this.productApiUrl = `${baseUrlWithVersion}/${this.productsApiPath}`;
         this.options = {
             retries: 0,
             validate: false,
@@ -77,82 +80,20 @@ export default class ProductsV3 {
         };
     }
 
-    public async deleteProduct(productId: number): Promise<TchefResult<null>> {
-        const endpoint = `${this.baseEndpoint}/${productId}`;
-        const res = await tchef(`${this.baseUrlWithVersion}/${endpoint}`, {
-            headers: {
-                'X-Auth-Token': this.accessToken,
-            },
-            method: 'DELETE',
-            // BigCommerce returns an empty string on successful delete, so we use 'text' to avoid JSON parsing errors
-            responseFormat: 'text',
-        });
+    /* ===== Product Crud Methods ===== */
 
-        if (!res.ok) {
-            return res;
-        }
-
-        return { data: null, ok: true };
-    }
-
-    public async getAllProducts<
-        T extends ProductIncludes = Record<string, never>,
-        F extends readonly BaseProductField[] | undefined = undefined,
-    >(options?: {
-        includes?: T;
-        query?: Omit<ApiProductQuery, 'include_fields'> & {
-            include_fields?: F;
-        };
-    }): Promise<TchefResult<GetProductsReturnType<T, F>>> {
-        const query = options?.query as ApiProductQuery | undefined;
-        const includesString = ProductsV3.generateIncludes(options?.includes);
-        const queryString = ProductsV3.generateQueryString(query, includesString);
-        return (await this.getMultiPage(
-            this.baseEndpoint,
-            queryString,
-            query?.page ?? DEFAULT_START_PAGE,
-            ProductsV3.clampLimit(query?.limit ?? DEFAULT_LIMIT),
-        )) as TchefResult<GetProductsReturnType<T, F>>;
-    }
-
-    public async getProduct<
-        T extends ProductIncludes = Record<string, never>,
-        F extends readonly BaseProductField[] | undefined = undefined,
-    >(
-        id: number,
-        options?: {
-            includes?: T;
-            query?: Omit<ApiProductQuery, 'include_fields'> & {
-                include_fields?: F;
-            };
-        },
-    ): Promise<TchefResult<GetProductReturnType<T, F>>> {
-        const query = options?.query as ApiProductQuery | undefined;
-        const includesString = ProductsV3.generateIncludes(options?.includes);
-        const queryString = ProductsV3.generateQueryString(query, includesString);
-        const querySuffix = queryString ? `?${queryString}` : '';
-        const endpoint = `${this.baseEndpoint}/${id}${querySuffix}`;
-
-        return (await this.getProductById(endpoint)) as TchefResult<GetProductReturnType<T, F>>;
-    }
-
-    public async createProduct<F extends readonly BaseProductField[] | undefined = undefined>(
-        payload: CreateProductPayload,
-        options?: {
-            query?: { include_fields?: F };
-        },
-    ): Promise<TchefResult<CreateProductReturnType<F>>> {
-        const validationError = ProductsV3.validateCreatePayload(payload);
+    /** Creates a new product.
+     * @param payload Product data to create.
+     * @returns {Promise<TchefResult<BaseProduct>>} The created product or an error result.
+     */
+    public async createProduct(payload: CreateProductPayload): Promise<TchefResult<BaseProduct>> {
+        const validationError = ProductsV3.validateCreateProductPayload(payload);
         if (validationError !== null) {
+            // At least one validation error was found on the payload, meaning one of the fields is invalid as per BC docs (name too big, invalid number, etc.) — return an error result without making the API call
             return { error: validationError, ok: false, statusCode: 400 };
         }
 
-        const query = options?.query as ApiProductQuery | undefined;
-        const queryString = ProductsV3.generateQueryString(query, '');
-        const querySuffix = queryString ? `?${queryString}` : '';
-        const endpoint = `${this.baseEndpoint}${querySuffix}`;
-
-        const res = await tchef(`${this.baseUrlWithVersion}/${endpoint}`, {
+        const response = await tchef(`${this.productApiUrl}`, {
             body: JSON.stringify(payload),
             headers: {
                 Accept: 'application/json',
@@ -162,14 +103,95 @@ export default class ProductsV3 {
             method: 'POST',
         });
 
-        if (!res.ok) {
-            return res;
+        if (!response.ok) {
+            // response here contains error details from the Tchef API call, so we return it directly to the caller instead of a generic error message
+            return response;
         }
 
-        const { data } = res.data as BcCreateProductResponse;
-        return { data: data as CreateProductReturnType<F>, ok: true };
+        const { data } = response.data as BcCreateProductResponse;
+        return { data, ok: true };
     }
 
+    /** Deletes a product by ID.
+     * @param productId Product ID.
+     * @returns {Promise<TchefResult<null>>} `null` on success or an error result.
+     */
+    public async deleteProduct(productId: number): Promise<TchefResult<null>> {
+        const response = await tchef(`${this.productApiUrl}/${productId}`, {
+            headers: {
+                'X-Auth-Token': this.accessToken,
+            },
+            method: 'DELETE',
+            // BigCommerce returns an empty string on successful delete, so we use 'text' to avoid JSON parsing errors
+            responseFormat: 'text',
+        });
+
+        if (!response.ok) {
+            return response;
+        }
+
+        return { data: null, ok: true };
+    }
+
+    /** Fetches all products across every page, or a single page if `query.page` is supplied.
+     * @param options Query and include options.
+     * @returns {Promise<TchefResult<GetProductsReturnType<T, F>>>} The collected products or an error result.
+     */
+    public async getAllProducts<
+        T extends ProductIncludes = Record<string, never>,
+        F extends readonly BaseProductField[] | undefined = undefined,
+    >(options?: {
+        includes?: T;
+        // keep every other query param from ApiProductQuery as-is, but replace include_fields with the generic F so inference can flow
+        query?: Omit<ApiProductQuery, 'include_fields'> & {
+            include_fields?: F;
+        };
+    }): Promise<TchefResult<GetProductsReturnType<T, F>>> {
+        const query = options?.query as ApiProductQuery | undefined;
+        const includesString = ProductsV3.generateProductIncludes(options?.includes);
+        const queryString = ProductsV3.generateProductQueryString(query, includesString);
+        const querySuffix = queryString ? `?${queryString}` : '';
+        const url = `${this.productApiUrl}${querySuffix}`;
+
+        return (await this.getProductsMultiPage(
+            url,
+            ProductsV3.clampPerPageLimits(query?.limit ?? PER_PAGE_DEFAULT),
+            query?.page,
+        )) as TchefResult<GetProductsReturnType<T, F>>;
+    }
+
+    /** Fetches a single product by ID.
+     * @param productId Product ID.
+     * @param options Query and include options.
+     * @returns {Promise<TchefResult<GetProductReturnType<T, F>>>} The product or an error result.
+     */
+    public async getProduct<
+        T extends ProductIncludes = Record<string, never>,
+        F extends readonly BaseProductField[] | undefined = undefined,
+    >(
+        productId: number,
+        options?: {
+            includes?: T;
+            query?: Omit<ApiProductQuery, 'include_fields'> & {
+                include_fields?: F;
+            };
+        },
+    ): Promise<TchefResult<GetProductReturnType<T, F>>> {
+        const query = options?.query as ApiProductQuery | undefined;
+        const includesString = ProductsV3.generateProductIncludes(options?.includes);
+        const queryString = ProductsV3.generateProductQueryString(query, includesString);
+        const querySuffix = queryString ? `?${queryString}` : '';
+        const url = `${this.productApiUrl}/${productId}${querySuffix}`;
+
+        return (await this.getProductById(url)) as TchefResult<GetProductReturnType<T, F>>;
+    }
+
+    /** Updates an existing product by ID.
+     * @param productId Product ID.
+     * @param payload Product data to update.
+     * @param options Query and include options.
+     * @returns {Promise<TchefResult<UpdateProductReturnType<T, F>>>} The updated product or an error result.
+     */
     public async updateProduct<
         T extends ProductIncludes = Record<string, never>,
         F extends readonly BaseProductField[] | undefined = undefined,
@@ -181,18 +203,18 @@ export default class ProductsV3 {
             query?: { include_fields?: F };
         },
     ): Promise<TchefResult<UpdateProductReturnType<T, F>>> {
-        const validationError = ProductsV3.validateUpdatePayload(payload);
+        const validationError = ProductsV3.validateUpdateProductPayload(payload);
+
         if (validationError !== null) {
             return { error: validationError, ok: false, statusCode: 400 };
         }
 
         const query = options?.query as ApiProductQuery | undefined;
-        const includesString = ProductsV3.generateIncludes(options?.includes);
-        const queryString = ProductsV3.generateQueryString(query, includesString);
+        const includesString = ProductsV3.generateProductIncludes(options?.includes);
+        const queryString = ProductsV3.generateProductQueryString(query, includesString);
         const querySuffix = queryString ? `?${queryString}` : '';
-        const endpoint = `${this.baseEndpoint}/${productId}${querySuffix}`;
 
-        const res = await tchef(`${this.baseUrlWithVersion}/${endpoint}`, {
+        const response = await tchef(`${this.productApiUrl}/${productId}${querySuffix}`, {
             body: JSON.stringify(payload),
             headers: {
                 Accept: 'application/json',
@@ -202,57 +224,75 @@ export default class ProductsV3 {
             method: 'PUT',
         });
 
-        if (!res.ok) {
-            return res;
+        if (!response.ok) {
+            return response;
         }
 
-        const { data } = res.data as BcUpdateProductResponse;
+        const { data } = response.data as BcUpdateProductResponse;
         return { data: data as UpdateProductReturnType<T, F>, ok: true };
     }
 
-    private async getProductById(endpoint: string): Promise<TchefResult<unknown>> {
-        const res = await tchef(`${this.baseUrlWithVersion}/${endpoint}`, {
+    /* ===== Private Fetching Helper Methods ===== */
+
+    /** Fetches a single product with shared headers.
+     * @param url Request URL.
+     * @returns {Promise<TchefResult<FullProduct>>} The product or an error result.
+     */
+    private async getProductById(url: string): Promise<TchefResult<FullProduct>> {
+        const response = await tchef(url, {
             headers: {
                 Accept: 'application/json',
                 'X-Auth-Token': this.accessToken,
             },
         });
-        if (!res.ok) {
-            return res;
+
+        if (!response.ok) {
+            return response;
         }
-        const { data } = res.data as BcGetProductResponse;
+        const { data } = response.data as BcGetProductResponse;
         return { data, ok: true };
     }
 
-    public async getMultiPage(
-        endpoint: string,
-        queryString: string,
-        initialPage = DEFAULT_START_PAGE,
-        limit = DEFAULT_LIMIT,
-    ): Promise<TchefResult<unknown[]>> {
-        const results: unknown[] = [];
+    /** Fetches and merges paginated product results.
+     * @param url Base request URL.
+     * @param limit Page size.
+     * @param singlePage Optional single page number.
+     * @returns {Promise<TchefResult<FullProduct[]>>} The collected products or an error result.
+     */
+    private async getProductsMultiPage(
+        url: string,
+        limit = PER_PAGE_DEFAULT,
+        singlePage?: number,
+    ): Promise<TchefResult<FullProduct[]>> {
+        const results: FullProduct[] = [];
 
-        let page = initialPage;
+        let page = singlePage ?? DEFAULT_START_PAGE;
         let totalPages = 1;
 
-        do {
-            const querySuffix = queryString ? `&${queryString}` : '';
-            const url = `${this.baseUrlWithVersion}/${endpoint}?page=${page}&limit=${limit}${querySuffix}`;
+        const separator = url.includes('?') ? '&' : '?';
 
-            const res = await tchef(url, {
+        do {
+            const pagedUrl = `${url}${separator}page=${page}&limit=${limit}`;
+
+            const response = await tchef(pagedUrl, {
                 headers: {
                     Accept: 'application/json',
                     'X-Auth-Token': this.accessToken,
                 },
             });
 
-            if (!res.ok) {
-                return res;
+            if (!response.ok) {
+                return response;
             }
 
-            const { data, meta } = res.data as BcGetProductsResponse;
+            const { data, meta } = response.data as BcGetProductsResponse;
 
             results.push(...data);
+
+            if (singlePage !== undefined) {
+                return { data: results, ok: true };
+            }
+
             totalPages = meta.pagination.total_pages;
             page += 1;
         } while (page <= totalPages);
@@ -260,11 +300,21 @@ export default class ProductsV3 {
         return { data: results, ok: true };
     }
 
-    private static clampLimit(limit: number): number {
-        return Math.min(Math.max(limit, MIN_LIMIT), MAX_LIMIT);
+    /* ===== Static Helper Methods ===== */
+
+    /** Clamps page size to the supported range.
+     * @param limit Requested page size.
+     * @returns {number} The clamped page size.
+     */
+    private static clampPerPageLimits(limit: number): number {
+        return Math.min(Math.max(limit, PER_PAGE_MIN), PER_PAGE_MAX);
     }
 
-    private static generateIncludes(includes: ProductIncludes | undefined): string {
+    /** Serializes include flags into the API format.
+     * @param includes Include flags.
+     * @returns {string} A comma-separated include string.
+     */
+    private static generateProductIncludes(includes: ProductIncludes | undefined): string {
         if (!includes) {
             return '';
         }
@@ -275,7 +325,12 @@ export default class ProductsV3 {
             .join(',');
     }
 
-    private static generateQueryString(
+    /** Builds the query string for product requests.
+     * @param query Query params.
+     * @param includes Serialized include flags.
+     * @returns {string} The query string.
+     */
+    private static generateProductQueryString(
         query: ApiProductQuery | undefined,
         includes: string,
     ): string {
@@ -283,6 +338,7 @@ export default class ProductsV3 {
 
         if (query) {
             for (const [key, value] of Object.entries(query)) {
+                // We handle pagination params separately in getProductsMultiPage, so we skip them here to avoid conflicts. Every other param is added to the query string if it's defined.
                 if (value !== undefined && key !== 'page' && key !== 'limit') {
                     params.set(key, Array.isArray(value) ? value.join(',') : String(value));
                 }
@@ -296,67 +352,10 @@ export default class ProductsV3 {
         return params.toString();
     }
 
-    private static validateCreatePayload(payload: CreateProductPayload): string | null {
-        // name (required, minLength 1, maxLength 250)
-        if (payload.name.length === 0) {
-            return 'Product name must not be empty';
-        }
-        if (payload.name.length > 250) {
-            return 'Product name must not exceed 250 characters';
-        }
-
-        // price (required, minimum 0)
-        if (payload.price < 0) {
-            return 'price must be >= 0';
-        }
-
-        // weight (required, minimum 0, maximum 9999999999)
-        if (payload.weight < 0) {
-            return 'weight must be >= 0';
-        }
-        if (payload.weight > 9_999_999_999) {
-            return 'weight must be <= 9999999999';
-        }
-
-        const validationError = ProductsV3.validateCommonProductFields(payload);
-        if (validationError !== null) {
-            return validationError;
-        }
-
-        return null;
-    }
-
-    private static validateUpdatePayload(payload: UpdateProductPayload): string | null {
-        if (payload.name !== undefined) {
-            if (payload.name.length === 0) {
-                return 'Product name must not be empty';
-            }
-            if (payload.name.length > 250) {
-                return 'Product name must not exceed 250 characters';
-            }
-        }
-
-        if (payload.price !== undefined && payload.price < 0) {
-            return 'price must be >= 0';
-        }
-
-        if (payload.weight !== undefined) {
-            if (payload.weight < 0) {
-                return 'weight must be >= 0';
-            }
-            if (payload.weight > 9_999_999_999) {
-                return 'weight must be <= 9999999999';
-            }
-        }
-
-        const validationError = ProductsV3.validateCommonProductFields(payload);
-        if (validationError !== null) {
-            return validationError;
-        }
-
-        return null;
-    }
-
+    /** Validates fields shared by create and update payloads.
+     * @param payload Product data to validate.
+     * @returns {string | null} A validation error message, or `null` when valid.
+     */
     private static validateCommonProductFields(
         payload: CommonProductValidationPayload,
     ): string | null {
@@ -374,6 +373,7 @@ export default class ProductsV3 {
             [payload.preorder_message, 'preorder_message', 255],
             [payload.price_hidden_label, 'price_hidden_label', 200],
         ];
+
         for (const [value, field, max] of strChecks) {
             if (value !== undefined && value.length > max) {
                 return `${field} must not exceed ${max} characters`;
@@ -396,13 +396,16 @@ export default class ProductsV3 {
             [payload.order_quantity_minimum, 'order_quantity_minimum', 0, 1_000_000_000],
             [payload.order_quantity_maximum, 'order_quantity_maximum', 0, 1_000_000_000],
         ];
+
         for (const [value, field, min, max] of numChecks) {
             if (value === undefined) {
                 continue;
             }
+
             if (value < min) {
                 return `${field} must be >= ${min}`;
             }
+
             if (max !== undefined && value > max) {
                 return `${field} must be <= ${max}`;
             }
@@ -411,18 +414,93 @@ export default class ProductsV3 {
         if (payload.categories !== undefined && payload.categories.length > 1000) {
             return 'categories must not contain more than 1000 items';
         }
+
         if (payload.custom_fields !== undefined) {
             if (payload.custom_fields.length > 200) {
                 return 'custom_fields must not contain more than 200 items';
             }
+
             for (const [i, cf] of payload.custom_fields.entries()) {
                 if (cf.name.length === 0 || cf.name.length > 250) {
                     return `custom_fields[${i}].name must be between 1 and 250 characters`;
                 }
+
                 if (cf.value.length === 0 || cf.value.length > 250) {
                     return `custom_fields[${i}].value must be between 1 and 250 characters`;
                 }
             }
+        }
+
+        return null;
+    }
+
+    /** Validates the create payload.
+     * @param payload Product data to validate.
+     * @returns {string | null} A validation error message, or `null` when valid.
+     */
+    private static validateCreateProductPayload(payload: CreateProductPayload): string | null {
+        if (payload.name.length === 0) {
+            return 'Product name must not be empty';
+        }
+
+        if (payload.name.length > 250) {
+            return 'Product name must not exceed 250 characters';
+        }
+
+        if (payload.price < 0) {
+            return 'price must be >= 0';
+        }
+
+        if (payload.weight < 0) {
+            return 'weight must be >= 0';
+        }
+
+        if (payload.weight > 9_999_999_999) {
+            return 'weight must be <= 9999999999';
+        }
+
+        const validationError = ProductsV3.validateCommonProductFields(payload);
+
+        if (validationError !== null) {
+            return validationError;
+        }
+
+        return null;
+    }
+
+    /** Validates the update payload.
+     * @param payload Product data to validate.
+     * @returns {string | null} A validation error message, or `null` when valid.
+     */
+    private static validateUpdateProductPayload(payload: UpdateProductPayload): string | null {
+        if (payload.name !== undefined) {
+            if (payload.name.length === 0) {
+                return 'Product name must not be empty';
+            }
+
+            if (payload.name.length > 250) {
+                return 'Product name must not exceed 250 characters';
+            }
+        }
+
+        if (payload.price !== undefined && payload.price < 0) {
+            return 'price must be >= 0';
+        }
+
+        if (payload.weight !== undefined) {
+            if (payload.weight < 0) {
+                return 'weight must be >= 0';
+            }
+
+            if (payload.weight > 9_999_999_999) {
+                return 'weight must be <= 9999999999';
+            }
+        }
+
+        const validationError = ProductsV3.validateCommonProductFields(payload);
+
+        if (validationError !== null) {
+            return validationError;
         }
 
         return null;

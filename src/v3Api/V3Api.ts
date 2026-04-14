@@ -16,35 +16,47 @@ import type { BcApiChefOptions } from '@/types/api-types';
  * the package grows.
  */
 export default class V3Api {
-    private version = 'v3';
-    private baseUrl: string;
     private accessToken: string;
-    private options: Required<BcApiChefOptions>;
+    private baseUrl: string;
     private baseUrlWithVersion: string;
+    /** The `Required` here makes typescript happy without having to check for undefined values upstream constantly, but the values are still optional at runtime */
+    private options: Required<BcApiChefOptions>;
+    private version = 'v3';
 
     /**
-     * @param baseUrl     - Store base URL (`https://api.bigcommerce.com/stores/{hash}`),
-     *                      without the API version segment.
+     * @param baseUrl - Store base URL (`https://api.bigcommerce.com/stores/{hash}`),
+     * without the API version segment.
      * @param accessToken - BigCommerce API access token, forwarded to every request.
-     * @param options     - Shared client options propagated from `BcApiChef`.
-     *                      `validate` controls client-side payload validation on
-     *                      mutating requests and `retries` is reserved for retry
-     *                      support in downstream HTTP calls.
-     *
-     * @todo `validate` is not yet honoured by `ProductsV3` (validators always run).
+     * @param options - Shared client options propagated from `BcApiChef`.
+     * `validate` controls runtime response validation before results are returned
+     * to callers, and `retries` is reserved for retry support in downstream HTTP
+     * calls.
+     * @param options.validate - When `true`, runtime validation runs on responses
+     * received from BigCommerce before they are returned to the caller.
+     * Defaults to `false`.
+     * @param options.retries  - Number of times to retry a failed HTTP request before
+     * surfacing the error. Forwarded to the underlying `tchef` HTTP client.
+     * Defaults to `0` (no retries).
+     * @todo `validate` is not yet honoured by `ProductsV3`.
      * @todo `retries` is not yet forwarded to `tchef()` by `ProductsV3`.
      */
     constructor(baseUrl: string, accessToken: string, options: BcApiChefOptions = {}) {
-        this.baseUrl = baseUrl;
         this.accessToken = accessToken;
+        this.baseUrl = baseUrl;
+        this.baseUrlWithVersion = `${this.baseUrl}/${this.version}`;
         this.options = {
             retries: 0,
             validate: false,
             ...options,
         };
-        this.baseUrlWithVersion = `${this.baseUrl}/${this.version}`;
     }
 
+    /**
+     * Creates the Products V3 endpoint wrapper for this client.
+     * Each call returns a fresh {@link ProductsV3} instance that shares the same
+     * base URL, access token, and client options.
+     * @returns {ProductsV3} A new `ProductsV3` instance for catalog product operations.
+     */
     public products(): ProductsV3 {
         return new ProductsV3(this.baseUrlWithVersion, this.accessToken, this.options);
     }

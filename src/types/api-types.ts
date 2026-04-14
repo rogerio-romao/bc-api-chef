@@ -124,7 +124,9 @@ export interface ApiProductQuery {
     include_fields?: readonly BaseProductField[];
     exclude_fields?: readonly BaseProductField[];
 
-    // --- Sorting and pagination (managed by getMultiPage internally) ---
+    // --- Sorting and pagination ---
+    // Note: if `page` is supplied, only that page is returned. If omitted,
+    // getAllProducts walks every page until total_pages.
     sort?: ProductSortField;
     direction?: SortDirection;
     page?: number;
@@ -208,6 +210,10 @@ type RequiredCreateProductFields = 'name' | 'type' | 'weight' | 'price';
 
 export type ProductCustomFieldsPayload = Omit<ProductCustomField, 'id'>[];
 
+export type CommonProductValidationPayload = Partial<BaseProduct> & {
+    custom_fields?: ProductCustomFieldsPayload;
+};
+
 export type ProductBulkPricingRulesPayload = Omit<ProductBulkPricingRule, 'id'>[];
 
 export type ProductImagePayload = {
@@ -238,14 +244,6 @@ export type CreateProductPayload = Pick<BaseProduct, RequiredCreateProductFields
 export interface BcCreateProductResponse {
     data: BaseProduct;
 }
-
-/**
- * Resolves the return type of createProduct based on requested include_fields.
- * Narrows to Pick<BaseProduct, F[number]> when include_fields is provided;
- * otherwise returns the full BaseProduct.
- */
-export type CreateProductReturnType<F extends readonly BaseProductField[] | undefined = undefined> =
-    F extends readonly BaseProductField[] ? Pick<BaseProduct, F[number]> : BaseProduct;
 
 // ---------------------------------------------------------------------------
 // Update product
