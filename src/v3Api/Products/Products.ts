@@ -140,13 +140,20 @@ export default class ProductsV3 {
     public async getAllProducts<
         T extends ProductIncludes = Record<string, never>,
         F extends readonly BaseProductField[] | undefined = undefined,
+        E extends readonly BaseProductField[] | undefined = undefined,
     >(options?: {
         includes?: T;
-        // keep every other query param from ApiProductQuery as-is, but replace include_fields with the generic F so inference can flow
-        query?: Omit<ApiProductQuery, 'include_fields'> & {
-            include_fields?: F;
-        };
-    }): Promise<TchefResult<GetProductsReturnType<T, F>>> {
+        // BC returns 409 when both include_fields and exclude_fields are supplied, so we enforce mutual exclusion at the type level.
+        query?:
+            | (Omit<ApiProductQuery, 'include_fields' | 'exclude_fields'> & {
+                  include_fields?: F;
+                  exclude_fields?: never;
+              })
+            | (Omit<ApiProductQuery, 'include_fields' | 'exclude_fields'> & {
+                  include_fields?: never;
+                  exclude_fields?: E;
+              });
+    }): Promise<TchefResult<GetProductsReturnType<T, F, E>>> {
         const query = options?.query as ApiProductQuery | undefined;
         const includesString = ProductsV3.generateProductIncludes(options?.includes);
         const queryString = ProductsV3.generateProductQueryString(query, includesString);
@@ -157,7 +164,7 @@ export default class ProductsV3 {
             url,
             ProductsV3.clampPerPageLimits(query?.limit ?? PER_PAGE_DEFAULT),
             query?.page,
-        )) as TchefResult<GetProductsReturnType<T, F>>;
+        )) as TchefResult<GetProductsReturnType<T, F, E>>;
     }
 
     /** Fetches a single product by ID.
@@ -168,22 +175,29 @@ export default class ProductsV3 {
     public async getProduct<
         T extends ProductIncludes = Record<string, never>,
         F extends readonly BaseProductField[] | undefined = undefined,
+        E extends readonly BaseProductField[] | undefined = undefined,
     >(
         productId: number,
         options?: {
             includes?: T;
-            query?: Omit<ApiProductQuery, 'include_fields'> & {
-                include_fields?: F;
-            };
+            query?:
+                | (Omit<ApiProductQuery, 'include_fields' | 'exclude_fields'> & {
+                      include_fields?: F;
+                      exclude_fields?: never;
+                  })
+                | (Omit<ApiProductQuery, 'include_fields' | 'exclude_fields'> & {
+                      include_fields?: never;
+                      exclude_fields?: E;
+                  });
         },
-    ): Promise<TchefResult<GetProductReturnType<T, F>>> {
+    ): Promise<TchefResult<GetProductReturnType<T, F, E>>> {
         const query = options?.query as ApiProductQuery | undefined;
         const includesString = ProductsV3.generateProductIncludes(options?.includes);
         const queryString = ProductsV3.generateProductQueryString(query, includesString);
         const querySuffix = queryString ? `?${queryString}` : '';
         const url = `${this.productApiUrl}/${productId}${querySuffix}`;
 
-        return (await this.getProductById(url)) as TchefResult<GetProductReturnType<T, F>>;
+        return (await this.getProductById(url)) as TchefResult<GetProductReturnType<T, F, E>>;
     }
 
     /** Updates an existing product by ID.

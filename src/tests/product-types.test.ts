@@ -231,4 +231,27 @@ describe('GetProductsReturnType type', () => {
         expectTypeOf<Result[number]>().toHaveProperty('images');
         expectTypeOf<Result[number]>().not.toHaveProperty('sku');
     });
+
+    it('removes excluded fields when exclude_fields is provided', () => {
+        type Result = GetProductsReturnType<
+            Record<string, never>,
+            undefined,
+            readonly ['description', 'weight']
+        >;
+        expectTypeOf<Result[number]>().toHaveProperty('id');
+        expectTypeOf<Result[number]>().toHaveProperty('name');
+        expectTypeOf<Result[number]>().not.toHaveProperty('description');
+        expectTypeOf<Result[number]>().not.toHaveProperty('weight');
+    });
+
+    it('combines exclude_fields narrowing with sub-resource includes', () => {
+        type Result = GetProductsReturnType<
+            { variants: true },
+            undefined,
+            readonly ['description']
+        >;
+        expectTypeOf<Result[number]>().toHaveProperty('id');
+        expectTypeOf<Result[number]>().toHaveProperty('variants');
+        expectTypeOf<Result[number]>().not.toHaveProperty('description');
+    });
 });

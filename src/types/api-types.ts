@@ -11,10 +11,20 @@ import type {
     ProductVideo,
 } from './product-types';
 
-// ---------------------------------------------------------------------------
-// Includes
-// ---------------------------------------------------------------------------
+export interface BcApiChefOptions {
+    validate?: boolean;
+    retries?: number;
+}
 
+export interface GetProductsOptions {
+    includes?: ProductIncludes;
+    query?: ApiProductQuery;
+}
+
+/**
+ * Defines which sub-resources to include in product responses. Each key corresponds to an optional sub-resource array on the response product type.
+ * Note: include_fields (which controls which base product fields are returned) is intentionally not modelled here.
+ */
 export interface ProductIncludes {
     variants?: boolean;
     images?: boolean;
@@ -40,10 +50,6 @@ export type IncludeExpansion<T extends ProductIncludes> = (T['variants'] extends
     (T['options'] extends true ? { options: ProductOption[] } : object) &
     (T['videos'] extends true ? { videos: ProductVideo[] } : object);
 
-// ---------------------------------------------------------------------------
-// Sort / direction
-// ---------------------------------------------------------------------------
-
 export type ProductSortField =
     | 'id'
     | 'name'
@@ -57,12 +63,10 @@ export type ProductSortField =
 
 export type SortDirection = 'asc' | 'desc';
 
-// ---------------------------------------------------------------------------
-// Query parameters for GET /v3/catalog/products
-// ---------------------------------------------------------------------------
-
+/**
+ * Defines allowed query parameters for product listing endpoints. Each key corresponds to a supported filter or sort parameter. Some filters (e.g. `id:in`) allow multiple values.
+ */
 export interface ApiProductQuery {
-    // --- ID filters ---
     id?: number;
     'id:in'?: number[];
     'id:not_in'?: number[];
@@ -70,36 +74,24 @@ export interface ApiProductQuery {
     'id:max'?: number;
     'id:greater'?: number;
     'id:less'?: number;
-
-    // --- Name filters ---
     name?: string;
     'name:like'?: string;
-
-    // --- SKU filters ---
     sku?: string;
     'sku:in'?: string[];
-
-    // --- Other simple filters ---
     upc?: string;
     price?: number;
     weight?: number;
     condition?: BaseProduct['condition'];
     brand_id?: number;
-
-    // --- Date filters ---
     date_modified?: string;
     'date_modified:max'?: string;
     'date_modified:min'?: string;
     date_last_imported?: string;
     'date_last_imported:max'?: string;
     'date_last_imported:min'?: string;
-
-    // --- Boolean filters ---
     is_visible?: boolean;
     is_featured?: boolean;
     is_free_shipping?: boolean;
-
-    // --- Inventory filters ---
     inventory_level?: number;
     'inventory_level:in'?: number[];
     'inventory_level:not_in'?: number[];
@@ -109,8 +101,6 @@ export interface ApiProductQuery {
     'inventory_level:less'?: number;
     inventory_low_stock?: boolean;
     out_of_stock?: boolean;
-
-    // --- Other filters ---
     total_sold?: number;
     type?: BaseProduct['type'];
     categories?: number;
@@ -119,45 +109,40 @@ export interface ApiProductQuery {
     keyword_context?: 'shopper' | 'merchant';
     status?: number;
     availability?: BaseProduct['availability'];
-
-    // --- Field selection (type-safe union of BaseProduct field names) ---
     include_fields?: readonly BaseProductField[];
     exclude_fields?: readonly BaseProductField[];
-
-    // --- Sorting and pagination ---
-    // Note: if `page` is supplied, only that page is returned. If omitted,
-    // getAllProducts walks every page until total_pages.
     sort?: ProductSortField;
     direction?: SortDirection;
+    // Note: if `page` is supplied, only that page is returned. If omitted, getAllProducts walks every page until total_pages.
     page?: number;
     limit?: number;
 }
 
-// ---------------------------------------------------------------------------
-// Options and return types
-// ---------------------------------------------------------------------------
-
-export interface BcApiChefOptions {
-    validate?: boolean;
-    retries?: number;
-}
-
-export interface GetProductsOptions {
-    includes?: ProductIncludes;
-    query?: ApiProductQuery;
-}
+/**
+ * Applies Omit<BaseProduct, E[number]> for exclude_fields, with a guard that
+ * falls back to BaseProduct when inference widens E to the full field union
+ * (e.g. when a variable typed as BaseProductField[] is passed instead of a
+ * literal array).
+ */
+type ExcludeProductFields<E extends readonly BaseProductField[]> =
+    BaseProductField extends E[number] ? BaseProduct : Omit<BaseProduct, E[number]>;
 
 /**
- * Resolves the return type of getAllProducts based on requested includes and
- * include_fields. When include_fields is provided, the base product fields are
- * narrowed to only the requested ones via Pick. Sub-resources from includes are
- * always additive. exclude_fields is intentionally not modelled in the return
- * type (Omit with a generic array is fragile).
+ * Resolves the return type of getAllProducts based on requested includes,
+ * include_fields, and exclude_fields. When include_fields is provided, base
+ * fields are narrowed via Pick. When exclude_fields is provided, base fields
+ * are narrowed via Omit. The two are mutually exclusive — BC returns 409 when
+ * both are supplied. Sub-resources from includes are always additive.
  */
 export type GetProductsReturnType<
     T extends ProductIncludes,
     F extends readonly BaseProductField[] | undefined = undefined,
-> = ((F extends readonly BaseProductField[] ? Pick<BaseProduct, F[number]> : BaseProduct) &
+    E extends readonly BaseProductField[] | undefined = undefined,
+> = ((F extends readonly BaseProductField[]
+    ? Pick<BaseProduct, F[number]>
+    : E extends readonly BaseProductField[]
+      ? ExcludeProductFields<E>
+      : BaseProduct) &
     IncludeExpansion<T>)[];
 
 export interface BcGetProductsResponse {
@@ -181,16 +166,17 @@ export interface BcGetProductsResponse {
 export type GetProductReturnType<
     T extends ProductIncludes,
     F extends readonly BaseProductField[] | undefined = undefined,
-> = (F extends readonly BaseProductField[] ? Pick<BaseProduct, F[number]> : BaseProduct) &
+    E extends readonly BaseProductField[] | undefined = undefined,
+> = (F extends readonly BaseProductField[]
+    ? Pick<BaseProduct, F[number]>
+    : E extends readonly BaseProductField[]
+      ? ExcludeProductFields<E>
+      : BaseProduct) &
     IncludeExpansion<T>;
 
 export interface BcGetProductResponse {
     data: FullProduct;
 }
-
-// ---------------------------------------------------------------------------
-// Create product
-// ---------------------------------------------------------------------------
 
 type ServerComputedProductFields =
     | 'id'
@@ -245,10 +231,6 @@ export interface BcCreateProductResponse {
     data: BaseProduct;
 }
 
-// ---------------------------------------------------------------------------
-// Update product
-// ---------------------------------------------------------------------------
-
 /**
  * Payload for PUT /v3/catalog/products/{productId}.
  * All fields are optional. Server-computed fields are excluded.
@@ -267,5 +249,10 @@ export interface BcUpdateProductResponse {
 export type UpdateProductReturnType<
     T extends ProductIncludes,
     F extends readonly BaseProductField[] | undefined = undefined,
-> = (F extends readonly BaseProductField[] ? Pick<BaseProduct, F[number]> : BaseProduct) &
+    E extends readonly BaseProductField[] | undefined = undefined,
+> = (F extends readonly BaseProductField[]
+    ? Pick<BaseProduct, F[number]>
+    : E extends readonly BaseProductField[]
+      ? ExcludeProductFields<E>
+      : BaseProduct) &
     IncludeExpansion<T>;
