@@ -9,7 +9,6 @@ type ProductOptionsConfig =
       }
     | {
           type: 'radio-buttons' | 'rectangles' | 'dropdown' | 'swatch';
-          config: never;
       };
 
 interface ProductOptionsCommonFields {
@@ -22,7 +21,7 @@ interface ProductOptionsCommonFields {
         label: string;
         sort_order: number;
         is_default: boolean;
-        value_data: object | null;
+        value_data: Record<string, unknown> | null;
     }[];
 }
 

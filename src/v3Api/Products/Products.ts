@@ -117,6 +117,10 @@ export default class ProductsV3 {
      * @returns {Promise<TchefResult<null>>} `null` on success or an error result.
      */
     public async deleteProduct(productId: number): Promise<TchefResult<null>> {
+        if (!Number.isInteger(productId) || productId <= 0) {
+            return { error: 'Invalid productId', ok: false, statusCode: 400 };
+        }
+
         const response = await tchef(`${this.productApiUrl}/${productId}`, {
             headers: {
                 'X-Auth-Token': this.accessToken,
@@ -191,6 +195,10 @@ export default class ProductsV3 {
                   });
         },
     ): Promise<TchefResult<GetProductReturnType<T, F, E>>> {
+        if (!Number.isInteger(productId) || productId <= 0) {
+            return { error: 'Invalid productId', ok: false, statusCode: 400 };
+        }
+
         const query = options?.query as ApiProductQuery | undefined;
         const includesString = ProductsV3.generateProductIncludes(options?.includes);
         const queryString = ProductsV3.generateProductQueryString(query, includesString);

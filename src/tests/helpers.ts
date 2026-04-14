@@ -69,7 +69,7 @@ export function getCallHeaders(mockTchef: MockTchef, callIndex = 0): Record<stri
 
     const options = call[1] as MockTchefCallOptions;
 
-    if (!options.headers) {
+    if (!options || !options.headers) {
         throw new Error(`Call ${callIndex} has no headers`);
     }
 
@@ -90,7 +90,13 @@ export function getCallOptions(mockTchef: MockTchef, callIndex = 0): MockTchefCa
         throw new Error(`No mock call at index ${callIndex}`);
     }
 
-    return call[1] as MockTchefCallOptions;
+    const options = call[1] as MockTchefCallOptions | undefined;
+
+    if (!options) {
+        throw new Error(`Call ${callIndex} has no options`);
+    }
+
+    return options;
 }
 
 /**

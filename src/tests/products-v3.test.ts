@@ -45,6 +45,15 @@ describe('ProductsV3 class', () => {
             });
         });
 
+        it('returns a 400 error without calling the API when productId is not a positive integer', async () => {
+            const result = await products.getProduct(0);
+
+            assertErr(result);
+            expect(result.statusCode).toBe(400);
+            expect(result.error).toBe('Invalid productId');
+            expect(mockTchef).not.toHaveBeenCalled();
+        });
+
         it('makes exactly one HTTP call', async () => {
             await products.getProduct(42);
 
@@ -913,49 +922,59 @@ describe('ProductsV3 class', () => {
     });
 
     describe('deleteProduct', () => {
-        it('makes exactly one HTTP call', async () => {
+        beforeEach(() => {
             mockTchef.mockResolvedValue({ data: '', ok: true });
+        });
 
+        it('returns a 400 error without calling the API when productId is not a positive integer', async () => {
+            const result = await products.deleteProduct(0);
+
+            assertErr(result);
+            expect(result.statusCode).toBe(400);
+            expect(result.error).toBe('Invalid productId');
+            expect(mockTchef).not.toHaveBeenCalled();
+        });
+
+        it('returns a 400 error without calling the API when productId is not an integer', async () => {
+            const result = await products.deleteProduct(1.5);
+
+            assertErr(result);
+            expect(result.statusCode).toBe(400);
+            expect(result.error).toBe('Invalid productId');
+            expect(mockTchef).not.toHaveBeenCalled();
+        });
+
+        it('makes exactly one HTTP call', async () => {
             await products.deleteProduct(42);
 
             expect(mockTchef).toHaveBeenCalledOnce();
         });
 
         it('uses the DELETE method', async () => {
-            mockTchef.mockResolvedValue({ data: '', ok: true });
-
             await products.deleteProduct(42);
 
             expect(getCallOptions(mockTchef, 0).method).toBe('DELETE');
         });
 
         it('includes the product ID in the URL path', async () => {
-            mockTchef.mockResolvedValue({ data: '', ok: true });
-
             await products.deleteProduct(42);
 
             expect(getCallUrl(mockTchef, 0).href).toContain('catalog/products/42');
         });
 
         it('sends the access token as X-Auth-Token', async () => {
-            mockTchef.mockResolvedValue({ data: '', ok: true });
-
             await products.deleteProduct(42);
 
             expect(getCallHeaders(mockTchef, 0)['X-Auth-Token']).toBe('test-token');
         });
 
         it('uses responseFormat: text to handle the empty 204 body', async () => {
-            mockTchef.mockResolvedValue({ data: '', ok: true });
-
             await products.deleteProduct(42);
 
             expect(getCallOptions(mockTchef, 0).responseFormat).toBe('text');
         });
 
         it('returns { ok: true, data: null } on success', async () => {
-            mockTchef.mockResolvedValue({ data: '', ok: true });
-
             const result = await products.deleteProduct(42);
 
             expect(result).toStrictEqual({ data: null, ok: true });

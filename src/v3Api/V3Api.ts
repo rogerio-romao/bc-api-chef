@@ -21,7 +21,7 @@ export default class V3Api {
     private baseUrlWithVersion: string;
     /** The `Required` here makes typescript happy without having to check for undefined values upstream constantly, but the values are still optional at runtime */
     private options: Required<BcApiChefOptions>;
-    private version = 'v3';
+    private readonly version = 'v3';
 
     /**
      * @param baseUrl - Store base URL (`https://api.bigcommerce.com/stores/{hash}`),

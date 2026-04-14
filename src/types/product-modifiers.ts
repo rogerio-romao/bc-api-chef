@@ -10,10 +10,11 @@ type ProductModifierConfig =
           type: 'date';
           config: {
               date_limited: boolean;
-              date_limit_mode: 'range' | 'earliest' | 'latest';
-              date_earliest_value: string;
-              date_latest_value: string;
-          };
+          } & (
+              | { date_limit_mode: 'range'; date_earliest_value: string; date_latest_value: string }
+              | { date_limit_mode: 'earliest'; date_earliest_value: string }
+              | { date_limit_mode: 'latest'; date_latest_value: string }
+          );
       }
     | {
           type: 'file';
@@ -49,18 +50,29 @@ type ProductModifierConfig =
           config: {
               default_value: string;
               number_limited: boolean;
-              number_limit_mode: 'lowest' | 'highest' | 'range';
-              number_lowest_value: number;
-              number_highest_value: number;
               number_integers_only: boolean;
-          };
+          } & (
+              | {
+                    number_limit_mode: 'lowest';
+                    number_lowest_value: number;
+                }
+              | {
+                    number_limit_mode: 'highest';
+                    number_highest_value: number;
+                }
+              | {
+                    number_limit_mode: 'range';
+                    number_lowest_value: number;
+                    number_highest_value: number;
+                }
+          );
       }
     | {
           type: 'product_list' | 'product_list_with_images';
           config: {
               product_list_adjusts_inventory: boolean;
               product_list_adjusts_pricing: boolean;
-              product_list_shipping_calc: 'none' | 'weight' | 'package';
+              value_data: Record<string, unknown> | null;
           };
       }
     | {
@@ -72,7 +84,7 @@ interface ProductModifierOptionValue {
     is_default: boolean;
     label: string;
     sort_order: number;
-    value_data: object | null;
+    value_data: Record<string, unknown> | null;
     adjusters: {
         price: {
             adjuster: ('percentage' | 'relative') | null;

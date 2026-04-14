@@ -63,7 +63,6 @@ export interface BaseProduct {
     meta_description: string;
     date_created: string;
     date_modified: string;
-    view_count?: number;
     preorder_release_date: string | null;
     preorder_message: string;
     is_preorder_only: boolean;

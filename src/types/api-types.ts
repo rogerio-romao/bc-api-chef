@@ -23,13 +23,23 @@ export interface GetProductsOptions {
 
 export type ProductBulkPricingRulesPayload = Omit<ProductBulkPricingRule, 'id'>[];
 
-export type ProductImagePayload = {
-    image_file?: string;
-    image_url?: string;
-    is_thumbnail?: boolean;
-    sort_order?: number;
-    description?: string;
-}[];
+type ProductImagePayloadItem =
+    | {
+          image_file: string;
+          image_url?: never;
+          is_thumbnail?: boolean;
+          sort_order?: number;
+          description?: string;
+      }
+    | {
+          image_url: string;
+          image_file?: never;
+          is_thumbnail?: boolean;
+          sort_order?: number;
+          description?: string;
+      };
+
+export type ProductImagePayload = ProductImagePayloadItem[];
 
 export type ProductVideoPayload = Omit<ProductVideo, 'id' | 'product_id' | 'length'>[];
 
@@ -70,6 +80,17 @@ export type IncludeExpansion<T extends ProductIncludes> = (T['variants'] extends
  */
 type ExcludeProductFields<E extends readonly BaseProductField[]> =
     BaseProductField extends E[number] ? BaseProduct : Omit<BaseProduct, E[number]>;
+
+type ProductReturnBase<
+    T extends ProductIncludes,
+    F extends readonly BaseProductField[] | undefined,
+    E extends readonly BaseProductField[] | undefined,
+> = (F extends readonly BaseProductField[]
+    ? Pick<BaseProduct, F[number]>
+    : E extends readonly BaseProductField[]
+      ? ExcludeProductFields<E>
+      : BaseProduct) &
+    IncludeExpansion<T>;
 
 export type ProductSortField =
     | 'id'
@@ -167,9 +188,9 @@ export interface BcGetProductsResponse {
             current_page: number;
             total_pages: number;
             links: {
-                previous: string;
+                previous?: string;
                 current: string;
-                next: string;
+                next?: string;
             };
         };
     };
@@ -179,12 +200,7 @@ export type GetProductReturnType<
     T extends ProductIncludes,
     F extends readonly BaseProductField[] | undefined = undefined,
     E extends readonly BaseProductField[] | undefined = undefined,
-> = (F extends readonly BaseProductField[]
-    ? Pick<BaseProduct, F[number]>
-    : E extends readonly BaseProductField[]
-      ? ExcludeProductFields<E>
-      : BaseProduct) &
-    IncludeExpansion<T>;
+> = ProductReturnBase<T, F, E>;
 
 export interface BcGetProductResponse {
     data: FullProduct;
@@ -250,9 +266,4 @@ export type UpdateProductReturnType<
     T extends ProductIncludes,
     F extends readonly BaseProductField[] | undefined = undefined,
     E extends readonly BaseProductField[] | undefined = undefined,
-> = (F extends readonly BaseProductField[]
-    ? Pick<BaseProduct, F[number]>
-    : E extends readonly BaseProductField[]
-      ? ExcludeProductFields<E>
-      : BaseProduct) &
-    IncludeExpansion<T>;
+> = ProductReturnBase<T, F, E>;
