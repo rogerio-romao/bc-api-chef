@@ -1,5 +1,3 @@
-// oxlint-disable max-lines
-
 /**
  * Integration tests — hit the real BigCommerce API.
  *
@@ -20,8 +18,6 @@ const hasCredentials = STORE_HASH.length > 0 && ACCESS_TOKEN.length > 0;
 
 // [Sample] Smith Journal 13 at my Bc Dev Sandbox store
 const TEST_PRODUCT_ID = 111;
-
-vi.setConfig({ testTimeout: 5000 });
 
 describe.runIf(hasCredentials)('Products API — integration', () => {
     const client = new BcApiChef(STORE_HASH, ACCESS_TOKEN);
@@ -111,6 +107,7 @@ describe.runIf(hasCredentials)('Products API — integration', () => {
 // oxlint-disable-next-line max-lines-per-function
 describe.runIf(hasCredentials)('Products API — write integration', () => {
     const client = new BcApiChef(STORE_HASH, ACCESS_TOKEN);
+
     const createdIds: number[] = [];
     const suffix = Date.now();
 
@@ -129,6 +126,7 @@ describe.runIf(hasCredentials)('Products API — write integration', () => {
     describe('createProduct', () => {
         it('creates a product with the minimum required payload', async () => {
             const name = `bc-api-chef integration ${suffix}-1`;
+
             const result = await client.v3().products().createProduct({
                 name,
                 price: 29.99,
@@ -148,6 +146,7 @@ describe.runIf(hasCredentials)('Products API — write integration', () => {
 
         it('creates a product with more fields', async () => {
             const name = `bc-api-chef integration ${suffix}-2`;
+
             const result = await client
                 .v3()
                 .products()
@@ -179,6 +178,7 @@ describe.runIf(hasCredentials)('Products API — write integration', () => {
         it('updates name and price on an existing product', async () => {
             const id = createdIds[0];
             assert(id, 'Expected a product ID from the createProduct test');
+
             const updatedName = `bc-api-chef integration ${suffix}-1 UPDATED`;
 
             const result = await client

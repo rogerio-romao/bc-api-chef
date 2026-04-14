@@ -21,6 +21,18 @@ export interface GetProductsOptions {
     query?: ApiProductQuery;
 }
 
+export type ProductBulkPricingRulesPayload = Omit<ProductBulkPricingRule, 'id'>[];
+
+export type ProductImagePayload = {
+    image_file?: string;
+    image_url?: string;
+    is_thumbnail?: boolean;
+    sort_order?: number;
+    description?: string;
+}[];
+
+export type ProductVideoPayload = Omit<ProductVideo, 'id' | 'product_id' | 'length'>[];
+
 /**
  * Defines which sub-resources to include in product responses. Each key corresponds to an optional sub-resource array on the response product type.
  * Note: include_fields (which controls which base product fields are returned) is intentionally not modelled here.
@@ -49,6 +61,15 @@ export type IncludeExpansion<T extends ProductIncludes> = (T['variants'] extends
     (T['modifiers'] extends true ? { modifiers: ProductModifier[] } : object) &
     (T['options'] extends true ? { options: ProductOption[] } : object) &
     (T['videos'] extends true ? { videos: ProductVideo[] } : object);
+
+/**
+ * Applies Omit<BaseProduct, E[number]> for exclude_fields, with a guard that
+ * falls back to BaseProduct when inference widens E to the full field union
+ * (e.g. when a variable typed as BaseProductField[] is passed instead of a
+ * literal array).
+ */
+type ExcludeProductFields<E extends readonly BaseProductField[]> =
+    BaseProductField extends E[number] ? BaseProduct : Omit<BaseProduct, E[number]>;
 
 export type ProductSortField =
     | 'id'
@@ -117,15 +138,6 @@ export interface ApiProductQuery {
     page?: number;
     limit?: number;
 }
-
-/**
- * Applies Omit<BaseProduct, E[number]> for exclude_fields, with a guard that
- * falls back to BaseProduct when inference widens E to the full field union
- * (e.g. when a variable typed as BaseProductField[] is passed instead of a
- * literal array).
- */
-type ExcludeProductFields<E extends readonly BaseProductField[]> =
-    BaseProductField extends E[number] ? BaseProduct : Omit<BaseProduct, E[number]>;
 
 /**
  * Resolves the return type of getAllProducts based on requested includes,
@@ -199,18 +211,6 @@ export type ProductCustomFieldsPayload = Omit<ProductCustomField, 'id'>[];
 export type CommonProductValidationPayload = Partial<BaseProduct> & {
     custom_fields?: ProductCustomFieldsPayload;
 };
-
-export type ProductBulkPricingRulesPayload = Omit<ProductBulkPricingRule, 'id'>[];
-
-export type ProductImagePayload = {
-    image_file?: string;
-    image_url?: string;
-    is_thumbnail?: boolean;
-    sort_order?: number;
-    description?: string;
-}[];
-
-export type ProductVideoPayload = Omit<ProductVideo, 'id' | 'product_id' | 'length'>[];
 
 /**
  * Payload for POST /v3/catalog/products.

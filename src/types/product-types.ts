@@ -92,7 +92,7 @@ export interface BaseProduct {
 }
 
 export type { ProductBulkPricingRule } from './product-bulk-pricing-rules.ts';
-export type { CustomField, ProductCustomField } from './product-custom-fields.ts';
+export type { ProductCustomField } from './product-custom-fields.ts';
 export type { ProductImage } from './product-images.ts';
 export type { ProductModifier } from './product-modifiers.ts';
 export type { ProductOption } from './product-options.ts';

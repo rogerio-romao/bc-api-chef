@@ -1,7 +1,5 @@
-export interface CustomField {
+export interface ProductCustomField {
     id: number;
     name: string;
     value: string;
 }
-
-export type ProductCustomField = CustomField;

@@ -10,7 +10,6 @@ export type {
 
 export type {
     BaseProduct,
-    CustomField,
     FullProduct,
     ProductBulkPricingRule,
     ProductCustomField,

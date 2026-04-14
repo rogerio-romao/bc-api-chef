@@ -14,8 +14,6 @@ import type {
     ProductVariant,
 } from '@/types/product-types';
 
-vi.setConfig({ testTimeout: 1000 });
-
 describe('BaseProductField type', () => {
     it('equals keyof BaseProduct', () => {
         expectTypeOf<BaseProductField>().toEqualTypeOf<keyof BaseProduct>();
@@ -25,6 +23,7 @@ describe('BaseProductField type', () => {
 describe('ApiProductQuery type', () => {
     it('accepts valid BaseProductField values for include_fields', () => {
         const q: ApiProductQuery = { include_fields: ['id', 'name', 'sku'] };
+
         expectTypeOf(q.include_fields).toEqualTypeOf<readonly BaseProductField[] | undefined>();
     });
 
@@ -32,6 +31,7 @@ describe('ApiProductQuery type', () => {
         const q: ApiProductQuery = {
             exclude_fields: ['description', 'weight'],
         };
+
         expectTypeOf(q.exclude_fields).toEqualTypeOf<readonly BaseProductField[] | undefined>();
     });
 
@@ -78,9 +78,7 @@ describe('ApiProductQuery type', () => {
 
 describe('ProductSortField type', () => {
     it('accepts all expected sort fields', () => {
-        // Typed array assignment is a compile-time assertion — TypeScript will
-        // error here if any value is not part of the union.
-        const sortFields: ProductSortField[] = [
+        const sortFields = [
             'id',
             'name',
             'price',
@@ -90,8 +88,9 @@ describe('ProductSortField type', () => {
             'inventory_level',
             'is_visible',
             'total_sold',
-        ];
-        expect(sortFields).toBeDefined();
+        ] as const satisfies readonly ProductSortField[];
+
+        expectTypeOf(sortFields).toExtend<readonly ProductSortField[]>();
     });
 
     it('is a strict union (not the loose string type)', () => {
@@ -107,17 +106,18 @@ describe('SortDirection type', () => {
 
 describe('CreateProductPayload type', () => {
     it('accepts a minimum valid payload (required fields only)', () => {
-        const payload: CreateProductPayload = {
+        const payload = {
             name: 'Widget',
             price: 29.99,
             type: 'physical',
             weight: 1.5,
-        };
-        expect(payload).toBeDefined();
+        } satisfies CreateProductPayload;
+
+        expectTypeOf(payload).toExtend<CreateProductPayload>();
     });
 
     it('accepts optional fields alongside required ones', () => {
-        const payload: CreateProductPayload = {
+        const payload = {
             categories: [1, 2],
             custom_fields: [{ name: 'material', value: 'steel' }],
             description: '<p>A widget</p>',
@@ -127,8 +127,9 @@ describe('CreateProductPayload type', () => {
             sku: 'SKU-001',
             type: 'physical',
             weight: 1.5,
-        };
-        expect(payload).toBeDefined();
+        } satisfies CreateProductPayload;
+
+        expectTypeOf(payload).toExtend<CreateProductPayload>();
     });
 
     it('does not allow server-computed field id', () => {
@@ -140,6 +141,8 @@ describe('CreateProductPayload type', () => {
             type: 'physical',
             weight: 1.5,
         };
+
+        // this is only here for the linter wanting at least one assertion - the test is really that the above line causes a TypeScript error
         expect(payload).toBeDefined();
     });
 
@@ -152,6 +155,7 @@ describe('CreateProductPayload type', () => {
             type: 'physical',
             weight: 1.5,
         };
+
         expect(payload).toBeDefined();
     });
 
@@ -162,6 +166,7 @@ describe('CreateProductPayload type', () => {
             type: 'physical',
             weight: 1.5,
         };
+
         expect(payload).toBeDefined();
     });
 
@@ -172,6 +177,7 @@ describe('CreateProductPayload type', () => {
             type: 'physical',
             weight: 1.5,
         };
+
         expect(payload).toBeDefined();
     });
 });
@@ -179,6 +185,8 @@ describe('CreateProductPayload type', () => {
 describe('GetProductsReturnType type', () => {
     it('returns an array of objects with core BaseProduct fields when nothing is specified', () => {
         type Result = GetProductsReturnType<Record<string, never>>;
+
+        // `GetProductsReturnType` returns an array, so we check the type of the items in the array with Result[number]
         expectTypeOf<Result[number]>().toHaveProperty('id');
         expectTypeOf<Result[number]>().toHaveProperty('name');
         expectTypeOf<Result[number]>().toHaveProperty('sku');
@@ -187,29 +195,34 @@ describe('GetProductsReturnType type', () => {
 
     it('adds variants when variants include is true', () => {
         type Result = GetProductsReturnType<{ variants: true }>;
+
         expectTypeOf<Result[number]>().toHaveProperty('variants');
         expectTypeOf<Result[number]['variants']>().toEqualTypeOf<ProductVariant[]>();
     });
 
     it('adds images when images include is true', () => {
         type Result = GetProductsReturnType<{ images: true }>;
+
         expectTypeOf<Result[number]>().toHaveProperty('images');
         expectTypeOf<Result[number]['images']>().toEqualTypeOf<ProductImage[]>();
     });
 
     it('adds custom_fields when custom_fields include is true', () => {
         type Result = GetProductsReturnType<{ custom_fields: true }>;
+
         expectTypeOf<Result[number]>().toHaveProperty('custom_fields');
         expectTypeOf<Result[number]['custom_fields']>().toEqualTypeOf<ProductCustomField[]>();
     });
 
     it('does not add variants when include is false', () => {
         type Result = GetProductsReturnType<{ variants: false }>;
+
         expectTypeOf<Result[number]>().not.toHaveProperty('variants');
     });
 
     it('always has base BaseProduct fields regardless of includes', () => {
         type Result = GetProductsReturnType<ProductIncludes>;
+
         expectTypeOf<Result[number]>().toHaveProperty('id');
         expectTypeOf<Result[number]>().toHaveProperty('name');
         expectTypeOf<Result[number]>().toHaveProperty('sku');
@@ -217,15 +230,15 @@ describe('GetProductsReturnType type', () => {
 
     it('narrows base fields to Pick when include_fields is provided', () => {
         type Result = GetProductsReturnType<Record<string, never>, readonly ['id', 'name']>;
-        // Should have id and name
+
         expectTypeOf<Result[number]>().toHaveProperty('id');
         expectTypeOf<Result[number]>().toHaveProperty('name');
-        // Should NOT have sku (not in the pick)
         expectTypeOf<Result[number]>().not.toHaveProperty('sku');
     });
 
     it('combines include_fields narrowing with sub-resource includes', () => {
         type Result = GetProductsReturnType<{ images: true }, readonly ['id', 'name']>;
+
         expectTypeOf<Result[number]>().toHaveProperty('id');
         expectTypeOf<Result[number]>().toHaveProperty('name');
         expectTypeOf<Result[number]>().toHaveProperty('images');
@@ -238,6 +251,7 @@ describe('GetProductsReturnType type', () => {
             undefined,
             readonly ['description', 'weight']
         >;
+
         expectTypeOf<Result[number]>().toHaveProperty('id');
         expectTypeOf<Result[number]>().toHaveProperty('name');
         expectTypeOf<Result[number]>().not.toHaveProperty('description');
@@ -250,6 +264,7 @@ describe('GetProductsReturnType type', () => {
             undefined,
             readonly ['description']
         >;
+
         expectTypeOf<Result[number]>().toHaveProperty('id');
         expectTypeOf<Result[number]>().toHaveProperty('variants');
         expectTypeOf<Result[number]>().not.toHaveProperty('description');

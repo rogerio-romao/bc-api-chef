@@ -1,43 +1,12 @@
+import { DEFAULT_START_PAGE, PER_PAGE_DEFAULT } from '@/v3Api/constants';
 import ProductsV3 from '@/v3Api/Products/Products';
 
-vi.setConfig({ testTimeout: 1000 });
+import { getCallUrl, makeProductsPageResponse } from './helpers';
 
 const mockTchef = vi.hoisted(() => vi.fn());
 vi.mock(import('tchef'), () => ({
     default: mockTchef,
 }));
-
-// oxlint-disable-next-line typescript/explicit-function-return-type
-function makePageResponse(products: object[] = []) {
-    return {
-        data: {
-            data: products,
-            meta: {
-                pagination: {
-                    count: 0,
-                    current_page: 1,
-                    links: { current: '', next: '', previous: '' },
-                    per_page: 250,
-                    total: 0,
-                    total_pages: 1,
-                },
-            },
-        },
-        ok: true,
-    };
-}
-
-function getCallUrl(): URL {
-    const call = mockTchef.mock.calls[0];
-    if (!call) {
-        throw new Error('No mock calls recorded');
-    }
-    const urlArg: unknown = call[0];
-    if (typeof urlArg !== 'string') {
-        throw new TypeError('First argument is not a string');
-    }
-    return new URL(urlArg);
-}
 
 // oxlint-disable-next-line max-lines-per-function
 describe('query param serialization', () => {
@@ -45,33 +14,37 @@ describe('query param serialization', () => {
 
     beforeEach(() => {
         mockTchef.mockReset();
-        mockTchef.mockResolvedValue(makePageResponse());
+        mockTchef.mockResolvedValue(makeProductsPageResponse());
         products = new ProductsV3('https://api.bigcommerce.com/stores/test/v3/', 'test-token', {});
     });
 
     describe('number array params', () => {
         it('serializes id:in as comma-separated numbers', async () => {
             await products.getAllProducts({ query: { 'id:in': [10, 20, 30] } });
-            expect(getCallUrl().searchParams.get('id:in')).toBe('10,20,30');
+
+            expect(getCallUrl(mockTchef).searchParams.get('id:in')).toBe('10,20,30');
         });
 
         it('serializes id:not_in as comma-separated numbers', async () => {
             await products.getAllProducts({ query: { 'id:not_in': [5, 15] } });
-            expect(getCallUrl().searchParams.get('id:not_in')).toBe('5,15');
+
+            expect(getCallUrl(mockTchef).searchParams.get('id:not_in')).toBe('5,15');
         });
 
         it('serializes inventory_level:in as comma-separated numbers', async () => {
             await products.getAllProducts({
                 query: { 'inventory_level:in': [0, 1, 2] },
             });
-            expect(getCallUrl().searchParams.get('inventory_level:in')).toBe('0,1,2');
+
+            expect(getCallUrl(mockTchef).searchParams.get('inventory_level:in')).toBe('0,1,2');
         });
 
         it('serializes categories:in as comma-separated numbers', async () => {
             await products.getAllProducts({
                 query: { 'categories:in': [100, 200] },
             });
-            expect(getCallUrl().searchParams.get('categories:in')).toBe('100,200');
+
+            expect(getCallUrl(mockTchef).searchParams.get('categories:in')).toBe('100,200');
         });
     });
 
@@ -80,24 +53,28 @@ describe('query param serialization', () => {
             await products.getAllProducts({
                 query: { 'sku:in': ['ABC-1', 'DEF-2'] },
             });
-            expect(getCallUrl().searchParams.get('sku:in')).toBe('ABC-1,DEF-2');
+
+            expect(getCallUrl(mockTchef).searchParams.get('sku:in')).toBe('ABC-1,DEF-2');
         });
     });
 
     describe('boolean params', () => {
         it('serializes is_visible: true as "true"', async () => {
             await products.getAllProducts({ query: { is_visible: true } });
-            expect(getCallUrl().searchParams.get('is_visible')).toBe('true');
+
+            expect(getCallUrl(mockTchef).searchParams.get('is_visible')).toBe('true');
         });
 
         it('serializes is_featured: false as "false"', async () => {
             await products.getAllProducts({ query: { is_featured: false } });
-            expect(getCallUrl().searchParams.get('is_featured')).toBe('false');
+
+            expect(getCallUrl(mockTchef).searchParams.get('is_featured')).toBe('false');
         });
 
         it('serializes out_of_stock: true as "true"', async () => {
             await products.getAllProducts({ query: { out_of_stock: true } });
-            expect(getCallUrl().searchParams.get('out_of_stock')).toBe('true');
+
+            expect(getCallUrl(mockTchef).searchParams.get('out_of_stock')).toBe('true');
         });
     });
 
@@ -106,33 +83,42 @@ describe('query param serialization', () => {
             await products.getAllProducts({
                 query: { 'date_modified:min': '2024-01-01T00:00:00Z' },
             });
-            expect(getCallUrl().searchParams.get('date_modified:min')).toBe('2024-01-01T00:00:00Z');
+
+            expect(getCallUrl(mockTchef).searchParams.get('date_modified:min')).toBe(
+                '2024-01-01T00:00:00Z',
+            );
         });
 
         it('serializes date_last_imported:max correctly', async () => {
             await products.getAllProducts({
                 query: { 'date_last_imported:max': '2024-12-31' },
             });
-            expect(getCallUrl().searchParams.get('date_last_imported:max')).toBe('2024-12-31');
+
+            expect(getCallUrl(mockTchef).searchParams.get('date_last_imported:max')).toBe(
+                '2024-12-31',
+            );
         });
     });
 
     describe('sort and direction params', () => {
         it('serializes sort field', async () => {
             await products.getAllProducts({ query: { sort: 'price' } });
-            expect(getCallUrl().searchParams.get('sort')).toBe('price');
+
+            expect(getCallUrl(mockTchef).searchParams.get('sort')).toBe('price');
         });
 
         it('serializes direction', async () => {
             await products.getAllProducts({ query: { direction: 'desc' } });
-            expect(getCallUrl().searchParams.get('direction')).toBe('desc');
+
+            expect(getCallUrl(mockTchef).searchParams.get('direction')).toBe('desc');
         });
 
         it('serializes sort and direction together', async () => {
             await products.getAllProducts({
                 query: { direction: 'asc', sort: 'date_modified' },
             });
-            const url = getCallUrl();
+
+            const url = getCallUrl(mockTchef);
             expect(url.searchParams.get('sort')).toBe('date_modified');
             expect(url.searchParams.get('direction')).toBe('asc');
         });
@@ -143,14 +129,16 @@ describe('query param serialization', () => {
             await products.getAllProducts({
                 query: { include_fields: ['id', 'name', 'sku'] },
             });
-            expect(getCallUrl().searchParams.get('include_fields')).toBe('id,name,sku');
+
+            expect(getCallUrl(mockTchef).searchParams.get('include_fields')).toBe('id,name,sku');
         });
 
         it('serializes exclude_fields array as comma-separated string', async () => {
             await products.getAllProducts({
                 query: { exclude_fields: ['description', 'meta_description'] },
             });
-            expect(getCallUrl().searchParams.get('exclude_fields')).toBe(
+
+            expect(getCallUrl(mockTchef).searchParams.get('exclude_fields')).toBe(
                 'description,meta_description',
             );
         });
@@ -159,26 +147,30 @@ describe('query param serialization', () => {
     describe('literal union params', () => {
         it('serializes condition correctly', async () => {
             await products.getAllProducts({ query: { condition: 'New' } });
-            expect(getCallUrl().searchParams.get('condition')).toBe('New');
+
+            expect(getCallUrl(mockTchef).searchParams.get('condition')).toBe('New');
         });
 
         it('serializes type correctly', async () => {
             await products.getAllProducts({ query: { type: 'physical' } });
-            expect(getCallUrl().searchParams.get('type')).toBe('physical');
+
+            expect(getCallUrl(mockTchef).searchParams.get('type')).toBe('physical');
         });
 
         it('serializes availability correctly', async () => {
             await products.getAllProducts({
                 query: { availability: 'preorder' },
             });
-            expect(getCallUrl().searchParams.get('availability')).toBe('preorder');
+
+            expect(getCallUrl(mockTchef).searchParams.get('availability')).toBe('preorder');
         });
 
         it('serializes keyword_context correctly', async () => {
             await products.getAllProducts({
                 query: { keyword_context: 'shopper' },
             });
-            expect(getCallUrl().searchParams.get('keyword_context')).toBe('shopper');
+
+            expect(getCallUrl(mockTchef).searchParams.get('keyword_context')).toBe('shopper');
         });
     });
 
@@ -196,7 +188,8 @@ describe('query param serialization', () => {
                 },
             });
 
-            const url = getCallUrl();
+            const url = getCallUrl(mockTchef);
+
             expect(url.searchParams.get('id:in')).toBe('1,2,3');
             expect(url.searchParams.get('name')).toBe('Widget');
             expect(url.searchParams.get('is_visible')).toBe('true');
@@ -212,10 +205,12 @@ describe('query param serialization', () => {
     describe('pagination params', () => {
         it('always sets page and limit (managed by getMultiPage, not the user query)', async () => {
             await products.getAllProducts({ query: { name: 'test' } });
-            const url = getCallUrl();
+
+            const url = getCallUrl(mockTchef);
+
             // page and limit come from getMultiPage, not the query string
-            expect(url.searchParams.get('page')).toBe('1');
-            expect(url.searchParams.get('limit')).toBe('250');
+            expect(url.searchParams.get('page')).toBe(DEFAULT_START_PAGE.toString());
+            expect(url.searchParams.get('limit')).toBe(PER_PAGE_DEFAULT.toString());
         });
     });
 });
