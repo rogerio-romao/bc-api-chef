@@ -12,3 +12,21 @@ export interface ProductImage {
     date_modified: string;
     image_url?: string;
 }
+
+type ProductImagePayloadItem =
+    | {
+          image_file: string;
+          image_url?: never;
+          is_thumbnail?: boolean;
+          sort_order?: number;
+          description?: string;
+      }
+    | {
+          image_url: string;
+          image_file?: never;
+          is_thumbnail?: boolean;
+          sort_order?: number;
+          description?: string;
+      };
+
+export type ProductImagePayload = ProductImagePayloadItem[];

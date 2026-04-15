@@ -22,6 +22,7 @@
     },
     "rules": {
         "eslint/capitalized-comments": "off",
+        "eslint/class-methods-use-this": "off",
         "eslint/complexity": ["warn", { "max": 18 }],
         "eslint/func-style": ["warn", "declaration", { "allowArrowFunctions": true }],
         "eslint/id-length": "off",

@@ -11,7 +11,7 @@
 
 import BcApiChef from '@/BcApiChef.ts';
 import { ACCESS_TOKEN, STORE_HASH } from '@/config.ts';
-import { assertOk } from '@/tests/helpers.ts';
+import { assertOk } from '@/tests/unit/helpers.ts';
 import { PER_PAGE_MIN } from '@/v3Api/constants.ts';
 
 const hasCredentials = STORE_HASH.length > 0 && ACCESS_TOKEN.length > 0;
@@ -23,7 +23,7 @@ describe.runIf(hasCredentials)('Products API — integration', () => {
     const client = new BcApiChef(STORE_HASH, ACCESS_TOKEN);
 
     it('fetches at least one product with default options', async () => {
-        const result = await client.v3().products().getAllProducts();
+        const result = await client.v3().products().getProducts();
 
         assertOk(result);
         expect(Array.isArray(result.data)).toBe(true);
@@ -38,7 +38,7 @@ describe.runIf(hasCredentials)('Products API — integration', () => {
         const result = await client
             .v3()
             .products()
-            .getAllProducts({
+            .getProducts({
                 query: {
                     include_fields: ['id', 'name'] as const,
                 },
@@ -58,7 +58,7 @@ describe.runIf(hasCredentials)('Products API — integration', () => {
         const result = await client
             .v3()
             .products()
-            .getAllProducts({
+            .getProducts({
                 includes: { custom_fields: true, images: true },
             });
 
@@ -74,7 +74,7 @@ describe.runIf(hasCredentials)('Products API — integration', () => {
         const result = await client
             .v3()
             .products()
-            .getAllProducts({ query: { limit: PER_PAGE_MIN } });
+            .getProducts({ query: { limit: PER_PAGE_MIN } });
 
         assertOk(result);
 
@@ -86,7 +86,7 @@ describe.runIf(hasCredentials)('Products API — integration', () => {
         const filtered = await client
             .v3()
             .products()
-            .getAllProducts({
+            .getProducts({
                 query: { 'id:in': [TEST_PRODUCT_ID] },
             });
 

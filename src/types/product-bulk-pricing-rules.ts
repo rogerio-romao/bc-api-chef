@@ -5,3 +5,5 @@ export interface ProductBulkPricingRule {
     type: 'price' | 'percent' | 'fixed';
     amount: number | string;
 }
+
+export type ProductBulkPricingRulesPayload = Omit<ProductBulkPricingRule, 'id'>[];

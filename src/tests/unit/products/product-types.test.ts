@@ -1,18 +1,16 @@
+import type { SortDirection } from '@/types/api-types';
+import type { ProductCustomField } from '@/types/product-custom-fields';
+import type { ProductImage } from '@/types/product-images';
 import type {
     ApiProductQuery,
+    BaseProduct,
+    BaseProductField,
     CreateProductPayload,
     GetProductsReturnType,
     ProductIncludes,
     ProductSortField,
-    SortDirection,
-} from '@/types/api-types';
-import type {
-    BaseProduct,
-    BaseProductField,
-    ProductCustomField,
-    ProductImage,
-    ProductVariant,
 } from '@/types/product-types';
+import type { ProductVariant } from '@/types/product-variants';
 
 describe('BaseProductField type', () => {
     it('equals keyof BaseProduct', () => {
