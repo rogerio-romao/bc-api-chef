@@ -13,20 +13,14 @@ export interface ProductImage {
     image_url?: string;
 }
 
+interface ProductImagePayloadCommon {
+    is_thumbnail?: boolean;
+    sort_order?: number;
+    description?: string;
+}
+
 type ProductImagePayloadItem =
-    | {
-          image_file: string;
-          image_url?: never;
-          is_thumbnail?: boolean;
-          sort_order?: number;
-          description?: string;
-      }
-    | {
-          image_url: string;
-          image_file?: never;
-          is_thumbnail?: boolean;
-          sort_order?: number;
-          description?: string;
-      };
+    | (ProductImagePayloadCommon & { image_file: string; image_url?: never })
+    | (ProductImagePayloadCommon & { image_url: string; image_file?: never });
 
 export type ProductImagePayload = ProductImagePayloadItem[];

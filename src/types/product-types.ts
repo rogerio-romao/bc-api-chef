@@ -247,12 +247,7 @@ export type GetProductsReturnType<
     T extends ProductIncludes,
     F extends readonly BaseProductField[] | undefined = undefined,
     E extends readonly BaseProductField[] | undefined = undefined,
-> = ((F extends readonly BaseProductField[]
-    ? Pick<BaseProduct, F[number]>
-    : E extends readonly BaseProductField[]
-      ? ExcludeProductFields<E>
-      : BaseProduct) &
-    IncludeExpansion<T>)[];
+> = ProductReturnBase<T, F, E>[];
 
 export interface BcGetProductsResponse {
     data: FullProduct[];
@@ -270,7 +265,6 @@ type ServerComputedProductFields =
     | 'date_created'
     | 'date_modified'
     | 'date_last_imported'
-    | 'view_count'
     | 'base_variant_id';
 
 type RequiredCreateProductFields = 'name' | 'type' | 'weight' | 'price';

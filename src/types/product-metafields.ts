@@ -1,21 +1,30 @@
 import type { BcRequestResponseMeta } from './api-types';
 
+export type PermissionSet =
+    | 'app_only'
+    | 'read'
+    | 'write'
+    | 'read_and_sf_access'
+    | 'write_and_sf_access';
+
+export type ResourceType =
+    | 'brand'
+    | 'product'
+    | 'variant'
+    | 'category'
+    | 'cart'
+    | 'channel'
+    | 'location'
+    | 'order'
+    | 'customer';
+
 export interface ProductMetafield {
-    permission_set: 'app_only' | 'read' | 'write' | 'read_and_sf_access' | 'write_and_sf_access';
+    permission_set: PermissionSet;
     namespace: string;
     key: string;
     value: string;
     description: string;
-    resource_type:
-        | 'brand'
-        | 'product'
-        | 'variant'
-        | 'category'
-        | 'cart'
-        | 'channel'
-        | 'location'
-        | 'order'
-        | 'customer';
+    resource_type: ResourceType;
     readonly resource_id: number;
     id: number;
     date_created: string;
@@ -30,15 +39,31 @@ export interface BcGetMetafieldsResponse {
     meta: BcRequestResponseMeta;
 }
 
-export interface ApiMetafieldQuery {
+type FieldSelectionOptions =
+    | {
+          include_fields: readonly BaseMetafieldField[];
+          exclude_fields?: never;
+      }
+    | {
+          include_fields?: never;
+          exclude_fields: readonly BaseMetafieldField[];
+      }
+    | {
+          include_fields?: never;
+          exclude_fields?: never;
+      };
+
+export interface ApiMetafieldQueryBase {
     page?: number;
     limit?: number;
     key?: string;
     namespace?: string;
-    include_fields?: readonly BaseMetafieldField[];
-    exclude_fields?: readonly BaseMetafieldField[];
     'resource_id:in'?: string;
 }
+
+export type ApiMetafieldQuery = ApiMetafieldQueryBase & FieldSelectionOptions;
+
+export type ApiMetafieldQueryBaseWithFieldSelection = ApiMetafieldQueryBase & FieldSelectionOptions;
 
 /**
  * Applies Omit<ProductMetafield, E[number]> for exclude_fields, with a guard
@@ -78,18 +103,9 @@ export interface CreateMetafieldPayload {
     namespace: string;
     key: string;
     value: string;
-    permission_set: 'app_only' | 'read' | 'write' | 'read_and_sf_access' | 'write_and_sf_access';
+    permission_set: PermissionSet;
     description?: string;
-    resource_type?:
-        | 'brand'
-        | 'product'
-        | 'variant'
-        | 'category'
-        | 'cart'
-        | 'channel'
-        | 'location'
-        | 'order'
-        | 'customer';
+    resource_type?: ResourceType;
 }
 
 export interface CreateMetafieldResponse {

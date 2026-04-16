@@ -20,17 +20,15 @@ describe('BaseProductField type', () => {
 
 describe('ApiProductQuery type', () => {
     it('accepts valid BaseProductField values for include_fields', () => {
-        const q: ApiProductQuery = { include_fields: ['id', 'name', 'sku'] };
-
-        expectTypeOf(q.include_fields).toEqualTypeOf<readonly BaseProductField[] | undefined>();
+        expectTypeOf<ApiProductQuery['include_fields']>().toEqualTypeOf<
+            readonly BaseProductField[] | undefined
+        >();
     });
 
     it('accepts valid BaseProductField values for exclude_fields', () => {
-        const q: ApiProductQuery = {
-            exclude_fields: ['description', 'weight'],
-        };
-
-        expectTypeOf(q.exclude_fields).toEqualTypeOf<readonly BaseProductField[] | undefined>();
+        expectTypeOf<ApiProductQuery['exclude_fields']>().toEqualTypeOf<
+            readonly BaseProductField[] | undefined
+        >();
     });
 
     it('types id:in as number[] | undefined', () => {

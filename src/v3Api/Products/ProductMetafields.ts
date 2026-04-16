@@ -14,7 +14,7 @@ import type { TchefResult } from 'tchef';
 
 import type { BcApiChefOptions } from '@/types/api-types';
 import type {
-    ApiMetafieldQuery,
+    ApiMetafieldQueryBase,
     BaseMetafieldField,
     CreateMetafieldPayload,
     GetMetafieldReturnType,
@@ -83,21 +83,23 @@ export default class ProductMetafields {
         productId: number,
         metafieldId: number,
         query?:
-            | (Omit<ApiMetafieldQuery, 'include_fields' | 'exclude_fields'> & {
+            | (Omit<ApiMetafieldQueryBase, 'include_fields' | 'exclude_fields'> & {
                   include_fields?: F;
                   exclude_fields?: never;
               })
-            | (Omit<ApiMetafieldQuery, 'include_fields' | 'exclude_fields'> & {
+            | (Omit<ApiMetafieldQueryBase, 'include_fields' | 'exclude_fields'> & {
                   include_fields?: never;
                   exclude_fields?: E;
               }),
     ): Promise<TchefResult<GetMetafieldReturnType<F, E>>> {
-        if (!Number.isInteger(productId) || productId <= 0) {
-            return { error: 'Invalid productId', ok: false, statusCode: 400 };
-        }
+        const idsValidOrErrorMsg = this.validatePositiveIntegers({ metafieldId, productId });
 
-        if (!Number.isInteger(metafieldId) || metafieldId <= 0) {
-            return { error: 'Invalid metafieldId', ok: false, statusCode: 400 };
+        if (idsValidOrErrorMsg !== true) {
+            return {
+                error: idsValidOrErrorMsg,
+                ok: false,
+                statusCode: 400,
+            } as TchefResult<GetMetafieldReturnType<F, E>>;
         }
 
         const querySuffix = buildQueryString(query);
@@ -119,15 +121,25 @@ export default class ProductMetafields {
     >(
         productId: number,
         query?:
-            | (Omit<ApiMetafieldQuery, 'include_fields' | 'exclude_fields'> & {
+            | (Omit<ApiMetafieldQueryBase, 'include_fields' | 'exclude_fields'> & {
                   include_fields?: F;
                   exclude_fields?: never;
               })
-            | (Omit<ApiMetafieldQuery, 'include_fields' | 'exclude_fields'> & {
+            | (Omit<ApiMetafieldQueryBase, 'include_fields' | 'exclude_fields'> & {
                   include_fields?: never;
                   exclude_fields?: E;
               }),
     ): Promise<TchefResult<GetMetafieldsReturnType<F, E>>> {
+        const idValidOrErrorMsg = this.validatePositiveIntegers({ productId });
+
+        if (idValidOrErrorMsg !== true) {
+            return {
+                error: idValidOrErrorMsg,
+                ok: false,
+                statusCode: 400,
+            } as TchefResult<GetMetafieldsReturnType<F, E>>;
+        }
+
         const querySuffix = buildQueryString(query);
         const url = `${this.apiUrl}/${productId}/metafields${querySuffix}`;
         const limit = clampPerPageLimits(query?.limit);
@@ -149,12 +161,14 @@ export default class ProductMetafields {
         productId: number,
         metafieldId: number,
     ): Promise<TchefResult<null>> {
-        if (!Number.isInteger(productId) || productId <= 0) {
-            return { error: 'Invalid productId', ok: false, statusCode: 400 };
-        }
+        const idsValidOrErrorMsg = this.validatePositiveIntegers({ metafieldId, productId });
 
-        if (!Number.isInteger(metafieldId) || metafieldId <= 0) {
-            return { error: 'Invalid metafieldId', ok: false, statusCode: 400 };
+        if (idsValidOrErrorMsg !== true) {
+            return {
+                error: idsValidOrErrorMsg,
+                ok: false,
+                statusCode: 400,
+            } as TchefResult<null>;
         }
 
         const url = `${this.apiUrl}/${productId}/metafields/${metafieldId}`;
@@ -171,8 +185,14 @@ export default class ProductMetafields {
         productId: number,
         metafieldData: CreateMetafieldPayload,
     ): Promise<TchefResult<ProductMetafield>> {
-        if (!Number.isInteger(productId) || productId <= 0) {
-            return { error: 'Invalid productId', ok: false, statusCode: 400 };
+        const idValidOrError = this.validatePositiveIntegers({ productId });
+
+        if (idValidOrError !== true) {
+            return {
+                error: idValidOrError,
+                ok: false,
+                statusCode: 400,
+            } as TchefResult<ProductMetafield>;
         }
 
         const validationError = this.validateCreateMetafieldPayload(metafieldData);
@@ -201,12 +221,14 @@ export default class ProductMetafields {
         metafieldId: number,
         metafieldData: Partial<CreateMetafieldPayload>,
     ): Promise<TchefResult<ProductMetafield>> {
-        if (!Number.isInteger(productId) || productId <= 0) {
-            return { error: 'Invalid productId', ok: false, statusCode: 400 };
-        }
+        const idsValidOrErrorMsg = this.validatePositiveIntegers({ metafieldId, productId });
 
-        if (!Number.isInteger(metafieldId) || metafieldId <= 0) {
-            return { error: 'Invalid metafieldId', ok: false, statusCode: 400 };
+        if (idsValidOrErrorMsg !== true) {
+            return {
+                error: idsValidOrErrorMsg,
+                ok: false,
+                statusCode: 400,
+            } as TchefResult<ProductMetafield>;
         }
 
         const validationError = this.validateUpdateMetafieldPayload(metafieldData);
@@ -224,6 +246,21 @@ export default class ProductMetafields {
         );
     }
 
+    /// ===== Validation Methods =====
+
+    /** Validates that an number is a positive integer.
+     * @param numbers Number values to validate.
+     * @returns {true | string} `true` if all numbers are valid, or an error message for the first invalid number.
+     */
+    private validatePositiveIntegers(numbers: Record<string, number>): true | string {
+        for (const [fieldName, value] of Object.entries(numbers)) {
+            if (!Number.isInteger(value) || value <= 0) {
+                return `Invalid ${fieldName}: must be a positive integer.`;
+            }
+        }
+        return true;
+    }
+
     /** Validates the create payload.
      * @param payload Metafield data to validate.
      * @returns {string | null} A validation error message, or `null` when valid.
@@ -238,28 +275,16 @@ export default class ProductMetafields {
 
         for (const field of requiredFields) {
             if (!payload[field]) {
-                return `Missing required field: ${field}`;
+                return `Missing required field, or field has an empty value: ${field}`;
             }
-        }
-
-        if (payload.key.length === 0) {
-            return 'Key cannot be an empty string';
         }
 
         if (payload.key.length > 64) {
             return 'Key cannot exceed 64 characters';
         }
 
-        if (payload.value.length === 0) {
-            return 'Value cannot be an empty string';
-        }
-
         if (payload.value.length > 65_535) {
             return 'Value cannot exceed 65535 characters';
-        }
-
-        if (payload.namespace.length === 0) {
-            return 'Namespace cannot be an empty string';
         }
 
         if (payload.namespace.length > 64) {

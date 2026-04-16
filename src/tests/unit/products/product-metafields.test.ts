@@ -61,7 +61,7 @@ describe('ProductMetafields class', () => {
 
             assertErr(result);
             expect(result.statusCode).toBe(400);
-            expect(result.error).toBe('Invalid productId');
+            expect(result.error).toBe('Invalid productId: must be a positive integer.');
             expect(mockTchef).not.toHaveBeenCalled();
         });
 
@@ -86,7 +86,7 @@ describe('ProductMetafields class', () => {
 
             assertErr(result);
             expect(result.statusCode).toBe(400);
-            expect(result.error).toBe('Invalid metafieldId');
+            expect(result.error).toBe('Invalid metafieldId: must be a positive integer.');
             expect(mockTchef).not.toHaveBeenCalled();
         });
 
@@ -95,6 +95,16 @@ describe('ProductMetafields class', () => {
 
             assertErr(result);
             expect(result.statusCode).toBe(400);
+            expect(result.error).toBe('Invalid metafieldId: must be a positive integer.');
+            expect(mockTchef).not.toHaveBeenCalled();
+        });
+
+        it('returns a 400 error without calling the API when metafieldId is a non-integer', async () => {
+            const result = await metafields.getMetafield(42, 1.5);
+
+            assertErr(result);
+            expect(result.statusCode).toBe(400);
+            expect(result.error).toBe('Invalid metafieldId: must be a positive integer.');
             expect(mockTchef).not.toHaveBeenCalled();
         });
 
@@ -373,7 +383,7 @@ describe('ProductMetafields class', () => {
 
             assertErr(result);
             expect(result.statusCode).toBe(400);
-            expect(result.error).toBe('Invalid productId');
+            expect(result.error).toBe('Invalid productId: must be a positive integer.');
             expect(mockTchef).not.toHaveBeenCalled();
         });
 
@@ -576,7 +586,7 @@ describe('ProductMetafields class', () => {
 
             assertErr(result);
             expect(result.statusCode).toBe(400);
-            expect(result.error).toBe('Invalid productId');
+            expect(result.error).toBe('Invalid productId: must be a positive integer.');
             expect(mockTchef).not.toHaveBeenCalled();
         });
 
@@ -585,7 +595,23 @@ describe('ProductMetafields class', () => {
 
             assertErr(result);
             expect(result.statusCode).toBe(400);
-            expect(result.error).toBe('Invalid metafieldId');
+            expect(result.error).toBe('Invalid metafieldId: must be a positive integer.');
+            expect(mockTchef).not.toHaveBeenCalled();
+        });
+
+        it('returns a 400 error without calling the API when productId is a non-integer', async () => {
+            const result = await metafields.updateMetafield(1.5, 7, {});
+
+            assertErr(result);
+            expect(result.statusCode).toBe(400);
+            expect(mockTchef).not.toHaveBeenCalled();
+        });
+
+        it('returns a 400 error without calling the API when metafieldId is a non-integer', async () => {
+            const result = await metafields.updateMetafield(42, 1.5, {});
+
+            assertErr(result);
+            expect(result.statusCode).toBe(400);
             expect(mockTchef).not.toHaveBeenCalled();
         });
 
@@ -620,6 +646,17 @@ describe('ProductMetafields class', () => {
             assertErr(result);
             expect(result.statusCode).toBe(400);
             expect(result.error).toBe('Namespace cannot be an empty string');
+            expect(mockTchef).not.toHaveBeenCalled();
+        });
+
+        it('returns a 400 error when namespace exceeds 64 characters', async () => {
+            const result = await metafields.updateMetafield(42, 7, {
+                namespace: 'n'.repeat(65),
+            });
+
+            assertErr(result);
+            expect(result.statusCode).toBe(400);
+            expect(result.error).toBe('Namespace cannot exceed 64 characters');
             expect(mockTchef).not.toHaveBeenCalled();
         });
 
@@ -726,7 +763,7 @@ describe('ProductMetafields class', () => {
 
             assertErr(result);
             expect(result.statusCode).toBe(400);
-            expect(result.error).toBe('Invalid productId');
+            expect(result.error).toBe('Invalid productId: must be a positive integer.');
             expect(mockTchef).not.toHaveBeenCalled();
         });
 
@@ -743,7 +780,7 @@ describe('ProductMetafields class', () => {
 
             assertErr(result);
             expect(result.statusCode).toBe(400);
-            expect(result.error).toBe('Invalid metafieldId');
+            expect(result.error).toBe('Invalid metafieldId: must be a positive integer.');
             expect(mockTchef).not.toHaveBeenCalled();
         });
 

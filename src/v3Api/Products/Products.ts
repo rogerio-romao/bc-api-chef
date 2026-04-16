@@ -258,6 +258,8 @@ export default class ProductsV3 {
             .join(',');
     }
 
+    // ===== Validation Methods ===== */
+
     /** Validates fields shared by create and update payloads.
      * @param payload Product data to validate.
      * @returns {string | null} A validation error message, or `null` when valid.

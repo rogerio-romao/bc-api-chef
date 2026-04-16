@@ -53,6 +53,15 @@ describe('ProductsV3 class', () => {
             expect(mockTchef).not.toHaveBeenCalled();
         });
 
+        it('returns a 400 error without calling the API when productId is negative', async () => {
+            const result = await products.getProduct(-1);
+
+            assertErr(result);
+            expect(result.statusCode).toBe(400);
+            expect(result.error).toBe('Invalid productId');
+            expect(mockTchef).not.toHaveBeenCalled();
+        });
+
         it('makes exactly one HTTP call', async () => {
             await products.getProduct(42);
 

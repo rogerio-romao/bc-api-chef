@@ -112,7 +112,7 @@ export async function fetchPaginated<T>(
             return { data: results, ok: true };
         }
 
-        totalPages = meta.pagination.total_pages;
+        totalPages = meta?.pagination?.total_pages ?? 1;
         page += 1;
     } while (page <= totalPages);
 
