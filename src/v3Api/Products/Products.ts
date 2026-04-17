@@ -10,6 +10,7 @@ import {
     updateResource,
 } from '@/v3Api/utils.ts';
 
+import ProductImages from './ProductImages';
 import ProductMetafields from './ProductMetafields';
 
 import type { TchefResult } from 'tchef';
@@ -232,6 +233,13 @@ export default class ProductsV3 {
     }
 
     /* ===== Sub-resource Methods/Classes ===== */
+
+    /** Returns an instance of the {@link ProductImages} class to manage product images, which are accessed via the `/catalog/products/{product_id}/images` endpoint.
+     * @returns {ProductImages} An instance of the ProductImages class.
+     */
+    public images(): ProductImages {
+        return new ProductImages(this.accessToken, this.apiUrl);
+    }
 
     /**
      * Returns an instance of the {@link ProductMetafields} class to manage product metafields, which are accessed via the `/catalog/products/{product_id}/metafields` endpoint.

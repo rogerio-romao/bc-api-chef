@@ -46,6 +46,19 @@ export function clampPerPageLimits(limit: number | undefined): number {
     return Math.min(Math.max(limit, PER_PAGE_MIN), PER_PAGE_MAX);
 }
 
+/** Validates that an number is a positive integer.
+ * @param numbers Number values to validate.
+ * @returns {true | string} `true` if all numbers are valid, or an error message for the first invalid number.
+ */
+export function validatePositiveIntegers(numbers: Record<string, number>): true | string {
+    for (const [fieldName, value] of Object.entries(numbers)) {
+        if (!Number.isInteger(value) || value <= 0) {
+            return `Invalid ${fieldName}: must be a positive integer.`;
+        }
+    }
+    return true;
+}
+
 /**
  * Fetches a single BC resource and unwraps the `{ data }` envelope.
  * @param url - Fully-built request URL.

@@ -8,6 +8,7 @@ import {
     fetchOne,
     fetchPaginated,
     updateResource,
+    validatePositiveIntegers,
 } from '@/v3Api/utils.ts';
 
 import type { TchefResult } from 'tchef';
@@ -74,70 +75,58 @@ export default class ProductMetafields {
      * @param productId Product ID.
      * @param metafieldId Metafield ID.
      * @param query Query and include/exclude field options.
-     * @returns {Promise<TchefResult<GetMetafieldReturnType<F, E>>>} The metafield or an error result.
+     * @returns {Promise<TchefResult<GetMetafieldReturnType<I, E>>>} The metafield or an error result.
      */
     public async getMetafield<
-        F extends readonly BaseMetafieldField[] | undefined = undefined,
+        I extends readonly BaseMetafieldField[] | undefined = undefined,
         E extends readonly BaseMetafieldField[] | undefined = undefined,
     >(
         productId: number,
         metafieldId: number,
         query?:
-            | (Omit<ApiMetafieldQueryBase, 'include_fields' | 'exclude_fields'> & {
-                  include_fields?: F;
-                  exclude_fields?: never;
-              })
-            | (Omit<ApiMetafieldQueryBase, 'include_fields' | 'exclude_fields'> & {
-                  include_fields?: never;
-                  exclude_fields?: E;
-              }),
-    ): Promise<TchefResult<GetMetafieldReturnType<F, E>>> {
-        const idsValidOrErrorMsg = this.validatePositiveIntegers({ metafieldId, productId });
+            | (ApiMetafieldQueryBase & { include_fields?: I; exclude_fields?: never })
+            | (ApiMetafieldQueryBase & { include_fields?: never; exclude_fields?: E }),
+    ): Promise<TchefResult<GetMetafieldReturnType<I, E>>> {
+        const idsValidOrErrorMsg = validatePositiveIntegers({ metafieldId, productId });
 
         if (idsValidOrErrorMsg !== true) {
             return {
                 error: idsValidOrErrorMsg,
                 ok: false,
                 statusCode: 400,
-            } as TchefResult<GetMetafieldReturnType<F, E>>;
+            } as TchefResult<GetMetafieldReturnType<I, E>>;
         }
 
         const querySuffix = buildQueryString(query);
         const url = `${this.apiUrl}/${productId}/metafields/${metafieldId}${querySuffix}`;
 
         return (await fetchOne<ProductMetafield>(url, this.accessToken)) as TchefResult<
-            GetMetafieldReturnType<F, E>
+            GetMetafieldReturnType<I, E>
         >;
     }
 
     /** Fetches all metafields across every page, or a single page if `query.page` is supplied.
      * @param productId Product ID.
      * @param query Query and include/exclude field options.
-     * @returns {Promise<TchefResult<GetMetafieldsReturnType<F, E>>>} The collected metafields or an error result.
+     * @returns {Promise<TchefResult<GetMetafieldsReturnType<I, E>>>} The collected metafields or an error result.
      */
     public async getMetafields<
-        F extends readonly BaseMetafieldField[] | undefined = undefined,
+        I extends readonly BaseMetafieldField[] | undefined = undefined,
         E extends readonly BaseMetafieldField[] | undefined = undefined,
     >(
         productId: number,
         query?:
-            | (Omit<ApiMetafieldQueryBase, 'include_fields' | 'exclude_fields'> & {
-                  include_fields?: F;
-                  exclude_fields?: never;
-              })
-            | (Omit<ApiMetafieldQueryBase, 'include_fields' | 'exclude_fields'> & {
-                  include_fields?: never;
-                  exclude_fields?: E;
-              }),
-    ): Promise<TchefResult<GetMetafieldsReturnType<F, E>>> {
-        const idValidOrErrorMsg = this.validatePositiveIntegers({ productId });
+            | (ApiMetafieldQueryBase & { include_fields?: I; exclude_fields?: never })
+            | (ApiMetafieldQueryBase & { include_fields?: never; exclude_fields?: E }),
+    ): Promise<TchefResult<GetMetafieldsReturnType<I, E>>> {
+        const idValidOrErrorMsg = validatePositiveIntegers({ productId });
 
         if (idValidOrErrorMsg !== true) {
             return {
                 error: idValidOrErrorMsg,
                 ok: false,
                 statusCode: 400,
-            } as TchefResult<GetMetafieldsReturnType<F, E>>;
+            } as TchefResult<GetMetafieldsReturnType<I, E>>;
         }
 
         const querySuffix = buildQueryString(query);
@@ -149,7 +138,7 @@ export default class ProductMetafields {
             this.accessToken,
             limit,
             query?.page,
-        )) as TchefResult<GetMetafieldsReturnType<F, E>>;
+        )) as TchefResult<GetMetafieldsReturnType<I, E>>;
     }
 
     /** Deletes a metafield by product and metafield ID.
@@ -161,7 +150,7 @@ export default class ProductMetafields {
         productId: number,
         metafieldId: number,
     ): Promise<TchefResult<null>> {
-        const idsValidOrErrorMsg = this.validatePositiveIntegers({ metafieldId, productId });
+        const idsValidOrErrorMsg = validatePositiveIntegers({ metafieldId, productId });
 
         if (idsValidOrErrorMsg !== true) {
             return {
@@ -185,7 +174,7 @@ export default class ProductMetafields {
         productId: number,
         metafieldData: CreateMetafieldPayload,
     ): Promise<TchefResult<ProductMetafield>> {
-        const idValidOrError = this.validatePositiveIntegers({ productId });
+        const idValidOrError = validatePositiveIntegers({ productId });
 
         if (idValidOrError !== true) {
             return {
@@ -221,7 +210,7 @@ export default class ProductMetafields {
         metafieldId: number,
         metafieldData: Partial<CreateMetafieldPayload>,
     ): Promise<TchefResult<ProductMetafield>> {
-        const idsValidOrErrorMsg = this.validatePositiveIntegers({ metafieldId, productId });
+        const idsValidOrErrorMsg = validatePositiveIntegers({ metafieldId, productId });
 
         if (idsValidOrErrorMsg !== true) {
             return {
@@ -247,19 +236,6 @@ export default class ProductMetafields {
     }
 
     /// ===== Validation Methods =====
-
-    /** Validates that an number is a positive integer.
-     * @param numbers Number values to validate.
-     * @returns {true | string} `true` if all numbers are valid, or an error message for the first invalid number.
-     */
-    private validatePositiveIntegers(numbers: Record<string, number>): true | string {
-        for (const [fieldName, value] of Object.entries(numbers)) {
-            if (!Number.isInteger(value) || value <= 0) {
-                return `Invalid ${fieldName}: must be a positive integer.`;
-            }
-        }
-        return true;
-    }
 
     /** Validates the create payload.
      * @param payload Metafield data to validate.

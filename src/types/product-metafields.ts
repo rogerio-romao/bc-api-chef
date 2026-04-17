@@ -63,8 +63,6 @@ export interface ApiMetafieldQueryBase {
 
 export type ApiMetafieldQuery = ApiMetafieldQueryBase & FieldSelectionOptions;
 
-export type ApiMetafieldQueryBaseWithFieldSelection = ApiMetafieldQueryBase & FieldSelectionOptions;
-
 /**
  * Applies Omit<ProductMetafield, E[number]> for exclude_fields, with a guard
  * that falls back to ProductMetafield when inference widens E to the full
@@ -75,10 +73,10 @@ type ExcludeMetafieldFields<E extends readonly BaseMetafieldField[]> =
     BaseMetafieldField extends E[number] ? ProductMetafield : Omit<ProductMetafield, E[number]>;
 
 type MetafieldReturnBase<
-    F extends readonly BaseMetafieldField[] | undefined,
+    I extends readonly BaseMetafieldField[] | undefined,
     E extends readonly BaseMetafieldField[] | undefined,
-> = F extends readonly BaseMetafieldField[]
-    ? Pick<ProductMetafield, F[number]>
+> = I extends readonly BaseMetafieldField[]
+    ? Pick<ProductMetafield, I[number]>
     : E extends readonly BaseMetafieldField[]
       ? ExcludeMetafieldFields<E>
       : ProductMetafield;
@@ -90,14 +88,14 @@ type MetafieldReturnBase<
  * two are mutually exclusive — BC returns 409 when both are supplied.
  */
 export type GetMetafieldsReturnType<
-    F extends readonly BaseMetafieldField[] | undefined = undefined,
+    I extends readonly BaseMetafieldField[] | undefined = undefined,
     E extends readonly BaseMetafieldField[] | undefined = undefined,
-> = MetafieldReturnBase<F, E>[];
+> = MetafieldReturnBase<I, E>[];
 
 export type GetMetafieldReturnType<
-    F extends readonly BaseMetafieldField[] | undefined = undefined,
+    I extends readonly BaseMetafieldField[] | undefined = undefined,
     E extends readonly BaseMetafieldField[] | undefined = undefined,
-> = MetafieldReturnBase<F, E>;
+> = MetafieldReturnBase<I, E>;
 
 export interface CreateMetafieldPayload {
     namespace: string;
