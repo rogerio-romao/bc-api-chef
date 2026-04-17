@@ -161,9 +161,10 @@ type ExcludeProductFields<E extends readonly BaseProductField[]> =
     BaseProductField extends E[number] ? BaseProduct : Omit<BaseProduct, E[number]>;
 
 /**
- * Defines allowed query parameters for product listing endpoints. Each key corresponds to a supported filter or sort parameter. Some filters (e.g. `id:in`) allow multiple values.
+ * Defines allowed query parameters for product listing endpoints, excluding field-selection keys.
+ * Use {@link ApiProductQuery} when field-selection options are also needed.
  */
-export interface ApiProductQuery {
+export interface ApiProductQueryBase {
     id?: number;
     'id:in'?: number[];
     'id:not_in'?: number[];
@@ -206,14 +207,20 @@ export interface ApiProductQuery {
     keyword_context?: 'shopper' | 'merchant';
     status?: number;
     availability?: BaseProduct['availability'];
-    include_fields?: readonly BaseProductField[];
-    exclude_fields?: readonly BaseProductField[];
     sort?: ProductSortField;
     direction?: SortDirection;
     // Note: if `page` is supplied, only that page is returned. If omitted, getAllProducts walks every page until total_pages.
     page?: number;
     limit?: number;
 }
+
+type ProductFieldSelectionOptions =
+    | { include_fields: readonly BaseProductField[]; exclude_fields?: never }
+    | { include_fields?: never; exclude_fields: readonly BaseProductField[] }
+    | { include_fields?: never; exclude_fields?: never };
+
+/** {@link ApiProductQueryBase} plus mutually-exclusive field-selection options. */
+export type ApiProductQuery = ApiProductQueryBase & ProductFieldSelectionOptions;
 
 type ProductReturnBase<
     T extends ProductIncludes,
