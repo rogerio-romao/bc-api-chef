@@ -151,15 +151,6 @@ export type IncludeExpansion<T extends ProductIncludes> = (T['variants'] extends
     (T['videos'] extends true ? { videos: ProductVideo[] } : object);
 
 /**
- * Applies Omit<BaseProduct, E[number]> for exclude_fields, with a guard that
- * falls back to BaseProduct when inference widens E to the full field union
- * (e.g. when a variable typed as BaseProductField[] is passed instead of a
- * literal array).
- */
-type ExcludeProductFields<E extends readonly BaseProductField[]> =
-    BaseProductField extends E[number] ? BaseProduct : Omit<BaseProduct, E[number]>;
-
-/**
  * Defines allowed query parameters for product listing endpoints, excluding field-selection keys.
  * Use {@link ApiProductQuery} when field-selection options are also needed.
  */
@@ -221,39 +212,9 @@ type ProductFieldSelectionOptions =
 /** {@link ApiProductQueryBase} plus mutually-exclusive field-selection options. */
 export type ApiProductQuery = ApiProductQueryBase & ProductFieldSelectionOptions;
 
-type ProductReturnBase<
-    T extends ProductIncludes,
-    F extends readonly BaseProductField[] | undefined,
-    E extends readonly BaseProductField[] | undefined,
-> = (F extends readonly BaseProductField[]
-    ? Pick<BaseProduct, F[number]>
-    : E extends readonly BaseProductField[]
-      ? ExcludeProductFields<E>
-      : BaseProduct) &
-    IncludeExpansion<T>;
-
-export type GetProductReturnType<
-    T extends ProductIncludes,
-    F extends readonly BaseProductField[] | undefined = undefined,
-    E extends readonly BaseProductField[] | undefined = undefined,
-> = ProductReturnBase<T, F, E>;
-
 export interface BcGetProductResponse {
     data: FullProduct;
 }
-
-/**
- * Resolves the return type of getAllProducts based on requested includes,
- * include_fields, and exclude_fields. When include_fields is provided, base
- * fields are narrowed via Pick. When exclude_fields is provided, base fields
- * are narrowed via Omit. The two are mutually exclusive — BC returns 409 when
- * both are supplied. Sub-resources from includes are always additive.
- */
-export type GetProductsReturnType<
-    T extends ProductIncludes,
-    F extends readonly BaseProductField[] | undefined = undefined,
-    E extends readonly BaseProductField[] | undefined = undefined,
-> = ProductReturnBase<T, F, E>[];
 
 export interface BcGetProductsResponse {
     data: FullProduct[];
@@ -310,12 +271,6 @@ export type UpdateProductPayload = Partial<Omit<BaseProduct, ServerComputedProdu
     images?: ProductImagePayload;
     videos?: ProductVideoPayload;
 };
-
-export type UpdateProductReturnType<
-    T extends ProductIncludes,
-    F extends readonly BaseProductField[] | undefined = undefined,
-    E extends readonly BaseProductField[] | undefined = undefined,
-> = ProductReturnBase<T, F, E>;
 
 export interface BcUpdateProductResponse {
     data: BaseProduct;

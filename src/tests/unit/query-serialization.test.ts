@@ -177,10 +177,10 @@ describe('query param serialization', () => {
     describe('full combination query', () => {
         it('serializes all param types in a single call', async () => {
             await products.getProducts({
-                includes: { custom_fields: true, images: true },
                 direction: 'desc',
                 'id:in': [1, 2, 3],
                 include_fields: ['id', 'name', 'price'],
+                includes: { custom_fields: true, images: true },
                 is_visible: true,
                 name: 'Widget',
                 sort: 'price',

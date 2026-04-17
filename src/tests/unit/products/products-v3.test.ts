@@ -845,8 +845,8 @@ describe('ProductsV3 class', () => {
                 42,
                 {},
                 {
-                    includes: { images: true },
                     include_fields: ['id', 'name'] as const,
+                    includes: { images: true },
                 },
             );
 

@@ -128,7 +128,7 @@ export default class ProductsV3 {
     >(
         productId: number,
         options: ApiProductQueryBase & {
-            includes?: T;
+            includes?: T & ProductIncludes;
             include_fields: F;
             exclude_fields?: never;
         },
@@ -140,7 +140,7 @@ export default class ProductsV3 {
     >(
         productId: number,
         options: ApiProductQueryBase & {
-            includes?: T;
+            includes?: T & ProductIncludes;
             include_fields?: never;
             exclude_fields: E;
         },
@@ -149,7 +149,7 @@ export default class ProductsV3 {
     public async getProduct<T extends ProductIncludes = Record<string, never>>(
         productId: number,
         options?: ApiProductQueryBase & {
-            includes?: T;
+            includes?: T & ProductIncludes;
         },
     ): Promise<BcApiChefResult<Prettify<BaseProduct & IncludeExpansion<T>>>>;
 
@@ -184,7 +184,7 @@ export default class ProductsV3 {
     >(
         // BC returns 409 when both include_fields and exclude_fields are supplied, so we enforce mutual exclusion at the type level.
         options: ApiProductQueryBase & {
-            includes?: T;
+            includes?: T & ProductIncludes;
             include_fields: F;
             exclude_fields?: never;
         },
@@ -195,7 +195,7 @@ export default class ProductsV3 {
         E extends readonly BaseProductField[] = readonly BaseProductField[],
     >(
         options: ApiProductQueryBase & {
-            includes?: T;
+            includes?: T & ProductIncludes;
             include_fields?: never;
             exclude_fields: E;
         },
@@ -203,7 +203,7 @@ export default class ProductsV3 {
 
     public async getProducts<T extends ProductIncludes = Record<string, never>>(
         options?: ApiProductQueryBase & {
-            includes?: T;
+            includes?: T & ProductIncludes;
         },
     ): Promise<BcApiChefResult<Prettify<BaseProduct & IncludeExpansion<T>>[]>>;
 
@@ -241,7 +241,7 @@ export default class ProductsV3 {
         productId: number,
         payload: UpdateProductPayload,
         options: {
-            includes?: T;
+            includes?: T & ProductIncludes;
             include_fields: F;
         },
     ): Promise<BcApiChefResult<Prettify<Pick<BaseProduct, F[number]> & IncludeExpansion<T>>>>;
@@ -250,7 +250,7 @@ export default class ProductsV3 {
         productId: number,
         payload: UpdateProductPayload,
         options?: {
-            includes?: T;
+            includes?: T & ProductIncludes;
         },
     ): Promise<BcApiChefResult<Prettify<BaseProduct & IncludeExpansion<T>>>>;
 
