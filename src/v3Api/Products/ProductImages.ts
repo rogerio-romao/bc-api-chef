@@ -5,13 +5,10 @@ import {
     validatePositiveIntegers,
 } from '@/v3Api/utils';
 
-import type { TchefResult } from 'tchef';
-
-import type { BcApiChefOptions } from '@/types/api-types';
+import type { BcApiChefOptions, BcApiChefResult, Prettify } from '@/types/api-types';
 import type {
     ApiImageQueryBase,
     BaseProductImageField,
-    GetProductImagesReturnType,
     ProductImage,
 } from '@/types/product-images';
 
@@ -30,15 +27,28 @@ export default class ProductImages {
         };
     }
 
-    public async getImages<
-        I extends readonly BaseProductImageField[] | undefined = undefined,
-        E extends readonly BaseProductImageField[] | undefined = undefined,
-    >(
+    public async getImages<I extends readonly BaseProductImageField[]>(
         productId: number,
-        query?:
-            | (ApiImageQueryBase & { include_fields?: I; exclude_fields?: never })
-            | (ApiImageQueryBase & { include_fields?: never; exclude_fields?: E }),
-    ): Promise<TchefResult<GetProductImagesReturnType<I, E>>> {
+        query: ApiImageQueryBase & { include_fields: I; exclude_fields?: never },
+    ): Promise<BcApiChefResult<Prettify<Pick<ProductImage, 'id' | I[number]>>[]>>;
+
+    public async getImages<E extends readonly BaseProductImageField[]>(
+        productId: number,
+        query: ApiImageQueryBase & { include_fields?: never; exclude_fields: E },
+    ): Promise<BcApiChefResult<Prettify<Omit<ProductImage, E[number]>>[]>>;
+
+    public async getImages(
+        productId: number,
+        query?: ApiImageQueryBase,
+    ): Promise<BcApiChefResult<ProductImage[]>>;
+
+    public async getImages(
+        productId: number,
+        query?: ApiImageQueryBase & {
+            include_fields?: readonly BaseProductImageField[];
+            exclude_fields?: readonly BaseProductImageField[];
+        },
+    ): Promise<BcApiChefResult<ProductImage[]>> {
         const idValidOrError = validatePositiveIntegers({ productId });
 
         if (idValidOrError !== true) {
@@ -46,7 +56,7 @@ export default class ProductImages {
                 error: idValidOrError,
                 ok: false,
                 statusCode: 400,
-            } as TchefResult<GetProductImagesReturnType<I, E>>;
+            } as BcApiChefResult<ProductImage[]>;
         }
 
         const querySuffix = buildQueryString(query);
@@ -58,6 +68,6 @@ export default class ProductImages {
             this.accessToken,
             limit,
             query?.page,
-        )) as TchefResult<GetProductImagesReturnType<I, E>>;
+        )) as BcApiChefResult<ProductImage[]>;
     }
 }

@@ -49,6 +49,8 @@
         "oxc/no-optional-chaining": "off",
         "oxc/no-rest-spread-properties": "off",
 
+        "typescript/ban-types": "off",
+
         "unicorn/filename-case": "off",
         "unicorn/no-null": "off",
         "unicorn/relative-url-style": ["warn", "always"],

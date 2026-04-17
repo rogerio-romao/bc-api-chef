@@ -1,4 +1,4 @@
-import type { BcRequestResponseMeta } from './api-types';
+import type { BcRequestResponseMeta, Prettify } from './api-types';
 
 export interface ProductImage {
     id: number;
@@ -59,7 +59,7 @@ type ProductImageReturnBase<
     I extends readonly BaseProductImageField[] | undefined,
     E extends readonly BaseProductImageField[] | undefined,
 > = I extends readonly BaseProductImageField[]
-    ? Pick<ProductImage, I[number]>
+    ? Prettify<Pick<ProductImage, 'id' | I[number]>>
     : E extends readonly BaseProductImageField[]
       ? Omit<ProductImage, E[number]>
       : ProductImage;
