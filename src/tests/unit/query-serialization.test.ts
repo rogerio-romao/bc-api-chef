@@ -19,20 +19,20 @@ describe('query param serialization', () => {
 
     describe('number array params', () => {
         it('serializes id:in as comma-separated numbers', async () => {
-            await products.getProducts({ query: { 'id:in': [10, 20, 30] } });
+            await products.getProducts({ 'id:in': [10, 20, 30] });
 
             expect(getCallUrl(mockTchef).searchParams.get('id:in')).toBe('10,20,30');
         });
 
         it('serializes id:not_in as comma-separated numbers', async () => {
-            await products.getProducts({ query: { 'id:not_in': [5, 15] } });
+            await products.getProducts({ 'id:not_in': [5, 15] });
 
             expect(getCallUrl(mockTchef).searchParams.get('id:not_in')).toBe('5,15');
         });
 
         it('serializes inventory_level:in as comma-separated numbers', async () => {
             await products.getProducts({
-                query: { 'inventory_level:in': [0, 1, 2] },
+                'inventory_level:in': [0, 1, 2],
             });
 
             expect(getCallUrl(mockTchef).searchParams.get('inventory_level:in')).toBe('0,1,2');
@@ -40,7 +40,7 @@ describe('query param serialization', () => {
 
         it('serializes categories:in as comma-separated numbers', async () => {
             await products.getProducts({
-                query: { 'categories:in': [100, 200] },
+                'categories:in': [100, 200],
             });
 
             expect(getCallUrl(mockTchef).searchParams.get('categories:in')).toBe('100,200');
@@ -50,7 +50,7 @@ describe('query param serialization', () => {
     describe('string array params', () => {
         it('serializes sku:in as comma-separated strings', async () => {
             await products.getProducts({
-                query: { 'sku:in': ['ABC-1', 'DEF-2'] },
+                'sku:in': ['ABC-1', 'DEF-2'],
             });
 
             expect(getCallUrl(mockTchef).searchParams.get('sku:in')).toBe('ABC-1,DEF-2');
@@ -59,19 +59,19 @@ describe('query param serialization', () => {
 
     describe('boolean params', () => {
         it('serializes is_visible: true as "true"', async () => {
-            await products.getProducts({ query: { is_visible: true } });
+            await products.getProducts({ is_visible: true });
 
             expect(getCallUrl(mockTchef).searchParams.get('is_visible')).toBe('true');
         });
 
         it('serializes is_featured: false as "false"', async () => {
-            await products.getProducts({ query: { is_featured: false } });
+            await products.getProducts({ is_featured: false });
 
             expect(getCallUrl(mockTchef).searchParams.get('is_featured')).toBe('false');
         });
 
         it('serializes out_of_stock: true as "true"', async () => {
-            await products.getProducts({ query: { out_of_stock: true } });
+            await products.getProducts({ out_of_stock: true });
 
             expect(getCallUrl(mockTchef).searchParams.get('out_of_stock')).toBe('true');
         });
@@ -80,7 +80,7 @@ describe('query param serialization', () => {
     describe('date string params', () => {
         it('serializes date_modified:min correctly', async () => {
             await products.getProducts({
-                query: { 'date_modified:min': '2024-01-01T00:00:00Z' },
+                'date_modified:min': '2024-01-01T00:00:00Z',
             });
 
             expect(getCallUrl(mockTchef).searchParams.get('date_modified:min')).toBe(
@@ -90,7 +90,7 @@ describe('query param serialization', () => {
 
         it('serializes date_last_imported:max correctly', async () => {
             await products.getProducts({
-                query: { 'date_last_imported:max': '2024-12-31' },
+                'date_last_imported:max': '2024-12-31',
             });
 
             expect(getCallUrl(mockTchef).searchParams.get('date_last_imported:max')).toBe(
@@ -101,20 +101,21 @@ describe('query param serialization', () => {
 
     describe('sort and direction params', () => {
         it('serializes sort field', async () => {
-            await products.getProducts({ query: { sort: 'price' } });
+            await products.getProducts({ sort: 'price' });
 
             expect(getCallUrl(mockTchef).searchParams.get('sort')).toBe('price');
         });
 
         it('serializes direction', async () => {
-            await products.getProducts({ query: { direction: 'desc' } });
+            await products.getProducts({ direction: 'desc' });
 
             expect(getCallUrl(mockTchef).searchParams.get('direction')).toBe('desc');
         });
 
         it('serializes sort and direction together', async () => {
             await products.getProducts({
-                query: { direction: 'asc', sort: 'date_modified' },
+                direction: 'asc',
+                sort: 'date_modified',
             });
 
             const url = getCallUrl(mockTchef);
@@ -126,7 +127,7 @@ describe('query param serialization', () => {
     describe('field selection params', () => {
         it('serializes include_fields array as comma-separated string', async () => {
             await products.getProducts({
-                query: { include_fields: ['id', 'name', 'sku'] },
+                include_fields: ['id', 'name', 'sku'],
             });
 
             expect(getCallUrl(mockTchef).searchParams.get('include_fields')).toBe('id,name,sku');
@@ -134,7 +135,7 @@ describe('query param serialization', () => {
 
         it('serializes exclude_fields array as comma-separated string', async () => {
             await products.getProducts({
-                query: { exclude_fields: ['description', 'meta_description'] },
+                exclude_fields: ['description', 'meta_description'],
             });
 
             expect(getCallUrl(mockTchef).searchParams.get('exclude_fields')).toBe(
@@ -145,20 +146,20 @@ describe('query param serialization', () => {
 
     describe('literal union params', () => {
         it('serializes condition correctly', async () => {
-            await products.getProducts({ query: { condition: 'New' } });
+            await products.getProducts({ condition: 'New' });
 
             expect(getCallUrl(mockTchef).searchParams.get('condition')).toBe('New');
         });
 
         it('serializes type correctly', async () => {
-            await products.getProducts({ query: { type: 'physical' } });
+            await products.getProducts({ type: 'physical' });
 
             expect(getCallUrl(mockTchef).searchParams.get('type')).toBe('physical');
         });
 
         it('serializes availability correctly', async () => {
             await products.getProducts({
-                query: { availability: 'preorder' },
+                availability: 'preorder',
             });
 
             expect(getCallUrl(mockTchef).searchParams.get('availability')).toBe('preorder');
@@ -166,7 +167,7 @@ describe('query param serialization', () => {
 
         it('serializes keyword_context correctly', async () => {
             await products.getProducts({
-                query: { keyword_context: 'shopper' },
+                keyword_context: 'shopper',
             });
 
             expect(getCallUrl(mockTchef).searchParams.get('keyword_context')).toBe('shopper');
@@ -177,14 +178,12 @@ describe('query param serialization', () => {
         it('serializes all param types in a single call', async () => {
             await products.getProducts({
                 includes: { custom_fields: true, images: true },
-                query: {
-                    direction: 'desc',
-                    'id:in': [1, 2, 3],
-                    include_fields: ['id', 'name', 'price'],
-                    is_visible: true,
-                    name: 'Widget',
-                    sort: 'price',
-                },
+                direction: 'desc',
+                'id:in': [1, 2, 3],
+                include_fields: ['id', 'name', 'price'],
+                is_visible: true,
+                name: 'Widget',
+                sort: 'price',
             });
 
             const url = getCallUrl(mockTchef);
@@ -203,7 +202,7 @@ describe('query param serialization', () => {
 
     describe('pagination params', () => {
         it('always sets page and limit (managed by getMultiPage, not the user query)', async () => {
-            await products.getProducts({ query: { name: 'test' } });
+            await products.getProducts({ name: 'test' });
 
             const url = getCallUrl(mockTchef);
 

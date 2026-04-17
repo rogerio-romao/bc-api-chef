@@ -118,9 +118,8 @@ export default class ProductsV3 {
 
     /** Fetches a single product by ID.
      * @param productId Product ID.
-     * @param options Query and include options.
+     * @param options Query and include options — flat object. `includes` controls sub-resource expansion, remaining keys are query params sent to the API.
      * @param options.includes - Include sub-resources in the response by setting the relevant flags to `true`. For example, `{ includes: { variants: true, images: true } }` will include both variants and images in the response. Defaults to no sub-resources included.
-     * @param options.query - Query options to narrow the fields returned by the API. `include_fields` and `exclude_fields` are mutually exclusive, so only one can be supplied. For example, `{ query: { include_fields: ['name', 'sku'] }}` will return only the `name` and `sku` fields in the response.
      * @returns {Promise<BcApiChefResult>} The product or an error result.
      */
     public async getProduct<
@@ -128,12 +127,10 @@ export default class ProductsV3 {
         F extends readonly BaseProductField[] = readonly BaseProductField[],
     >(
         productId: number,
-        options: {
+        options: ApiProductQueryBase & {
             includes?: T;
-            query: ApiProductQueryBase & {
-                include_fields: F;
-                exclude_fields?: never;
-            };
+            include_fields: F;
+            exclude_fields?: never;
         },
     ): Promise<BcApiChefResult<Prettify<Pick<BaseProduct, F[number]> & IncludeExpansion<T>>>>;
 
@@ -142,89 +139,84 @@ export default class ProductsV3 {
         E extends readonly BaseProductField[] = readonly BaseProductField[],
     >(
         productId: number,
-        options: {
+        options: ApiProductQueryBase & {
             includes?: T;
-            query: ApiProductQueryBase & {
-                include_fields?: never;
-                exclude_fields: E;
-            };
+            include_fields?: never;
+            exclude_fields: E;
         },
     ): Promise<BcApiChefResult<Prettify<Omit<BaseProduct, E[number]> & IncludeExpansion<T>>>>;
 
     public async getProduct<T extends ProductIncludes = Record<string, never>>(
         productId: number,
-        options?: {
+        options?: ApiProductQueryBase & {
             includes?: T;
-            query?: ApiProductQueryBase;
         },
     ): Promise<BcApiChefResult<Prettify<BaseProduct & IncludeExpansion<T>>>>;
 
     public async getProduct(
         productId: number,
-        options?: {
+        options?: ApiProductQueryBase & {
             includes?: ProductIncludes;
-            query?: ApiProductQueryBase & {
-                include_fields?: readonly BaseProductField[];
-                exclude_fields?: readonly BaseProductField[];
-            };
+            include_fields?: readonly BaseProductField[];
+            exclude_fields?: readonly BaseProductField[];
         },
     ): Promise<BcApiChefResult<BaseProduct>> {
         if (!Number.isInteger(productId) || productId <= 0) {
             return { error: 'Invalid productId', ok: false, statusCode: 400 };
         }
 
-        const includesString = this.generateProductIncludes(options?.includes);
-        const query = options?.query as ApiProductQuery | undefined;
-        const querySuffix = buildQueryString(query, { include: includesString });
+        const { includes, ...query } = options ?? {};
+        const includesString = this.generateProductIncludes(includes);
+        const querySuffix = buildQueryString(query as ApiProductQuery, { include: includesString });
         const url = `${this.apiUrl}/${productId}${querySuffix}`;
 
         return await fetchOne<FullProduct>(url, this.accessToken);
     }
 
-    /** Fetches all products across every page, or a single page if `query.page` is supplied.
-     * @param options Query and include options.
+    /** Fetches all products across every page, or a single page if `page` is supplied.
+     * @param options Query and include options — flat object. `includes` controls sub-resource expansion, remaining keys are query params sent to the API. Supply `page` to fetch a single page instead of auto-collecting every page.
      * @param options.includes - Include sub-resources in the response by setting the relevant flags to `true`. For example, `{ includes: { variants: true, images: true } }` will include both variants and images in the response. Defaults to no sub-resources included.
-     * @param options.query - Query options to narrow the fields returned by the API. `include_fields` and `exclude_fields` are mutually exclusive, so only one can be supplied. For example, `{ query: { include_fields: ['name', 'sku'] }}` will return only the `name` and `sku` fields in the response. Additionally, supply `query.page` to fetch a single page of results instead of auto-collecting every page.
      * @returns {Promise<BcApiChefResult>} The collected products or an error result.
      */
     public async getProducts<
         T extends ProductIncludes = Record<string, never>,
         F extends readonly BaseProductField[] = readonly BaseProductField[],
-    >(options: {
-        includes?: T;
+    >(
         // BC returns 409 when both include_fields and exclude_fields are supplied, so we enforce mutual exclusion at the type level.
-        query: ApiProductQueryBase & {
+        options: ApiProductQueryBase & {
+            includes?: T;
             include_fields: F;
             exclude_fields?: never;
-        };
-    }): Promise<BcApiChefResult<Prettify<Pick<BaseProduct, F[number]> & IncludeExpansion<T>>[]>>;
+        },
+    ): Promise<BcApiChefResult<Prettify<Pick<BaseProduct, F[number]> & IncludeExpansion<T>>[]>>;
 
     public async getProducts<
         T extends ProductIncludes = Record<string, never>,
         E extends readonly BaseProductField[] = readonly BaseProductField[],
-    >(options: {
-        includes?: T;
-        query: ApiProductQueryBase & {
+    >(
+        options: ApiProductQueryBase & {
+            includes?: T;
             include_fields?: never;
             exclude_fields: E;
-        };
-    }): Promise<BcApiChefResult<Prettify<Omit<BaseProduct, E[number]> & IncludeExpansion<T>>[]>>;
+        },
+    ): Promise<BcApiChefResult<Prettify<Omit<BaseProduct, E[number]> & IncludeExpansion<T>>[]>>;
 
-    public async getProducts<T extends ProductIncludes = Record<string, never>>(options?: {
-        includes?: T;
-        query?: ApiProductQueryBase;
-    }): Promise<BcApiChefResult<Prettify<BaseProduct & IncludeExpansion<T>>[]>>;
+    public async getProducts<T extends ProductIncludes = Record<string, never>>(
+        options?: ApiProductQueryBase & {
+            includes?: T;
+        },
+    ): Promise<BcApiChefResult<Prettify<BaseProduct & IncludeExpansion<T>>[]>>;
 
-    public async getProducts(options?: {
-        includes?: ProductIncludes;
-        query?: ApiProductQueryBase & {
+    public async getProducts(
+        options?: ApiProductQueryBase & {
+            includes?: ProductIncludes;
             include_fields?: readonly BaseProductField[];
             exclude_fields?: readonly BaseProductField[];
-        };
-    }): Promise<BcApiChefResult<BaseProduct[]>> {
-        const includesString = this.generateProductIncludes(options?.includes);
-        const query = options?.query as ApiProductQuery | undefined;
-        const querySuffix = buildQueryString(query, { include: includesString });
+        },
+    ): Promise<BcApiChefResult<BaseProduct[]>> {
+        const { includes, ...query } = options ?? {};
+        const includesString = this.generateProductIncludes(includes);
+        const querySuffix = buildQueryString(query as ApiProductQuery, { include: includesString });
         const url = `${this.apiUrl}${querySuffix}`;
 
         return await fetchPaginated<FullProduct>(
@@ -238,9 +230,8 @@ export default class ProductsV3 {
     /** Updates an existing product by ID.
      * @param productId Product ID.
      * @param payload Product data to update.
-     * @param options Query and include options.
+     * @param options Query and include options — flat object. `includes` controls sub-resource expansion, `include_fields` narrows the returned fields.
      * @param options.includes - Include sub-resources in the response by setting the relevant flags to `true`. For example, `{ includes: { variants: true, images: true } }` will include both variants and images in the response. Defaults to no sub-resources included.
-     * @param options.query - Query options to narrow the fields returned by the API. `include_fields` and `exclude_fields` are mutually exclusive, so only one can be supplied. For example, `{ query: { include_fields: ['name', 'sku'] }}` will return only the `name` and `sku` fields in the response.
      * @returns {Promise<BcApiChefResult>} The updated product or an error result.
      */
     public async updateProduct<
@@ -251,7 +242,7 @@ export default class ProductsV3 {
         payload: UpdateProductPayload,
         options: {
             includes?: T;
-            query: { include_fields: F };
+            include_fields: F;
         },
     ): Promise<BcApiChefResult<Prettify<Pick<BaseProduct, F[number]> & IncludeExpansion<T>>>>;
 
@@ -268,7 +259,7 @@ export default class ProductsV3 {
         payload: UpdateProductPayload,
         options?: {
             includes?: ProductIncludes;
-            query?: { include_fields?: readonly BaseProductField[] };
+            include_fields?: readonly BaseProductField[];
         },
     ): Promise<BcApiChefResult<BaseProduct>> {
         const validationError = this.validateUpdateProductPayload(payload);
@@ -277,9 +268,9 @@ export default class ProductsV3 {
             return { error: validationError, ok: false, statusCode: 400 };
         }
 
-        const includesString = this.generateProductIncludes(options?.includes);
-        const query = options?.query as ApiProductQuery | undefined;
-        const querySuffix = buildQueryString(query, { include: includesString });
+        const { includes, ...query } = options ?? {};
+        const includesString = this.generateProductIncludes(includes);
+        const querySuffix = buildQueryString(query as ApiProductQuery, { include: includesString });
         const url = `${this.apiUrl}/${productId}${querySuffix}`;
 
         return await updateResource<BaseProduct, UpdateProductPayload>(

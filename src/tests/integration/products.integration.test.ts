@@ -39,9 +39,7 @@ describe.runIf(hasCredentials)('Products API — integration', () => {
             .v3()
             .products()
             .getProducts({
-                query: {
-                    include_fields: ['id', 'name'] as const,
-                },
+                include_fields: ['id', 'name'] as const,
             });
 
         assertOk(result);
@@ -71,10 +69,7 @@ describe.runIf(hasCredentials)('Products API — integration', () => {
     });
 
     it('paginates through multiple pages and returns all results', async () => {
-        const result = await client
-            .v3()
-            .products()
-            .getProducts({ query: { limit: PER_PAGE_MIN } });
+        const result = await client.v3().products().getProducts({ limit: PER_PAGE_MIN });
 
         assertOk(result);
 
@@ -87,7 +82,7 @@ describe.runIf(hasCredentials)('Products API — integration', () => {
             .v3()
             .products()
             .getProducts({
-                query: { 'id:in': [TEST_PRODUCT_ID] },
+                'id:in': [TEST_PRODUCT_ID],
             });
 
         assertOk(filtered);
@@ -203,9 +198,7 @@ describe.runIf(hasCredentials)('Products API — write integration', () => {
                     id,
                     { description: 'updated description' },
                     {
-                        query: {
-                            include_fields: ['id', 'description'] as const,
-                        },
+                        include_fields: ['id', 'description'] as const,
                     },
                 );
 

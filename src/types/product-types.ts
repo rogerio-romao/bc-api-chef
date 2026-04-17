@@ -117,10 +117,9 @@ export type ProductSortField =
     | 'is_visible'
     | 'total_sold';
 
-export interface GetProductsOptions {
+export type GetProductsOptions = ApiProductQuery & {
     includes?: ProductIncludes;
-    query?: ApiProductQuery;
-}
+};
 
 /**
  * Defines which sub-resources to include in product responses. Each key corresponds to an optional sub-resource array on the response product type.

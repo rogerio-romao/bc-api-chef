@@ -168,7 +168,8 @@ describe('ProductsV3 class', () => {
                 mockTchef.mockResolvedValueOnce(makePageResponse([{ id: 2 }], 2, 3));
 
                 const result = await products.getProducts({
-                    query: { limit: 50, page: 2 },
+                    limit: 50,
+                    page: 2,
                 });
 
                 assertOk(result);
@@ -185,7 +186,7 @@ describe('ProductsV3 class', () => {
                     .mockResolvedValueOnce(makePageResponse([{ id: 3 }], 3, 3));
 
                 const result = await products.getProducts({
-                    query: { limit: 50 },
+                    limit: 50,
                 });
 
                 assertOk(result);
@@ -254,7 +255,7 @@ describe('ProductsV3 class', () => {
             });
 
             it('omits include param when no includes provided', async () => {
-                await products.getProducts({ query: { id: 1 } });
+                await products.getProducts({ id: 1 });
 
                 const url = getCallUrl(mockTchef, 0);
 
@@ -269,7 +270,8 @@ describe('ProductsV3 class', () => {
 
             it('adds query params to the URL', async () => {
                 await products.getProducts({
-                    query: { id: 42, name: 'Widget' },
+                    id: 42,
+                    name: 'Widget',
                 });
 
                 const url = getCallUrl(mockTchef, 0);
@@ -279,7 +281,7 @@ describe('ProductsV3 class', () => {
             });
 
             it('URL-encodes query values with special characters', async () => {
-                await products.getProducts({ query: { name: 'foo&bar=baz' } });
+                await products.getProducts({ name: 'foo&bar=baz' });
 
                 const url = getCallUrl(mockTchef, 0);
 
@@ -287,7 +289,7 @@ describe('ProductsV3 class', () => {
             });
 
             it('serializes id:in array as comma-separated string', async () => {
-                await products.getProducts({ query: { 'id:in': [1, 2, 3] } });
+                await products.getProducts({ 'id:in': [1, 2, 3] });
 
                 const url = getCallUrl(mockTchef, 0);
 
@@ -297,7 +299,7 @@ describe('ProductsV3 class', () => {
             });
 
             it('serializes id:not_in array as comma-separated string', async () => {
-                await products.getProducts({ query: { 'id:not_in': [10, 20] } });
+                await products.getProducts({ 'id:not_in': [10, 20] });
 
                 const url = getCallUrl(mockTchef, 0);
 
@@ -317,7 +319,9 @@ describe('ProductsV3 class', () => {
 
             it('does not duplicate user-supplied page and limit in the query string', async () => {
                 await products.getProducts({
-                    query: { limit: 25, name: 'Widget', page: 3 },
+                    limit: 25,
+                    name: 'Widget',
+                    page: 3,
                 });
 
                 const url = getCallUrl(mockTchef, 0);
@@ -330,7 +334,7 @@ describe('ProductsV3 class', () => {
             it('combines query params and includes in the same URL', async () => {
                 await products.getProducts({
                     includes: { images: true },
-                    query: { name: 'Test' },
+                    name: 'Test',
                 });
 
                 const url = getCallUrl(mockTchef, 0);
@@ -346,19 +350,19 @@ describe('ProductsV3 class', () => {
             });
 
             it(`clamps limit above ${PER_PAGE_MAX} down to ${PER_PAGE_MAX}`, async () => {
-                await products.getProducts({ query: { limit: 500 } });
+                await products.getProducts({ limit: 500 });
 
                 expect(getCallUrl(mockTchef, 0).searchParams.get('limit')).toBe(`${PER_PAGE_MAX}`);
             });
 
             it(`clamps limit below ${PER_PAGE_MIN} up to ${PER_PAGE_MIN}`, async () => {
-                await products.getProducts({ query: { limit: 1 } });
+                await products.getProducts({ limit: 1 });
 
                 expect(getCallUrl(mockTchef, 0).searchParams.get('limit')).toBe(`${PER_PAGE_MIN}`);
             });
 
             it('passes through a limit within the valid range unchanged', async () => {
-                await products.getProducts({ query: { limit: 100 } });
+                await products.getProducts({ limit: 100 });
 
                 expect(getCallUrl(mockTchef, 0).searchParams.get('limit')).toBe('100');
             });
@@ -372,13 +376,13 @@ describe('ProductsV3 class', () => {
             });
 
             it(`passes through limit of exactly ${PER_PAGE_MIN} (lower boundary) unchanged`, async () => {
-                await products.getProducts({ query: { limit: PER_PAGE_MIN } });
+                await products.getProducts({ limit: PER_PAGE_MIN });
 
                 expect(getCallUrl(mockTchef, 0).searchParams.get('limit')).toBe(`${PER_PAGE_MIN}`);
             });
 
             it(`passes through limit of exactly ${PER_PAGE_MAX} (upper boundary) unchanged`, async () => {
-                await products.getProducts({ query: { limit: PER_PAGE_MAX } });
+                await products.getProducts({ limit: PER_PAGE_MAX });
 
                 expect(getCallUrl(mockTchef, 0).searchParams.get('limit')).toBe(`${PER_PAGE_MAX}`);
             });
@@ -817,7 +821,7 @@ describe('ProductsV3 class', () => {
                 42,
                 {},
                 {
-                    query: { include_fields: ['id', 'name'] as const },
+                    include_fields: ['id', 'name'] as const,
                 },
             );
 
@@ -842,7 +846,7 @@ describe('ProductsV3 class', () => {
                 {},
                 {
                     includes: { images: true },
-                    query: { include_fields: ['id', 'name'] as const },
+                    include_fields: ['id', 'name'] as const,
                 },
             );
 
