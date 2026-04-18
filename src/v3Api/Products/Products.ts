@@ -15,6 +15,7 @@ import ProductMetafields from './ProductMetafields';
 
 import type { BcApiChefOptions, BcApiChefResult, Prettify } from '@/types/api-types';
 import type {
+    ApiGetProductQueryBase,
     ApiProductQuery,
     ApiProductQueryBase,
     BaseProduct,
@@ -23,6 +24,8 @@ import type {
     CreateProductPayload,
     FullProduct,
     IncludeExpansion,
+    IncludeableProductField,
+    NoProductIncludes,
     ProductIncludes,
     UpdateProductPayload,
 } from '@/types/product-types';
@@ -83,11 +86,23 @@ export default class ProductsV3 {
 
     /** Creates a new product.
      * @param productData Product data to create.
-     * @returns {Promise<BcApiChefResult<BaseProduct>>} The created product or an error result.
+     * @param options Query options — `include_fields` narrows the returned fields.
+     * @returns {Promise<BcApiChefResult<Prettify<Pick<BaseProduct, F[number]>>>>} The created product with only the requested fields, or an error result.
      */
+    public async createProduct<F extends readonly IncludeableProductField[]>(
+        productData: CreateProductPayload,
+        options: { include_fields: F },
+    ): Promise<BcApiChefResult<Prettify<{ id: number } & Pick<BaseProduct, F[number]>>>>;
+
     public async createProduct(
         productData: CreateProductPayload,
-    ): Promise<BcApiChefResult<BaseProduct>> {
+        options?: never,
+    ): Promise<BcApiChefResult<Prettify<BaseProduct>>>;
+
+    public async createProduct(
+        productData: CreateProductPayload,
+        options?: { include_fields?: readonly IncludeableProductField[] },
+    ): Promise<BcApiChefResult<Prettify<BaseProduct>>> {
         const validationError = this.validateCreateProductPayload(productData);
 
         if (validationError !== null) {
@@ -95,8 +110,11 @@ export default class ProductsV3 {
             return { error: validationError, ok: false, statusCode: 400 };
         }
 
+        const querySuffix = buildQueryString(options);
+        const url = `${this.apiUrl}${querySuffix}`;
+
         return await createResource<BaseProduct, CreateProductPayload>(
-            this.apiUrl,
+            url,
             this.accessToken,
             productData,
         );
@@ -123,32 +141,36 @@ export default class ProductsV3 {
      * @returns {Promise<BcApiChefResult>} The product or an error result.
      */
     public async getProduct<
-        T extends ProductIncludes = Record<string, never>,
-        F extends readonly BaseProductField[] = readonly BaseProductField[],
+        T extends ProductIncludes = NoProductIncludes,
+        F extends readonly IncludeableProductField[] = readonly IncludeableProductField[],
     >(
         productId: number,
-        options: ApiProductQueryBase & {
+        options: ApiGetProductQueryBase & {
             includes?: T & ProductIncludes;
             include_fields: F;
             exclude_fields?: never;
         },
-    ): Promise<BcApiChefResult<Prettify<Pick<BaseProduct, F[number]> & IncludeExpansion<T>>>>;
+    ): Promise<
+        BcApiChefResult<
+            Prettify<{ id: number } & Pick<BaseProduct, F[number]> & IncludeExpansion<T>>
+        >
+    >;
 
     public async getProduct<
-        T extends ProductIncludes = Record<string, never>,
+        T extends ProductIncludes = NoProductIncludes,
         E extends readonly BaseProductField[] = readonly BaseProductField[],
     >(
         productId: number,
-        options: ApiProductQueryBase & {
+        options: ApiGetProductQueryBase & {
             includes?: T & ProductIncludes;
             include_fields?: never;
             exclude_fields: E;
         },
     ): Promise<BcApiChefResult<Prettify<Omit<BaseProduct, E[number]> & IncludeExpansion<T>>>>;
 
-    public async getProduct<T extends ProductIncludes = Record<string, never>>(
+    public async getProduct<T extends ProductIncludes = NoProductIncludes>(
         productId: number,
-        options?: ApiProductQueryBase & {
+        options?: ApiGetProductQueryBase & {
             includes?: T & ProductIncludes;
         },
     ): Promise<BcApiChefResult<Prettify<BaseProduct & IncludeExpansion<T>>>>;
@@ -157,7 +179,7 @@ export default class ProductsV3 {
         productId: number,
         options?: ApiProductQueryBase & {
             includes?: ProductIncludes;
-            include_fields?: readonly BaseProductField[];
+            include_fields?: readonly IncludeableProductField[];
             exclude_fields?: readonly BaseProductField[];
         },
     ): Promise<BcApiChefResult<BaseProduct>> {
@@ -179,8 +201,8 @@ export default class ProductsV3 {
      * @returns {Promise<BcApiChefResult>} The collected products or an error result.
      */
     public async getProducts<
-        T extends ProductIncludes = Record<string, never>,
-        F extends readonly BaseProductField[] = readonly BaseProductField[],
+        T extends ProductIncludes = NoProductIncludes,
+        F extends readonly IncludeableProductField[] = readonly IncludeableProductField[],
     >(
         // BC returns 409 when both include_fields and exclude_fields are supplied, so we enforce mutual exclusion at the type level.
         options: ApiProductQueryBase & {
@@ -188,10 +210,14 @@ export default class ProductsV3 {
             include_fields: F;
             exclude_fields?: never;
         },
-    ): Promise<BcApiChefResult<Prettify<Pick<BaseProduct, F[number]> & IncludeExpansion<T>>[]>>;
+    ): Promise<
+        BcApiChefResult<
+            Prettify<{ id: number } & Pick<BaseProduct, F[number]> & IncludeExpansion<T>>[]
+        >
+    >;
 
     public async getProducts<
-        T extends ProductIncludes = Record<string, never>,
+        T extends ProductIncludes = NoProductIncludes,
         E extends readonly BaseProductField[] = readonly BaseProductField[],
     >(
         options: ApiProductQueryBase & {
@@ -201,7 +227,7 @@ export default class ProductsV3 {
         },
     ): Promise<BcApiChefResult<Prettify<Omit<BaseProduct, E[number]> & IncludeExpansion<T>>[]>>;
 
-    public async getProducts<T extends ProductIncludes = Record<string, never>>(
+    public async getProducts<T extends ProductIncludes = NoProductIncludes>(
         options?: ApiProductQueryBase & {
             includes?: T & ProductIncludes;
         },
@@ -210,7 +236,7 @@ export default class ProductsV3 {
     public async getProducts(
         options?: ApiProductQueryBase & {
             includes?: ProductIncludes;
-            include_fields?: readonly BaseProductField[];
+            include_fields?: readonly IncludeableProductField[];
             exclude_fields?: readonly BaseProductField[];
         },
     ): Promise<BcApiChefResult<BaseProduct[]>> {
@@ -235,8 +261,8 @@ export default class ProductsV3 {
      * @returns {Promise<BcApiChefResult>} The updated product or an error result.
      */
     public async updateProduct<
-        T extends ProductIncludes = Record<string, never>,
-        F extends readonly BaseProductField[] = readonly BaseProductField[],
+        T extends ProductIncludes = NoProductIncludes,
+        F extends readonly IncludeableProductField[] = readonly IncludeableProductField[],
     >(
         productId: number,
         payload: UpdateProductPayload,
@@ -244,9 +270,13 @@ export default class ProductsV3 {
             includes?: T & ProductIncludes;
             include_fields: F;
         },
-    ): Promise<BcApiChefResult<Prettify<Pick<BaseProduct, F[number]> & IncludeExpansion<T>>>>;
+    ): Promise<
+        BcApiChefResult<
+            Prettify<{ id: number } & Pick<BaseProduct, F[number]> & IncludeExpansion<T>>
+        >
+    >;
 
-    public async updateProduct<T extends ProductIncludes = Record<string, never>>(
+    public async updateProduct<T extends ProductIncludes = NoProductIncludes>(
         productId: number,
         payload: UpdateProductPayload,
         options?: {
@@ -259,7 +289,7 @@ export default class ProductsV3 {
         payload: UpdateProductPayload,
         options?: {
             includes?: ProductIncludes;
-            include_fields?: readonly BaseProductField[];
+            include_fields?: readonly IncludeableProductField[];
         },
     ): Promise<BcApiChefResult<BaseProduct>> {
         const validationError = this.validateUpdateProductPayload(payload);

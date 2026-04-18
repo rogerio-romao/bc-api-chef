@@ -127,10 +127,12 @@ describe('query param serialization', () => {
     describe('field selection params', () => {
         it('serializes include_fields array as comma-separated string', async () => {
             await products.getProducts({
-                include_fields: ['id', 'name', 'sku'],
+                include_fields: ['description', 'name', 'sku'],
             });
 
-            expect(getCallUrl(mockTchef).searchParams.get('include_fields')).toBe('id,name,sku');
+            expect(getCallUrl(mockTchef).searchParams.get('include_fields')).toBe(
+                'description,name,sku',
+            );
         });
 
         it('serializes exclude_fields array as comma-separated string', async () => {
@@ -179,7 +181,7 @@ describe('query param serialization', () => {
             await products.getProducts({
                 direction: 'desc',
                 'id:in': [1, 2, 3],
-                include_fields: ['id', 'name', 'price'],
+                include_fields: ['description', 'name', 'price'],
                 includes: { custom_fields: true, images: true },
                 is_visible: true,
                 name: 'Widget',
@@ -194,7 +196,7 @@ describe('query param serialization', () => {
             expect(url.searchParams.get('sort')).toBe('price');
             expect(url.searchParams.get('direction')).toBe('desc');
             // oxlint-disable-next-line vitest/max-expects
-            expect(url.searchParams.get('include_fields')).toBe('id,name,price');
+            expect(url.searchParams.get('include_fields')).toBe('description,name,price');
             // oxlint-disable-next-line vitest/max-expects
             expect(url.searchParams.get('include')).toBe('custom_fields,images');
         });

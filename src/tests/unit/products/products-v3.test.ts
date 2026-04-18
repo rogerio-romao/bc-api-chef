@@ -730,6 +730,18 @@ describe('ProductsV3 class', () => {
             expect(result.ok).toBe(true);
             expect(mockTchef).toHaveBeenCalledOnce();
         });
+
+        it('appends include_fields to the URL when provided', async () => {
+            await products.createProduct(minPayload, { include_fields: ['name', 'price'] });
+
+            expect(getCallUrl(mockTchef, 0).searchParams.get('include_fields')).toBe('name,price');
+        });
+
+        it('does not include include_fields in the URL when not provided', async () => {
+            await products.createProduct(minPayload);
+
+            expect(getCallUrl(mockTchef, 0).searchParams.has('include_fields')).toBe(false);
+        });
     });
 
     // oxlint-disable-next-line max-statements
@@ -821,11 +833,13 @@ describe('ProductsV3 class', () => {
                 42,
                 {},
                 {
-                    include_fields: ['id', 'name'] as const,
+                    include_fields: ['description', 'name'] as const,
                 },
             );
 
-            expect(getCallUrl(mockTchef, 0).searchParams.get('include_fields')).toBe('id,name');
+            expect(getCallUrl(mockTchef, 0).searchParams.get('include_fields')).toBe(
+                'description,name',
+            );
         });
 
         it('appends include param for sub-resources when provided', async () => {
@@ -845,7 +859,7 @@ describe('ProductsV3 class', () => {
                 42,
                 {},
                 {
-                    include_fields: ['id', 'name'] as const,
+                    include_fields: ['description', 'name'] as const,
                     includes: { images: true },
                 },
             );
@@ -853,7 +867,7 @@ describe('ProductsV3 class', () => {
             const url = getCallUrl(mockTchef, 0);
 
             expect(url.searchParams.get('include')).toBe('images');
-            expect(url.searchParams.get('include_fields')).toBe('id,name');
+            expect(url.searchParams.get('include_fields')).toBe('description,name');
         });
 
         it('returns the error result immediately on failure', async () => {

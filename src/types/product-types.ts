@@ -12,6 +12,7 @@ import type { ProductVariant } from './product-variants.ts';
 import type { ProductVideo, ProductVideoPayload } from './product-videos.ts';
 
 export type BaseProductField = keyof BaseProduct;
+export type IncludeableProductField = Exclude<BaseProductField, 'id'>;
 
 export interface BaseProduct {
     id: number;
@@ -136,6 +137,9 @@ export interface ProductIncludes {
     videos?: boolean;
 }
 
+/** Default type representing "no sub-resources requested" — every include flag is absent. */
+export type NoProductIncludes = { [K in keyof ProductIncludes]?: false };
+
 /** Expands included sub-resources onto the base product type. */
 export type IncludeExpansion<T extends ProductIncludes> = (T['variants'] extends true
     ? { variants: ProductVariant[] }
@@ -204,8 +208,11 @@ export interface ApiProductQueryBase {
     limit?: number;
 }
 
+/** {@link ApiProductQueryBase} without pagination — for single-product fetches where `page`/`limit` are meaningless. */
+export type ApiGetProductQueryBase = Omit<ApiProductQueryBase, 'page' | 'limit'>;
+
 type ProductFieldSelectionOptions =
-    | { include_fields: readonly BaseProductField[]; exclude_fields?: never }
+    | { include_fields: readonly IncludeableProductField[]; exclude_fields?: never }
     | { include_fields?: never; exclude_fields: readonly BaseProductField[] }
     | { include_fields?: never; exclude_fields?: never };
 

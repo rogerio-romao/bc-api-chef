@@ -76,19 +76,19 @@ export default class ProductMetafields {
     public async getMetafield<I extends readonly BaseMetafieldField[]>(
         productId: number,
         metafieldId: number,
-        query: ApiMetafieldQueryBase & { include_fields: I; exclude_fields?: never },
+        query: { include_fields: I; exclude_fields?: never },
     ): Promise<BcApiChefResult<Prettify<Pick<ProductMetafield, 'id' | I[number]>>>>;
 
     public async getMetafield<E extends readonly BaseMetafieldField[]>(
         productId: number,
         metafieldId: number,
-        query: ApiMetafieldQueryBase & { include_fields?: never; exclude_fields: E },
+        query: { include_fields?: never; exclude_fields: E },
     ): Promise<BcApiChefResult<Prettify<Omit<ProductMetafield, E[number]>>>>;
 
     public async getMetafield(
         productId: number,
         metafieldId: number,
-        query?: ApiMetafieldQueryBase,
+        query?: undefined,
     ): Promise<BcApiChefResult<ProductMetafield>>;
 
     public async getMetafield(
@@ -183,7 +183,7 @@ export default class ProductMetafields {
     public async createMetafield(
         productId: number,
         metafieldData: CreateMetafieldPayload,
-    ): Promise<BcApiChefResult<ProductMetafield>> {
+    ): Promise<BcApiChefResult<Prettify<ProductMetafield>>> {
         const idValidOrError = validatePositiveIntegers({ productId });
 
         if (idValidOrError !== true) {
@@ -191,7 +191,7 @@ export default class ProductMetafields {
                 error: idValidOrError,
                 ok: false,
                 statusCode: 400,
-            } as BcApiChefResult<ProductMetafield>;
+            } as BcApiChefResult<Prettify<ProductMetafield>>;
         }
 
         const validationError = this.validateCreateMetafieldPayload(metafieldData);
@@ -219,7 +219,7 @@ export default class ProductMetafields {
         productId: number,
         metafieldId: number,
         metafieldData: Partial<CreateMetafieldPayload>,
-    ): Promise<BcApiChefResult<ProductMetafield>> {
+    ): Promise<BcApiChefResult<Prettify<ProductMetafield>>> {
         const idsValidOrErrorMsg = validatePositiveIntegers({ metafieldId, productId });
 
         if (idsValidOrErrorMsg !== true) {
@@ -227,7 +227,7 @@ export default class ProductMetafields {
                 error: idsValidOrErrorMsg,
                 ok: false,
                 statusCode: 400,
-            } as BcApiChefResult<ProductMetafield>;
+            } as BcApiChefResult<Prettify<ProductMetafield>>;
         }
 
         const validationError = this.validateUpdateMetafieldPayload(metafieldData);

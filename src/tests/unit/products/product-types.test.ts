@@ -7,6 +7,7 @@ import type {
     BaseProductField,
     CreateProductPayload,
     IncludeExpansion,
+    IncludeableProductField,
     ProductSortField,
 } from '@/types/product-types';
 import type { ProductVariant } from '@/types/product-variants';
@@ -18,9 +19,9 @@ describe('BaseProductField type', () => {
 });
 
 describe('ApiProductQuery type', () => {
-    it('accepts valid BaseProductField values for include_fields', () => {
+    it('accepts IncludeableProductField values for include_fields', () => {
         expectTypeOf<ApiProductQuery['include_fields']>().toEqualTypeOf<
-            readonly BaseProductField[] | undefined
+            readonly IncludeableProductField[] | undefined
         >();
     });
 
@@ -74,7 +75,7 @@ describe('ApiProductQuery type', () => {
         // @ts-expect-error include_fields and exclude_fields are mutually exclusive
         const query: ApiProductQuery = {
             exclude_fields: ['name'],
-            include_fields: ['id'],
+            include_fields: ['description'],
         };
 
         expect(query).toBeDefined();

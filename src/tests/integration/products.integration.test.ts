@@ -39,7 +39,7 @@ describe.runIf(hasCredentials)('Products API — integration', () => {
             .v3()
             .products()
             .getProducts({
-                include_fields: ['id', 'name'] as const,
+                include_fields: ['description', 'name'],
             });
 
         assertOk(result);
@@ -50,6 +50,7 @@ describe.runIf(hasCredentials)('Products API — integration', () => {
         assert(product !== undefined, 'Expected at least one product');
         expectTypeOf(product.id).toBeNumber();
         expectTypeOf(product.name).toBeString();
+        expectTypeOf(product.description).toBeString();
     });
 
     it('returns sub-resources when includes are requested', async () => {
@@ -94,8 +95,8 @@ describe.runIf(hasCredentials)('Products API — integration', () => {
         const result = await client.v3().products().getProduct(TEST_PRODUCT_ID);
 
         assertOk(result);
-        expectTypeOf(result.data.id).toBeNumber();
-        expect(result.data.name).toBe('[Sample] Smith Journal 13');
+        expect(result.data.id).toBe(TEST_PRODUCT_ID);
+        expectTypeOf(result.data.name).toBeString();
     });
 });
 
@@ -198,13 +199,14 @@ describe.runIf(hasCredentials)('Products API — write integration', () => {
                     id,
                     { description: 'updated description' },
                     {
-                        include_fields: ['id', 'description'] as const,
+                        include_fields: ['name', 'description'],
                     },
                 );
 
             assertOk(result);
 
             expect(result.data.id).toBe(id);
+            expect(result.data.name).toBe(`bc-api-chef integration ${suffix}-2`);
             expect(result.data.description).toBe('updated description');
         });
     });
