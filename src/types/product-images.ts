@@ -23,8 +23,8 @@ interface ProductImagePayloadCommon {
     description?: string;
 }
 
-type ProductImagePayloadItem =
-    | (ProductImagePayloadCommon & { image_file: string; image_url?: never })
+export type ProductImagePayloadItem =
+    | (ProductImagePayloadCommon & { image_file: File; image_url?: never })
     | (ProductImagePayloadCommon & { image_url: string; image_file?: never });
 
 export type ProductImagePayload = ProductImagePayloadItem[];

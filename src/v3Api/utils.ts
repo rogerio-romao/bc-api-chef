@@ -187,6 +187,46 @@ export async function createResource<T, P>(
 }
 
 /**
+ * Sends a `multipart/form-data` `POST` request and unwraps the common `{ data }` response envelope.
+ * Uses raw `fetch` instead of `tchef` because `tchef` only accepts a `string` body.
+ * The `Content-type` header must NOT be set manually — `fetch` auto-generates it with the
+ * correct multipart boundary when given a `FormData` body.
+ * @param url - Fully-built request URL.
+ * @param accessToken - BigCommerce API access token.
+ * @param formData - The `FormData` body to send.
+ * @returns {Promise<TchefResult<T>>} The created resource or an error result.
+ */
+export async function createResourceMultipart<T>(
+    url: string,
+    accessToken: string,
+    formData: FormData,
+): Promise<TchefResult<T>> {
+    try {
+        const response = await fetch(url, {
+            body: formData,
+            headers: {
+                Accept: 'application/json',
+                'X-Auth-Token': accessToken,
+            },
+            method: 'POST',
+        });
+
+        if (!response.ok) {
+            return { error: response.statusText, ok: false, statusCode: response.status };
+        }
+
+        const json = (await response.json()) as { data: T };
+        return { data: json.data, ok: true };
+    } catch (error) {
+        return {
+            error: error instanceof Error ? error.message : 'Network Error',
+            ok: false,
+            statusCode: 500,
+        };
+    }
+}
+
+/**
  * Sends a JSON `PUT` request and unwraps the common `{ data }` response envelope.
  * Validation stays at the call site so this helper only handles transport concerns.
  * @param url - Fully-built request URL.
