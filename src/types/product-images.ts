@@ -61,7 +61,7 @@ type ProductImageReturnBase<
 > = I extends readonly BaseProductImageField[]
     ? Prettify<Pick<ProductImage, 'id' | I[number]>>
     : E extends readonly BaseProductImageField[]
-      ? Omit<ProductImage, E[number]>
+      ? Prettify<Omit<ProductImage, E[number]>>
       : ProductImage;
 
 export type GetProductImageReturnType<

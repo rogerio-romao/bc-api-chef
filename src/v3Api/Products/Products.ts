@@ -344,7 +344,7 @@ export default class ProductsV3 {
             .join(',');
     }
 
-    // ===== Validation Methods ===== */
+    /* ===== Validation Methods ===== */
 
     /** Validates fields shared by create and update payloads.
      * @param payload Product data to validate.

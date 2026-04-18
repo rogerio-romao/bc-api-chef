@@ -103,9 +103,10 @@ export default class ProductImages {
             } as BcApiChefResult<ProductImage[]>;
         }
 
-        const querySuffix = buildQueryString(query);
-        const url = `${this.apiUrl}/${productId}/images${querySuffix}`;
         const limit = clampPerPageLimits(query?.limit);
+        const clampedQuery = query ? { ...query, limit } : undefined;
+        const querySuffix = buildQueryString(clampedQuery);
+        const url = `${this.apiUrl}/${productId}/images${querySuffix}`;
 
         return (await fetchPaginated<ProductImage>(
             url,
@@ -213,7 +214,7 @@ export default class ProductImages {
         );
     }
 
-    validateCreateImagePayload(imageData: ProductImagePayloadItem): string | null {
+    private validateCreateImagePayload(imageData: ProductImagePayloadItem): string | null {
         if ('image_file' in imageData && 'image_url' in imageData) {
             return 'Payload cannot contain both image_file and image_url';
         }
@@ -225,7 +226,7 @@ export default class ProductImages {
         return this.validateSharedImageFields(imageData);
     }
 
-    validateUpdateImagePayload(imageData: Partial<ProductImage>): string | null {
+    private validateUpdateImagePayload(imageData: Partial<ProductImage>): string | null {
         if ('image_file' in imageData && 'image_url' in imageData) {
             return 'Payload cannot contain both image_file and image_url';
         }

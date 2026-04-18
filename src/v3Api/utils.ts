@@ -46,7 +46,7 @@ export function clampPerPageLimits(limit: number | undefined): number {
     return Math.min(Math.max(limit, PER_PAGE_MIN), PER_PAGE_MAX);
 }
 
-/** Validates that an number is a positive integer.
+/** Validates that a number is a positive integer.
  * @param numbers Number values to validate.
  * @returns {true | string} `true` if all numbers are valid, or an error message for the first invalid number.
  */
@@ -212,11 +212,24 @@ export async function createResourceMultipart<T>(
         });
 
         if (!response.ok) {
-            return { error: response.statusText, ok: false, statusCode: response.status };
+            return {
+                error: response.statusText || `Request failed with status ${response.status}`,
+                ok: false,
+                statusCode: response.status,
+            };
         }
 
-        const json = (await response.json()) as { data: T };
-        return { data: json.data, ok: true };
+        try {
+            const json = (await response.json()) as { data: T };
+            return { data: json.data, ok: true };
+        } catch {
+            const raw = await response.text().catch(() => null);
+            return {
+                error: raw ? `Invalid JSON response: ${raw}` : 'Invalid JSON response',
+                ok: false,
+                statusCode: response.status,
+            };
+        }
     } catch (error) {
         return {
             error: error instanceof Error ? error.message : 'Network Error',

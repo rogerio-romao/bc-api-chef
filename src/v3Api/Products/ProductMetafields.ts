@@ -144,9 +144,10 @@ export default class ProductMetafields {
             return { error: idValidOrErrorMsg, ok: false, statusCode: 400 };
         }
 
-        const querySuffix = buildQueryString(query);
-        const url = `${this.apiUrl}/${productId}/metafields${querySuffix}`;
         const limit = clampPerPageLimits(query?.limit);
+        const clampedQuery = query ? { ...query, limit } : undefined;
+        const querySuffix = buildQueryString(clampedQuery);
+        const url = `${this.apiUrl}/${productId}/metafields${querySuffix}`;
 
         return await fetchPaginated<ProductMetafield>(url, this.accessToken, limit, query?.page);
     }

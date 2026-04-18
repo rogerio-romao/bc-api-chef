@@ -127,7 +127,7 @@ describe.runIf(hasCredentials)('ProductImages API — integration', () => {
 
     describe('deleteImage', () => {
         it('deletes the image and a subsequent getImage returns not-found', async () => {
-            const id = createdIds.pop();
+            const id = createdIds.at(-1);
             assert(id, 'Expected an image ID from the createImage test');
 
             const deleteResult = await client
@@ -138,6 +138,9 @@ describe.runIf(hasCredentials)('ProductImages API — integration', () => {
 
             assertOk(deleteResult);
             expect(deleteResult.data).toBeNull();
+
+            // Remove from cleanup array only after confirmed deletion
+            createdIds.pop();
 
             // Confirm the image is truly gone server-side
             const fetchResult = await client.v3().products().images().getImage(TEST_PRODUCT_ID, id);

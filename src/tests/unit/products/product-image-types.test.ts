@@ -171,7 +171,7 @@ describe('GetProductImagesReturnType type', () => {
     });
 
     it('returns only server-computed fields when E covers the full base union', () => {
-        type E = BaseProductImageField[];
+        type E = readonly BaseProductImageField[];
         type Result = GetProductImagesReturnType<undefined, E>;
 
         expectTypeOf<Result[number]>().toHaveProperty('id');

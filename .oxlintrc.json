@@ -49,6 +49,7 @@
         "oxc/no-optional-chaining": "off",
         "oxc/no-rest-spread-properties": "off",
 
+        // we need `& {}` in some places to prevent type widening, and the `object` type is too broad to be useful
         "typescript/ban-types": "off",
 
         "unicorn/filename-case": "off",
