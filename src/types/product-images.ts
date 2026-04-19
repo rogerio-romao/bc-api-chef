@@ -27,6 +27,11 @@ export type ProductImagePayloadItem =
     | (ProductImagePayloadCommon & { image_file: File; image_url?: never })
     | (ProductImagePayloadCommon & { image_url: string; image_file?: never });
 
+export type ProductImageUpdatePayload =
+    | (ProductImagePayloadCommon & { image_file: File; image_url?: never })
+    | (ProductImagePayloadCommon & { image_url: string; image_file?: never })
+    | (ProductImagePayloadCommon & { image_file?: never; image_url?: never });
+
 export type ProductImagePayload = ProductImagePayloadItem[];
 
 export interface BcGetProductImagesResponse {

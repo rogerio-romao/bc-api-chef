@@ -5,6 +5,7 @@ import type {
     GetProductImagesReturnType,
     ProductImage,
     ProductImagePayloadItem,
+    ProductImageUpdatePayload,
 } from '@/types/product-images';
 
 describe('BaseProductImageField type', () => {
@@ -104,6 +105,47 @@ describe('ProductImagePayloadItem type', () => {
             image_url: 'https://example.com/img.jpg',
             // @ts-expect-error url_zoom is server-computed and not part of the payload
             url_zoom: 'https://cdn.example.com/zoom.jpg',
+        };
+
+        expect(payload).toBeDefined();
+    });
+});
+
+describe('ProductImageUpdatePayload type', () => {
+    it('accepts a payload with image_url and optional common fields', () => {
+        const payload = {
+            description: 'a photo',
+            image_url: 'https://example.com/img.jpg',
+            is_thumbnail: true,
+            sort_order: 1,
+        } satisfies ProductImageUpdatePayload;
+
+        expect(payload).toBeDefined();
+    });
+
+    it('accepts a payload with image_file and optional common fields', () => {
+        const payload = {
+            image_file: new File(['img'], 'photo.jpg', { type: 'image/jpeg' }),
+            sort_order: 0,
+        } satisfies ProductImageUpdatePayload;
+
+        expect(payload).toBeDefined();
+    });
+
+    it('accepts a payload with only common fields', () => {
+        const payload = {
+            description: 'updated description',
+            sort_order: 2,
+        } satisfies ProductImageUpdatePayload;
+
+        expect(payload).toBeDefined();
+    });
+
+    it('does not allow both image_file and image_url together', () => {
+        // @ts-expect-error image_url is `never` when image_file is present
+        const payload: ProductImageUpdatePayload = {
+            image_file: new File(['img'], 'photo.jpg', { type: 'image/jpeg' }),
+            image_url: 'https://example.com/img.jpg',
         };
 
         expect(payload).toBeDefined();

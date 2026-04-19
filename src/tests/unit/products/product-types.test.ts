@@ -18,6 +18,28 @@ describe('BaseProductField type', () => {
     });
 });
 
+describe('NoIdProductField type', () => {
+    it('excludes id while allowing other base product fields', () => {
+        const validFields = [
+            'name',
+            'sku',
+            'price',
+            'description',
+        ] as const satisfies readonly NoIdProductField[];
+
+        expectTypeOf(validFields).toExtend<readonly NoIdProductField[]>();
+
+        const validField: NoIdProductField = 'name';
+
+        expect(validField).toBe('name');
+
+        // @ts-expect-error id must not be assignable to NoIdProductField
+        const invalidField: NoIdProductField = 'id';
+
+        expect(invalidField).toBeDefined();
+    });
+});
+
 describe('ApiProductQuery type', () => {
     it('accepts NoIdProductField values for include_fields', () => {
         expectTypeOf<ApiProductQuery['include_fields']>().toEqualTypeOf<

@@ -180,7 +180,7 @@ export default class ProductMetafields {
     public async getMetafield(
         productId: number,
         metafieldId: number,
-        options?: ApiMetafieldQueryBase & {
+        options?: {
             include_fields?: readonly BaseMetafieldField[];
             exclude_fields?: readonly BaseMetafieldField[];
         },

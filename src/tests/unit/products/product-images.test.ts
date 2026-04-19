@@ -16,6 +16,8 @@ import {
 } from '@/v3Api/constants.ts';
 import ProductImages from '@/v3Api/Products/ProductImages';
 
+import type { ProductImageUpdatePayload } from '@/types/product-images';
+
 // oxlint-disable-next-line vitest/require-mock-type-parameters -- tchef is generic; adding type params causes a TS error in the vi.mock factory
 const mockTchef = vi.hoisted(() => vi.fn());
 vi.mock(import('tchef'), () => ({
@@ -49,6 +51,10 @@ describe('ProductImages class', () => {
     beforeEach(() => {
         mockTchef.mockReset();
         images = new ProductImages('test-token', BASE_URL, {});
+    });
+
+    afterEach(() => {
+        vi.unstubAllGlobals();
     });
 
     describe('getImage', () => {
@@ -747,14 +753,72 @@ describe('ProductImages class', () => {
 
         describe('updateImage — payload validation', () => {
             it('returns a 400 error when payload contains both image_file and image_url', async () => {
-                const result = await images.updateImage(42, 55, {
-                    image_file: 'path/to/file.jpg',
+                const invalidPayload = {
+                    image_file: new File(['img'], 'photo.jpg', { type: 'image/jpeg' }),
                     image_url: 'https://example.com/img.jpg',
-                });
+                } as unknown as ProductImageUpdatePayload;
+
+                const result = await images.updateImage(42, 55, invalidPayload);
 
                 assertErr(result);
                 expect(result.statusCode).toBe(400);
                 expect(result.error).toBe('Payload cannot contain both image_file and image_url');
+                expect(mockTchef).not.toHaveBeenCalled();
+            });
+
+            it('accepts a file upload payload and sends a multipart PUT request', async () => {
+                const fetchResponse = {
+                    json: vi.fn().mockResolvedValue({ data: mockUpdatedImage }),
+                    ok: true,
+                    status: 200,
+                    statusText: 'OK',
+                } as unknown as Response;
+
+                const fetchMock = vi.fn().mockResolvedValue(fetchResponse);
+
+                vi.stubGlobal('fetch', fetchMock);
+
+                const file = new File(['img'], 'photo.jpg', { type: 'image/jpeg' });
+                const result = await images.updateImage(42, 55, {
+                    description: 'updated desc',
+                    image_file: file,
+                    is_thumbnail: true,
+                    sort_order: 3,
+                });
+
+                expect(fetch).toHaveBeenCalledOnce();
+                expect(result).toMatchObject({ data: mockUpdatedImage, ok: true });
+
+                const [url, init] = fetchMock.mock.calls[0] as [string | URL, RequestInit?];
+
+                expect({
+                    init,
+                    url: String(url),
+                }).toMatchObject({
+                    init: expect.objectContaining({
+                        headers: expect.objectContaining({
+                            Accept: 'application/json',
+                            'X-Auth-Token': 'test-token',
+                        }),
+                        method: 'PUT',
+                    }),
+                    url: expect.stringContaining('catalog/products/42/images/55'),
+                });
+
+                const formData = init?.body as FormData;
+
+                expect({
+                    description: formData.get('description'),
+                    imageFile: formData.get('image_file'),
+                    isThumbnail: formData.get('is_thumbnail'),
+                    sortOrder: formData.get('sort_order'),
+                }).toMatchObject({
+                    description: 'updated desc',
+                    imageFile: file,
+                    isThumbnail: 'true',
+                    sortOrder: '3',
+                });
+
                 expect(mockTchef).not.toHaveBeenCalled();
             });
 

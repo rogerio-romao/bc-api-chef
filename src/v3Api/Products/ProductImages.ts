@@ -12,12 +12,13 @@ import {
     validatePositiveIntegers,
 } from '@/v3Api/utils';
 
-import type { ApiResult, BcApiChefOptions, BcApiChefResult } from '@/types/api-types';
+import type { ApiResult, BcApiChefOptions, Prettify } from '@/types/api-types';
 import type {
     ApiImageQueryBase,
     BaseProductImageField,
     ProductImage,
     ProductImagePayloadItem,
+    ProductImageUpdatePayload,
 } from '@/types/product-images';
 
 /**
@@ -165,12 +166,7 @@ export default class ProductImages {
         const url = `${this.apiUrl}/${productId}/images${querySuffix}`;
         const limit = clampPerPageLimits(options?.limit);
 
-        return (await fetchPaginated<ProductImage>(
-            url,
-            this.accessToken,
-            limit,
-            options?.page,
-        )) as BcApiChefResult<ProductImage[]>;
+        return await fetchPaginated<ProductImage>(url, this.accessToken, limit, options?.page);
     }
 
     /* -------------------------------- GET IMAGE ------------------------------- */
@@ -237,7 +233,7 @@ export default class ProductImages {
     public async updateImage(
         productId: number,
         imageId: number,
-        imageData: Partial<ProductImage>,
+        imageData: ProductImageUpdatePayload,
     ): ApiResult<ProductImage> {
         const idsValidOrErrorMsg = validatePositiveIntegers({ imageId, productId });
 
@@ -261,7 +257,22 @@ export default class ProductImages {
 
         const url = `${this.apiUrl}/${productId}/images/${imageId}`;
 
-        return await updateResource<ProductImage, Partial<ProductImage>>(
+        if ('image_file' in imageData) {
+            const formData = new FormData();
+            formData.append('image_file', imageData.image_file);
+            if (imageData.is_thumbnail !== undefined) {
+                formData.append('is_thumbnail', String(imageData.is_thumbnail));
+            }
+            if (imageData.sort_order !== undefined) {
+                formData.append('sort_order', String(imageData.sort_order));
+            }
+            if (imageData.description !== undefined) {
+                formData.append('description', imageData.description);
+            }
+            return await this.updateResourceMultipart<ProductImage>(url, formData);
+        }
+
+        return await updateResource<ProductImage, ProductImageUpdatePayload>(
             url,
             this.accessToken,
             imageData,
@@ -314,7 +325,7 @@ export default class ProductImages {
      * @param imageData The payload to validate for updating a product image.
      * @returns { string | null } A string error message if validation fails, or `null` if the payload is valid.
      */
-    private validateUpdateImagePayload(imageData: Partial<ProductImage>): string | null {
+    private validateUpdateImagePayload(imageData: ProductImageUpdatePayload): string | null {
         return this.validateCommonImageFields(imageData);
     }
 
@@ -323,9 +334,7 @@ export default class ProductImages {
      * @param imageData The payload to validate for common product image fields.
      * @returns { string | null } A string error message if validation fails, or `null` if the payload is valid.
      */
-    private validateCommonImageFields(
-        imageData: ProductImagePayloadItem | Partial<ProductImage>,
-    ): string | null {
+    private validateCommonImageFields(imageData: ProductImageUpdatePayload): string | null {
         if ('image_file' in imageData && 'image_url' in imageData) {
             return 'Payload cannot contain both image_file and image_url';
         }
@@ -344,5 +353,42 @@ export default class ProductImages {
         }
 
         return null;
+    }
+
+    /**
+     * Sends a multipart `PUT` request for image updates that include a file upload.
+     * @param url Fully-built request URL.
+     * @param formData Multipart payload to send.
+     * @returns {ApiResult<T>} The updated resource or an error result.
+     */
+    private async updateResourceMultipart<T>(url: string, formData: FormData): ApiResult<T> {
+        try {
+            const response = await fetch(url, {
+                body: formData,
+                headers: {
+                    Accept: 'application/json',
+                    'X-Auth-Token': this.accessToken,
+                },
+                method: 'PUT',
+            });
+
+            if (!response.ok) {
+                return {
+                    error: response.statusText || `Request failed with status ${response.status}`,
+                    ok: false,
+                    statusCode: response.status,
+                };
+            }
+
+            const json = (await response.json()) as { data: T };
+
+            return { data: json.data as Prettify<T>, ok: true };
+        } catch (error) {
+            return {
+                error: error instanceof Error ? error.message : 'Network Error',
+                ok: false,
+                statusCode: 500,
+            };
+        }
     }
 }
