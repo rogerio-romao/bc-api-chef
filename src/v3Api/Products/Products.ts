@@ -1,58 +1,58 @@
 // oxlint-disable max-lines
 
-import tchef from 'tchef';
-
 import {
-    DEFAULT_START_PAGE,
-    PER_PAGE_DEFAULT,
-    PER_PAGE_MAX,
-    PER_PAGE_MIN,
-} from '@/v3Api/constants.ts';
+    buildQueryString,
+    clampPerPageLimits,
+    createResource,
+    deleteResource,
+    fetchOne,
+    fetchPaginated,
+    updateResource,
+    validatePositiveIntegers,
+} from '@/v3Api/utils.ts';
 
-import type { TchefResult } from 'tchef';
+import ProductImages from './ProductImages';
+import ProductMetafields from './ProductMetafields';
 
+import type { ApiResult, BcApiChefOptions } from '@/types/api-types';
 import type {
+    ApiGetProductQueryBase,
     ApiProductQuery,
-    BcApiChefOptions,
-    BcCreateProductResponse,
-    BcGetProductResponse,
-    BcGetProductsResponse,
-    BcUpdateProductResponse,
+    ApiProductQueryBase,
+    BaseProduct,
     CommonProductValidationPayload,
     CreateProductPayload,
-    GetProductReturnType,
-    GetProductsReturnType,
+    CreateProductReturnType,
+    FullProduct,
+    IncludeExpansion,
+    NoIdProductField,
+    NoProductIncludes,
     ProductIncludes,
+    ProductWithFields,
+    ProductWithoutFields,
     UpdateProductPayload,
-    UpdateProductReturnType,
-} from '@/types/api-types';
-import type { BaseProduct, BaseProductField, FullProduct } from '@/types/product-types';
+} from '@/types/product-types';
 
 /**
  * Wrapper around the BigCommerce V3 `catalog/products` endpoint.
  *
  * Not intended to be instantiated directly by package consumers — obtain an
  * instance via `BcApiChef.v3().products()`. All methods return a
- * {@link TchefResult}, so callers must check `result.ok` before using
- * `result.data`.
+ * {@link ApiResult}, which is either `{ data: T; ok: true; }` on success or `{ error: string; ok: false; statusCode: number }` on failure.
  *
  * Public methods:
- * - {@link ProductsV3.getAllProducts} — paginated list, auto-collects every page.
- * - {@link ProductsV3.getProduct} — fetch a single product by id.
  * - {@link ProductsV3.createProduct} — `POST` a new product.
+ * - {@link ProductsV3.getProducts} — paginated list, auto-collects every page, or single page if `query.page` is supplied.
+ * - {@link ProductsV3.getProduct} — fetch a single product by id.
  * - {@link ProductsV3.updateProduct} — `PUT` an existing product.
  * - {@link ProductsV3.deleteProduct} — `DELETE` a product by id.
- *
- * The read methods are generic over `ProductIncludes` and
- * `BaseProductField[]` so the return type is narrowed by the requested
- * `include` and `include_fields` query params at compile time.
  */
 export default class ProductsV3 {
     private accessToken: string;
+    private apiUrl: string;
     /** The `Required` here makes typescript happy without having to check for undefined values upstream constantly, but the values are still optional at runtime */
     private options: Required<BcApiChefOptions>;
     private readonly productsApiPath = 'catalog/products';
-    private productApiUrl: string;
 
     /**
      * @param baseUrlWithVersion - Store base URL including the `/v3` version segment.
@@ -72,7 +72,7 @@ export default class ProductsV3 {
      */
     constructor(baseUrlWithVersion: string, accessToken: string, options: BcApiChefOptions = {}) {
         this.accessToken = accessToken;
-        this.productApiUrl = `${baseUrlWithVersion}/${this.productsApiPath}`;
+        this.apiUrl = `${baseUrlWithVersion}/${this.productsApiPath}`;
         this.options = {
             retries: 0,
             validate: false,
@@ -80,263 +80,291 @@ export default class ProductsV3 {
         };
     }
 
-    /* ===== Product Crud Methods ===== */
+    /* -------------------------------------------------------------------------- */
+    /*                            PRODUCT CRUD METHODS                            */
+    /* -------------------------------------------------------------------------- */
 
-    /** Creates a new product.
-     * @param payload Product data to create.
-     * @returns {Promise<TchefResult<BaseProduct>>} The created product or an error result.
+    /* ----------------------------- CREATE PRODUCT ----------------------------- */
+    /**
+     * Creates a new product. There are two overloads of this method:
+     * - The first overload accepts an `options` object with an `include_fields` property, which narrows the returned fields to those specified in the array. The return type is inferred accordingly at compile time.
+     * - The second overload does not accept an `options` object, and returns the full product.
+     *
+     * @param productData Product data to create.
+     * @param options Query options — `include_fields` narrows the returned fields.
+     * @returns {ApiResult<BaseProduct>} The created product with only the requested fields, or an error result.
      */
-    public async createProduct(payload: CreateProductPayload): Promise<TchefResult<BaseProduct>> {
-        const validationError = ProductsV3.validateCreateProductPayload(payload);
+    public async createProduct<F extends readonly NoIdProductField[]>(
+        productData: CreateProductPayload,
+        options: { include_fields: F },
+    ): ApiResult<CreateProductReturnType<F>>;
+
+    public async createProduct(productData: CreateProductPayload): ApiResult<BaseProduct>;
+
+    public async createProduct(
+        productData: CreateProductPayload,
+        options?: { include_fields?: readonly NoIdProductField[] },
+    ): ApiResult<BaseProduct> {
+        const validationError = this.validateCreateProductPayload(productData);
+
         if (validationError !== null) {
             // At least one validation error was found on the payload, meaning one of the fields is invalid as per BC docs (name too big, invalid number, etc.) — return an error result without making the API call
             return { error: validationError, ok: false, statusCode: 400 };
         }
 
-        const response = await tchef(`${this.productApiUrl}`, {
-            body: JSON.stringify(payload),
-            headers: {
-                Accept: 'application/json',
-                'Content-Type': 'application/json',
-                'X-Auth-Token': this.accessToken,
-            },
-            method: 'POST',
-        });
+        const querySuffix = buildQueryString(options);
+        const url = `${this.apiUrl}${querySuffix}`;
 
-        if (!response.ok) {
-            // response here contains error details from the Tchef API call, so we return it directly to the caller instead of a generic error message
-            return response;
-        }
-
-        const { data } = response.data as BcCreateProductResponse;
-        return { data, ok: true };
-    }
-
-    /** Deletes a product by ID.
-     * @param productId Product ID.
-     * @returns {Promise<TchefResult<null>>} `null` on success or an error result.
-     */
-    public async deleteProduct(productId: number): Promise<TchefResult<null>> {
-        if (!Number.isInteger(productId) || productId <= 0) {
-            return { error: 'Invalid productId', ok: false, statusCode: 400 };
-        }
-
-        const response = await tchef(`${this.productApiUrl}/${productId}`, {
-            headers: {
-                'X-Auth-Token': this.accessToken,
-            },
-            method: 'DELETE',
-            // BigCommerce returns an empty string on successful delete, so we use 'text' to avoid JSON parsing errors
-            responseFormat: 'text',
-        });
-
-        if (!response.ok) {
-            return response;
-        }
-
-        return { data: null, ok: true };
-    }
-
-    /** Fetches all products across every page, or a single page if `query.page` is supplied.
-     * @param options Query and include options.
-     * @returns {Promise<TchefResult<GetProductsReturnType<T, F>>>} The collected products or an error result.
-     */
-    public async getAllProducts<
-        T extends ProductIncludes = Record<string, never>,
-        F extends readonly BaseProductField[] | undefined = undefined,
-        E extends readonly BaseProductField[] | undefined = undefined,
-    >(options?: {
-        includes?: T;
-        // BC returns 409 when both include_fields and exclude_fields are supplied, so we enforce mutual exclusion at the type level.
-        query?:
-            | (Omit<ApiProductQuery, 'include_fields' | 'exclude_fields'> & {
-                  include_fields?: F;
-                  exclude_fields?: never;
-              })
-            | (Omit<ApiProductQuery, 'include_fields' | 'exclude_fields'> & {
-                  include_fields?: never;
-                  exclude_fields?: E;
-              });
-    }): Promise<TchefResult<GetProductsReturnType<T, F, E>>> {
-        const query = options?.query as ApiProductQuery | undefined;
-        const includesString = ProductsV3.generateProductIncludes(options?.includes);
-        const queryString = ProductsV3.generateProductQueryString(query, includesString);
-        const querySuffix = queryString ? `?${queryString}` : '';
-        const url = `${this.productApiUrl}${querySuffix}`;
-
-        return (await this.getProductsMultiPage(
+        return await createResource<BaseProduct, CreateProductPayload>(
             url,
-            ProductsV3.clampPerPageLimits(query?.limit ?? PER_PAGE_DEFAULT),
-            query?.page,
-        )) as TchefResult<GetProductsReturnType<T, F, E>>;
+            this.accessToken,
+            productData,
+        );
     }
 
-    /** Fetches a single product by ID.
+    /* ------------------------------ GET PRODUCTS ------------------------------ */
+    /**
+     * Fetches all products across every page, or a single page if `page` is supplied.
+     * There are three overloads of this method:
+     * - The first overload accepts an `options` object with an `include_fields` property, which narrows the returned fields to those specified in the array. The return type is inferred accordingly at compile time.
+     * - The second overload accepts an `options` object with an `exclude_fields` property, which narrows the returned fields by excluding those specified in the array. The return type is inferred accordingly at compile time.
+     * - The third overload does not accept an `options` object, and returns the full products.
+     *
+     * @param options Query and include options — flat object. Supply `page` to fetch a single page instead of auto-collecting every page, limit to control results per page, and the various filter/sort query params supported by the BC API.
+     * @param options.includes - Include sub-resources in the response by setting the relevant flags to `true`. For example, `{ includes: { variants: true, images: true } }` will include both variants and images in the response. Defaults to no sub-resources included.
+     * @param options.include_fields - An array of top-level product fields to include in the response. For example, `['name', 'price']` will return only the `id`, `name`, and `price` fields for each product. Mutually exclusive with `exclude_fields`.
+     * @param options.exclude_fields - An array of top-level product fields to exclude from the response. For example, `['description', 'weight']` will return all fields except `description` and `weight` for each product. Mutually exclusive with `include_fields`.
+     * @returns {ApiResult<BaseProduct[]>} The collected products or an error result.
+     */
+    public async getProducts<
+        T extends ProductIncludes = NoProductIncludes,
+        F extends readonly NoIdProductField[] = readonly NoIdProductField[],
+    >(
+        // BC returns 409 when both include_fields and exclude_fields are supplied, so we enforce mutual exclusion at the type level.
+        options: ApiProductQueryBase & {
+            includes?: T & ProductIncludes;
+            include_fields: F;
+            exclude_fields?: never;
+        },
+    ): ApiResult<ProductWithFields<F, T>[]>;
+
+    public async getProducts<
+        T extends ProductIncludes = NoProductIncludes,
+        E extends readonly NoIdProductField[] = readonly NoIdProductField[],
+    >(
+        options: ApiProductQueryBase & {
+            includes?: T & ProductIncludes;
+            include_fields?: never;
+            exclude_fields: E;
+        },
+    ): ApiResult<ProductWithoutFields<E, T>[]>;
+
+    public async getProducts<T extends ProductIncludes = NoProductIncludes>(
+        options?: ApiProductQueryBase & {
+            includes?: T & ProductIncludes;
+        },
+    ): ApiResult<(BaseProduct & IncludeExpansion<T>)[]>;
+
+    public async getProducts(
+        options?: ApiProductQueryBase & {
+            includes?: ProductIncludes;
+            include_fields?: readonly NoIdProductField[];
+            exclude_fields?: readonly NoIdProductField[];
+        },
+    ): ApiResult<BaseProduct[]> {
+        const { includes, ...query } = options ?? {};
+        const includesString = this.generateProductIncludes(includes);
+        const querySuffix = buildQueryString(query as ApiProductQuery, { include: includesString });
+        const url = `${this.apiUrl}${querySuffix}`;
+
+        return await fetchPaginated<FullProduct>(
+            url,
+            this.accessToken,
+            clampPerPageLimits(query?.limit),
+            query?.page,
+        );
+    }
+
+    /* ------------------------------ GET PRODUCT ------------------------------ */
+    /**
+     * Fetches a single product by ID. There are three overloads of this method:
+     * - The first overload accepts an `options` object with an `include_fields` property, which narrows the returned fields to those specified in the array. The return type is inferred accordingly at compile time.
+     * - The second overload accepts an `options` object with an `exclude_fields` property, which narrows the returned fields by excluding those specified in the array. The return type is inferred accordingly at compile time.
+     * - The third overload does not accept an `options` object, and returns the full product.
+     *
      * @param productId Product ID.
-     * @param options Query and include options.
-     * @returns {Promise<TchefResult<GetProductReturnType<T, F>>>} The product or an error result.
+     * @param options Include and exclude options — flat object. There are no other query params supported by this endpoint.
+     * @param options.includes - Include sub-resources in the response by setting the relevant flags to `true`. For example, `{ includes: { variants: true, images: true } }` will include both variants and images in the response. Defaults to no sub-resources included.
+     * @param options.include_fields - An array of top-level product fields to include in the response. For example, `['name', 'price']` will return only the `id`, `name`, and `price` fields for the product. Mutually exclusive with `exclude_fields`.
+     * @param options.exclude_fields - An array of top-level product fields to exclude from the response. For example, `['description', 'weight']` will return all fields except `description` and `weight` for the product. Mutually exclusive with `include_fields`.
+     * @returns {ApiResult<BaseProduct>} The product or an error result.
      */
     public async getProduct<
-        T extends ProductIncludes = Record<string, never>,
-        F extends readonly BaseProductField[] | undefined = undefined,
-        E extends readonly BaseProductField[] | undefined = undefined,
+        T extends ProductIncludes = NoProductIncludes,
+        F extends readonly NoIdProductField[] = readonly NoIdProductField[],
     >(
         productId: number,
-        options?: {
-            includes?: T;
-            query?:
-                | (Omit<ApiProductQuery, 'include_fields' | 'exclude_fields'> & {
-                      include_fields?: F;
-                      exclude_fields?: never;
-                  })
-                | (Omit<ApiProductQuery, 'include_fields' | 'exclude_fields'> & {
-                      include_fields?: never;
-                      exclude_fields?: E;
-                  });
+        options: ApiGetProductQueryBase & {
+            includes?: T & ProductIncludes;
+            include_fields: F;
+            exclude_fields?: never;
         },
-    ): Promise<TchefResult<GetProductReturnType<T, F, E>>> {
-        if (!Number.isInteger(productId) || productId <= 0) {
-            return { error: 'Invalid productId', ok: false, statusCode: 400 };
+    ): ApiResult<ProductWithFields<F, T>>;
+
+    public async getProduct<
+        T extends ProductIncludes = NoProductIncludes,
+        E extends readonly NoIdProductField[] = readonly NoIdProductField[],
+    >(
+        productId: number,
+        options: ApiGetProductQueryBase & {
+            includes?: T & ProductIncludes;
+            include_fields?: never;
+            exclude_fields: E;
+        },
+    ): ApiResult<ProductWithoutFields<E, T>>;
+
+    public async getProduct<T extends ProductIncludes = NoProductIncludes>(
+        productId: number,
+        options?: ApiGetProductQueryBase & {
+            includes?: T & ProductIncludes;
+        },
+    ): ApiResult<BaseProduct & IncludeExpansion<T>>;
+
+    public async getProduct(
+        productId: number,
+        options?: ApiProductQueryBase & {
+            includes?: ProductIncludes;
+            include_fields?: readonly NoIdProductField[];
+            exclude_fields?: readonly NoIdProductField[];
+        },
+    ): ApiResult<BaseProduct> {
+        const idValidOrErrorMsg = validatePositiveIntegers({ productId });
+
+        if (idValidOrErrorMsg !== true) {
+            return { error: idValidOrErrorMsg, ok: false, statusCode: 400 };
         }
 
-        const query = options?.query as ApiProductQuery | undefined;
-        const includesString = ProductsV3.generateProductIncludes(options?.includes);
-        const queryString = ProductsV3.generateProductQueryString(query, includesString);
-        const querySuffix = queryString ? `?${queryString}` : '';
-        const url = `${this.productApiUrl}/${productId}${querySuffix}`;
+        const { includes, ...query } = options ?? {};
+        const includesString = this.generateProductIncludes(includes);
+        const querySuffix = buildQueryString(query as ApiProductQuery, { include: includesString });
+        const url = `${this.apiUrl}/${productId}${querySuffix}`;
 
-        return (await this.getProductById(url)) as TchefResult<GetProductReturnType<T, F, E>>;
+        return await fetchOne<FullProduct>(url, this.accessToken);
     }
 
-    /** Updates an existing product by ID.
+    /* ------------------------------ UPDATE PRODUCT ------------------------------ */
+    /**
+     * Updates an existing product by ID. There are two overloads of this method:
+     * - The first overload accepts an `options` object `includes`, to add sub-resources like variants or images, and with an `include_fields` property, which narrows the returned fields to those specified in the array. The return type is inferred accordingly at compile time.
+     * - The second overload accepts an `options` object with an `includes` property but without `include_fields`, and returns the full product with the included sub-resources.
+     *
      * @param productId Product ID.
      * @param payload Product data to update.
-     * @param options Query and include options.
-     * @returns {Promise<TchefResult<UpdateProductReturnType<T, F>>>} The updated product or an error result.
+     * @param options Query and include options — flat object.
+     * @param options.includes - Include sub-resources in the response by setting the relevant flags to `true`. For example, `{ includes: { variants: true, images: true } }` will include both variants and images in the response. Defaults to no sub-resources included.
+     * @param options.include_fields - An array of top-level product fields to include in the response. For example, `['name', 'price']` will return only the `id`, `name`, and `price` fields for the product. Ignored if not supplied, in which case all fields are returned.
+     * @returns {ApiResult<BaseProduct>} The updated product or an error result.
      */
     public async updateProduct<
-        T extends ProductIncludes = Record<string, never>,
-        F extends readonly BaseProductField[] | undefined = undefined,
+        T extends ProductIncludes = NoProductIncludes,
+        F extends readonly NoIdProductField[] = readonly NoIdProductField[],
     >(
         productId: number,
         payload: UpdateProductPayload,
-        options?: {
-            includes?: T;
-            query?: { include_fields?: F };
+        options: {
+            includes?: T & ProductIncludes;
+            include_fields: F;
         },
-    ): Promise<TchefResult<UpdateProductReturnType<T, F>>> {
-        const validationError = ProductsV3.validateUpdateProductPayload(payload);
+    ): ApiResult<ProductWithFields<F, T>>;
+
+    public async updateProduct<T extends ProductIncludes = NoProductIncludes>(
+        productId: number,
+        payload: UpdateProductPayload,
+        options?: {
+            includes?: T & ProductIncludes;
+        },
+    ): ApiResult<BaseProduct & IncludeExpansion<T>>;
+
+    public async updateProduct(
+        productId: number,
+        payload: UpdateProductPayload,
+        options?: {
+            includes?: ProductIncludes;
+            include_fields?: readonly NoIdProductField[];
+        },
+    ): ApiResult<BaseProduct> {
+        const idValidOrErrorMsg = validatePositiveIntegers({ productId });
+
+        if (idValidOrErrorMsg !== true) {
+            return { error: idValidOrErrorMsg, ok: false, statusCode: 400 };
+        }
+
+        const validationError = this.validateUpdateProductPayload(payload);
 
         if (validationError !== null) {
             return { error: validationError, ok: false, statusCode: 400 };
         }
 
-        const query = options?.query as ApiProductQuery | undefined;
-        const includesString = ProductsV3.generateProductIncludes(options?.includes);
-        const queryString = ProductsV3.generateProductQueryString(query, includesString);
-        const querySuffix = queryString ? `?${queryString}` : '';
+        const { includes, ...query } = options ?? {};
+        const includesString = this.generateProductIncludes(includes);
+        const querySuffix = buildQueryString(query as ApiProductQuery, { include: includesString });
+        const url = `${this.apiUrl}/${productId}${querySuffix}`;
 
-        const response = await tchef(`${this.productApiUrl}/${productId}${querySuffix}`, {
-            body: JSON.stringify(payload),
-            headers: {
-                Accept: 'application/json',
-                'Content-Type': 'application/json',
-                'X-Auth-Token': this.accessToken,
-            },
-            method: 'PUT',
-        });
+        return await updateResource<BaseProduct, UpdateProductPayload>(
+            url,
+            this.accessToken,
+            payload,
+        );
+    }
 
-        if (!response.ok) {
-            return response;
+    /* ------------------------------ DELETE PRODUCT ------------------------------ */
+    /**
+     * Deletes a product by ID.
+     * @param productId Product ID.
+     * @returns {ApiResult<null>} `null` on success or an error result.
+     */
+    public async deleteProduct(productId: number): ApiResult<null> {
+        const idValidOrErrorMsg = validatePositiveIntegers({ productId });
+
+        if (idValidOrErrorMsg !== true) {
+            return { error: idValidOrErrorMsg, ok: false, statusCode: 400 };
         }
 
-        const { data } = response.data as BcUpdateProductResponse;
-        return { data: data as UpdateProductReturnType<T, F>, ok: true };
+        const url = `${this.apiUrl}/${productId}`;
+
+        return await deleteResource(url, this.accessToken);
     }
 
-    /* ===== Private Fetching Helper Methods ===== */
+    /* -------------------------------------------------------------------------- */
+    /*                       SUB_RESOURCE METHODS / CLASSES                       */
+    /* -------------------------------------------------------------------------- */
 
-    /** Fetches a single product with shared headers.
-     * @param url Request URL.
-     * @returns {Promise<TchefResult<FullProduct>>} The product or an error result.
+    /**
+     * Returns an instance of the {@link ProductImages} class to manage product images, which are accessed via the `/catalog/products/{product_id}/images` endpoint.
+     * @returns {ProductImages} An instance of the ProductImages class.
      */
-    private async getProductById(url: string): Promise<TchefResult<FullProduct>> {
-        const response = await tchef(url, {
-            headers: {
-                Accept: 'application/json',
-                'X-Auth-Token': this.accessToken,
-            },
-        });
-
-        if (!response.ok) {
-            return response;
-        }
-        const { data } = response.data as BcGetProductResponse;
-        return { data, ok: true };
+    public images(): ProductImages {
+        return new ProductImages(this.accessToken, this.apiUrl);
     }
 
-    /** Fetches and merges paginated product results.
-     * @param url Base request URL.
-     * @param limit Page size.
-     * @param singlePage Optional single page number.
-     * @returns {Promise<TchefResult<FullProduct[]>>} The collected products or an error result.
+    /**
+     * Returns an instance of the {@link ProductMetafields} class to manage product metafields, which are accessed via the `/catalog/products/{product_id}/metafields` endpoint.
+     * @returns {ProductMetafields} An instance of the ProductMetafields class.
      */
-    private async getProductsMultiPage(
-        url: string,
-        limit = PER_PAGE_DEFAULT,
-        singlePage?: number,
-    ): Promise<TchefResult<FullProduct[]>> {
-        const results: FullProduct[] = [];
-
-        let page = singlePage ?? DEFAULT_START_PAGE;
-        let totalPages = 1;
-
-        const separator = url.includes('?') ? '&' : '?';
-
-        do {
-            const pagedUrl = `${url}${separator}page=${page}&limit=${limit}`;
-
-            const response = await tchef(pagedUrl, {
-                headers: {
-                    Accept: 'application/json',
-                    'X-Auth-Token': this.accessToken,
-                },
-            });
-
-            if (!response.ok) {
-                return response;
-            }
-
-            const { data, meta } = response.data as BcGetProductsResponse;
-
-            results.push(...data);
-
-            if (singlePage !== undefined) {
-                return { data: results, ok: true };
-            }
-
-            totalPages = meta.pagination.total_pages;
-            page += 1;
-        } while (page <= totalPages);
-
-        return { data: results, ok: true };
+    public metafields(): ProductMetafields {
+        return new ProductMetafields(this.accessToken, this.apiUrl);
     }
 
-    /* ===== Static Helper Methods ===== */
+    /* -------------------------------------------------------------------------- */
+    /*                                HELPER METHODS                              */
+    /* -------------------------------------------------------------------------- */
 
-    /** Clamps page size to the supported range.
-     * @param limit Requested page size.
-     * @returns {number} The clamped page size.
-     */
-    private static clampPerPageLimits(limit: number): number {
-        return Math.min(Math.max(limit, PER_PAGE_MIN), PER_PAGE_MAX);
-    }
-
-    /** Serializes include flags into the API format.
+    /**
+     * Serializes include flags into the API format.
      * @param includes Include flags.
      * @returns {string} A comma-separated include string.
      */
-    private static generateProductIncludes(includes: ProductIncludes | undefined): string {
+    private generateProductIncludes(includes: ProductIncludes | undefined): string {
         if (!includes) {
             return '';
         }
@@ -347,40 +375,16 @@ export default class ProductsV3 {
             .join(',');
     }
 
-    /** Builds the query string for product requests.
-     * @param query Query params.
-     * @param includes Serialized include flags.
-     * @returns {string} The query string.
-     */
-    private static generateProductQueryString(
-        query: ApiProductQuery | undefined,
-        includes: string,
-    ): string {
-        const params = new URLSearchParams();
+    /* -------------------------------------------------------------------------- */
+    /*                            VALIDATION METHODS                              */
+    /* -------------------------------------------------------------------------- */
 
-        if (query) {
-            for (const [key, value] of Object.entries(query)) {
-                // We handle pagination params separately in getProductsMultiPage, so we skip them here to avoid conflicts. Every other param is added to the query string if it's defined.
-                if (value !== undefined && key !== 'page' && key !== 'limit') {
-                    params.set(key, Array.isArray(value) ? value.join(',') : String(value));
-                }
-            }
-        }
-
-        if (includes) {
-            params.set('include', includes);
-        }
-
-        return params.toString();
-    }
-
-    /** Validates fields shared by create and update payloads.
+    /**
+     * Validates fields shared by create and update payloads.
      * @param payload Product data to validate.
      * @returns {string | null} A validation error message, or `null` when valid.
      */
-    private static validateCommonProductFields(
-        payload: CommonProductValidationPayload,
-    ): string | null {
+    private validateCommonProductFields(payload: CommonProductValidationPayload): string | null {
         const strChecks: [string | undefined, string, number][] = [
             [payload.sku, 'sku', 255],
             [payload.product_tax_code, 'product_tax_code', 255],
@@ -456,11 +460,12 @@ export default class ProductsV3 {
         return null;
     }
 
-    /** Validates the create payload.
+    /**
+     * Validates the create payload.
      * @param payload Product data to validate.
      * @returns {string | null} A validation error message, or `null` when valid.
      */
-    private static validateCreateProductPayload(payload: CreateProductPayload): string | null {
+    private validateCreateProductPayload(payload: CreateProductPayload): string | null {
         if (payload.name.length === 0) {
             return 'Product name must not be empty';
         }
@@ -481,7 +486,7 @@ export default class ProductsV3 {
             return 'weight must be <= 9999999999';
         }
 
-        const validationError = ProductsV3.validateCommonProductFields(payload);
+        const validationError = this.validateCommonProductFields(payload);
 
         if (validationError !== null) {
             return validationError;
@@ -490,11 +495,12 @@ export default class ProductsV3 {
         return null;
     }
 
-    /** Validates the update payload.
+    /**
+     * Validates the update payload.
      * @param payload Product data to validate.
      * @returns {string | null} A validation error message, or `null` when valid.
      */
-    private static validateUpdateProductPayload(payload: UpdateProductPayload): string | null {
+    private validateUpdateProductPayload(payload: UpdateProductPayload): string | null {
         if (payload.name !== undefined) {
             if (payload.name.length === 0) {
                 return 'Product name must not be empty';
@@ -519,7 +525,7 @@ export default class ProductsV3 {
             }
         }
 
-        const validationError = ProductsV3.validateCommonProductFields(payload);
+        const validationError = this.validateCommonProductFields(payload);
 
         if (validationError !== null) {
             return validationError;

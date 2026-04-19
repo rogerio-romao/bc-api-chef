@@ -1,5 +1,7 @@
 import type { TchefResult } from 'tchef';
 
+import type { BcRequestResponseMeta } from '@/types/api-types';
+
 interface MockTchef {
     mock: {
         calls: unknown[][];
@@ -16,16 +18,7 @@ interface MockTchefCallOptions {
 interface MockPageResponse {
     data: {
         data: object[];
-        meta: {
-            pagination: {
-                count: number;
-                current_page: number;
-                links: { current: string; next: string; previous: string };
-                per_page: number;
-                total: number;
-                total_pages: number;
-            };
-        };
+        meta: BcRequestResponseMeta;
     };
     ok: true;
 }
@@ -100,27 +93,27 @@ export function getCallOptions(mockTchef: MockTchef, callIndex = 0): MockTchefCa
 }
 
 /**
- * Builds a paginated mock response for product list tests.
- * @param products - The page items to include.
+ * Builds a paginated mock response for list tests.
+ * @param rows - The page items to include.
  * @param currentPage - The current page number.
  * @param totalPages - The total number of pages.
  * @returns {MockPageResponse} A mock paginated response object.
  */
-export function makeProductsPageResponse(
-    products: object[] = [],
+export function makePageResponse(
+    rows: object[] = [],
     currentPage = 1,
     totalPages = 1,
 ): MockPageResponse {
     return {
         data: {
-            data: products,
+            data: rows,
             meta: {
                 pagination: {
-                    count: products.length,
+                    count: rows.length,
                     current_page: currentPage,
                     links: { current: '', next: '', previous: '' },
                     per_page: 250,
-                    total: products.length,
+                    total: rows.length,
                     total_pages: totalPages,
                 },
             },

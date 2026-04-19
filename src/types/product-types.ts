@@ -1,12 +1,18 @@
-import type { ProductBulkPricingRule } from './product-bulk-pricing-rules.ts';
+// oxlint-disable max-lines
+import type { BcRequestResponseMeta, FieldSelectionOptions, SortDirection } from './api-types.ts';
+import type {
+    ProductBulkPricingRule,
+    ProductBulkPricingRulesPayload,
+} from './product-bulk-pricing-rules.ts';
 import type { ProductCustomField } from './product-custom-fields.ts';
-import type { ProductImage } from './product-images.ts';
+import type { ProductImage, ProductImagePayload } from './product-images.ts';
 import type { ProductModifier } from './product-modifiers.ts';
 import type { ProductOption } from './product-options.ts';
 import type { ProductVariant } from './product-variants.ts';
-import type { ProductVideo } from './product-videos.ts';
+import type { ProductVideo, ProductVideoPayload } from './product-videos.ts';
 
 export type BaseProductField = keyof BaseProduct;
+export type NoIdProductField = Exclude<BaseProductField, 'id'>;
 
 export interface BaseProduct {
     id: number;
@@ -90,14 +96,6 @@ export interface BaseProduct {
     open_graph_use_image: boolean;
 }
 
-export type { ProductBulkPricingRule } from './product-bulk-pricing-rules.ts';
-export type { ProductCustomField } from './product-custom-fields.ts';
-export type { ProductImage } from './product-images.ts';
-export type { ProductModifier } from './product-modifiers.ts';
-export type { ProductOption } from './product-options.ts';
-export type { ProductVariant, VariantOption } from './product-variants.ts';
-export type { ProductVideo } from './product-videos.ts';
-
 export interface FullProduct extends BaseProduct {
     variants: ProductVariant[];
     images: ProductImage[];
@@ -107,4 +105,194 @@ export interface FullProduct extends BaseProduct {
     modifiers: ProductModifier[];
     options: ProductOption[];
     videos: ProductVideo[];
+}
+
+export type ProductSortField =
+    | 'id'
+    | 'name'
+    | 'sku'
+    | 'price'
+    | 'date_modified'
+    | 'date_last_imported'
+    | 'inventory_level'
+    | 'is_visible'
+    | 'total_sold';
+
+export type GetProductsOptions = ApiProductQuery & {
+    includes?: ProductIncludes;
+};
+
+/**
+ * Defines which sub-resources to include in product responses. Each key corresponds to an optional sub-resource array on the response product type.
+ * Note: include_fields (which controls which base product fields are returned) is intentionally not modelled here.
+ */
+export interface ProductIncludes {
+    variants?: boolean;
+    images?: boolean;
+    custom_fields?: boolean;
+    bulk_pricing_rules?: boolean;
+    primary_image?: boolean;
+    modifiers?: boolean;
+    options?: boolean;
+    videos?: boolean;
+}
+
+/** Default type representing "no sub-resources requested" — every include flag is absent. */
+export type NoProductIncludes = { [K in keyof ProductIncludes]?: false };
+
+/** Expands included sub-resources onto the base product type. */
+export type IncludeExpansion<T extends ProductIncludes> = (T['variants'] extends true
+    ? { variants: ProductVariant[] }
+    : object) &
+    (T['images'] extends true ? { images: ProductImage[] } : object) &
+    (T['custom_fields'] extends true ? { custom_fields: ProductCustomField[] } : object) &
+    (T['bulk_pricing_rules'] extends true
+        ? { bulk_pricing_rules: ProductBulkPricingRule[] }
+        : object) &
+    (T['primary_image'] extends true ? { primary_image: ProductImage } : object) &
+    (T['modifiers'] extends true ? { modifiers: ProductModifier[] } : object) &
+    (T['options'] extends true ? { options: ProductOption[] } : object) &
+    (T['videos'] extends true ? { videos: ProductVideo[] } : object);
+
+/**
+ * Defines allowed query parameters for product listing endpoints, excluding field-selection keys.
+ * Use {@link ApiProductQuery} when field-selection options are also needed.
+ */
+export interface ApiProductQueryBase {
+    id?: number;
+    'id:in'?: number[];
+    'id:not_in'?: number[];
+    'id:min'?: number;
+    'id:max'?: number;
+    'id:greater'?: number;
+    'id:less'?: number;
+    name?: string;
+    'name:like'?: string;
+    sku?: string;
+    'sku:in'?: string[];
+    upc?: string;
+    price?: number;
+    weight?: number;
+    condition?: BaseProduct['condition'];
+    brand_id?: number;
+    date_modified?: string;
+    'date_modified:max'?: string;
+    'date_modified:min'?: string;
+    date_last_imported?: string;
+    'date_last_imported:max'?: string;
+    'date_last_imported:min'?: string;
+    is_visible?: boolean;
+    is_featured?: boolean;
+    is_free_shipping?: boolean;
+    inventory_level?: number;
+    'inventory_level:in'?: number[];
+    'inventory_level:not_in'?: number[];
+    'inventory_level:min'?: number;
+    'inventory_level:max'?: number;
+    'inventory_level:greater'?: number;
+    'inventory_level:less'?: number;
+    inventory_low_stock?: boolean;
+    out_of_stock?: boolean;
+    total_sold?: number;
+    type?: BaseProduct['type'];
+    categories?: number;
+    'categories:in'?: number[];
+    keyword?: string;
+    keyword_context?: 'shopper' | 'merchant';
+    status?: number;
+    availability?: BaseProduct['availability'];
+    sort?: ProductSortField;
+    direction?: SortDirection;
+    // Note: if `page` is supplied, only that page is returned. If omitted, getAllProducts walks every page until total_pages.
+    page?: number;
+    limit?: number;
+}
+
+/** {@link ApiProductQueryBase} without pagination — for single-product fetches where `page`/`limit` are meaningless. */
+export type ApiGetProductQueryBase = Omit<ApiProductQueryBase, 'page' | 'limit'>;
+
+type ProductFieldSelectionOptions = FieldSelectionOptions<NoIdProductField>;
+
+/** {@link ApiProductQueryBase} plus mutually-exclusive field-selection options. */
+export type ApiProductQuery = ApiProductQueryBase & ProductFieldSelectionOptions;
+
+export interface BcGetProductResponse {
+    data: FullProduct;
+}
+
+export interface BcGetProductsResponse {
+    data: FullProduct[];
+    meta: BcRequestResponseMeta;
+}
+
+type ServerComputedProductFields =
+    | 'id'
+    | 'calculated_price'
+    | 'option_set_id'
+    | 'option_set_display'
+    | 'reviews_rating_sum'
+    | 'reviews_count'
+    | 'total_sold'
+    | 'date_created'
+    | 'date_modified'
+    | 'date_last_imported'
+    | 'base_variant_id';
+
+type RequiredCreateProductFields = 'name' | 'type' | 'weight' | 'price';
+
+export type ProductCustomFieldsPayload = Omit<ProductCustomField, 'id'>[];
+
+export type CommonProductValidationPayload = Partial<BaseProduct> & {
+    custom_fields?: ProductCustomFieldsPayload;
+};
+
+/** The response shape for `createProduct` when `include_fields` is supplied. */
+export type CreateProductReturnType<F extends readonly NoIdProductField[]> = {
+    id: number;
+} & Pick<BaseProduct, F[number]>;
+
+/** Product narrowed to only the requested fields (plus `id`), with optional sub-resource expansion. */
+export type ProductWithFields<
+    F extends readonly NoIdProductField[],
+    T extends ProductIncludes = NoProductIncludes,
+> = { id: number } & Pick<BaseProduct, F[number]> & IncludeExpansion<T>;
+
+/** Product with specific fields excluded, with optional sub-resource expansion. */
+export type ProductWithoutFields<
+    E extends readonly NoIdProductField[],
+    T extends ProductIncludes = NoProductIncludes,
+> = Omit<BaseProduct, E[number]> & IncludeExpansion<T>;
+
+/**
+ * Payload for POST /v3/catalog/products.
+ * Required: name, type, weight, price (per BigCommerce API spec).
+ * Optional: all other creatable BaseProduct fields plus creatable
+ * sub-resources (custom_fields, bulk_pricing_rules, images, videos).
+ * Server-computed fields (id, calculated_price, etc.) are excluded.
+ */
+export type CreateProductPayload = Pick<BaseProduct, RequiredCreateProductFields> &
+    Partial<Omit<BaseProduct, ServerComputedProductFields | RequiredCreateProductFields>> & {
+        custom_fields?: ProductCustomFieldsPayload;
+        bulk_pricing_rules?: ProductBulkPricingRulesPayload;
+        images?: ProductImagePayload;
+        videos?: ProductVideoPayload;
+    };
+
+export interface BcCreateProductResponse {
+    data: BaseProduct;
+}
+
+/**
+ * Payload for PUT /v3/catalog/products/{productId}.
+ * All fields are optional. Server-computed fields are excluded.
+ */
+export type UpdateProductPayload = Partial<Omit<BaseProduct, ServerComputedProductFields>> & {
+    custom_fields?: ProductCustomFieldsPayload;
+    bulk_pricing_rules?: ProductBulkPricingRulesPayload;
+    images?: ProductImagePayload;
+    videos?: ProductVideoPayload;
+};
+
+export interface BcUpdateProductResponse {
+    data: BaseProduct;
 }

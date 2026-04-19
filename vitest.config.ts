@@ -18,9 +18,8 @@ export default defineConfig({
             {
                 resolve: { alias },
                 test: {
-                    exclude: ['src/tests/integration/**'],
                     globals: true,
-                    include: ['src/tests/**/*.test.ts'],
+                    include: ['src/tests/unit/**/*.test.ts'],
                     name: { color: 'cyan', label: 'unit' },
                     testTimeout: 1000,
                 },

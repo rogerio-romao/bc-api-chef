@@ -2,7 +2,7 @@ import BcApiChef from '@/BcApiChef.ts';
 import ProductsV3 from '@/v3Api/Products/Products';
 import V3Api from '@/v3Api/V3Api.ts';
 
-import { getCallUrl, makeProductsPageResponse } from './helpers';
+import { getCallUrl, makePageResponse } from './helpers';
 
 const mockTchef = vi.hoisted(() => vi.fn());
 vi.mock(import('tchef'), () => ({
@@ -14,7 +14,7 @@ describe('BcApiChef builder chain', () => {
 
     beforeEach(() => {
         mockTchef.mockReset();
-        mockTchef.mockResolvedValue(makeProductsPageResponse());
+        mockTchef.mockResolvedValue(makePageResponse());
     });
 
     it('v3() returns a V3Api instance', () => {
@@ -26,7 +26,7 @@ describe('BcApiChef builder chain', () => {
     });
 
     it('builds the correct base URL for the store', async () => {
-        await client.v3().products().getAllProducts();
+        await client.v3().products().getProducts();
 
         expect(mockTchef).toHaveBeenCalledOnce();
         expect(getCallUrl(mockTchef).origin).toBe('https://api.bigcommerce.com');

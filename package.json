@@ -18,7 +18,7 @@
         "lint": "oxlint",
         "lint:fix": "oxlint --fix",
         "prepare": "husky",
-        "scratch": "node --env-file=.env src/scratchpad.ts",
+        "scratch": "pnpm dlx tsx --env-file=.env src/scratchpad.ts",
         "start": "node --env-file=.env dist/index.js",
         "test": "vitest --project unit",
         "test:ci": "vitest --run --project unit",

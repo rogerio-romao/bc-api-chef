@@ -1,18 +1,16 @@
+import type { Prettify, SortDirection } from '@/types/api-types';
+import type { ProductCustomField } from '@/types/product-custom-fields';
+import type { ProductImage } from '@/types/product-images';
 import type {
     ApiProductQuery,
-    CreateProductPayload,
-    GetProductsReturnType,
-    ProductIncludes,
-    ProductSortField,
-    SortDirection,
-} from '@/types/api-types';
-import type {
     BaseProduct,
     BaseProductField,
-    ProductCustomField,
-    ProductImage,
-    ProductVariant,
+    CreateProductPayload,
+    IncludeExpansion,
+    NoIdProductField,
+    ProductSortField,
 } from '@/types/product-types';
+import type { ProductVariant } from '@/types/product-variants';
 
 describe('BaseProductField type', () => {
     it('equals keyof BaseProduct', () => {
@@ -20,19 +18,39 @@ describe('BaseProductField type', () => {
     });
 });
 
-describe('ApiProductQuery type', () => {
-    it('accepts valid BaseProductField values for include_fields', () => {
-        const q: ApiProductQuery = { include_fields: ['id', 'name', 'sku'] };
+describe('NoIdProductField type', () => {
+    it('excludes id while allowing other base product fields', () => {
+        const validFields = [
+            'name',
+            'sku',
+            'price',
+            'description',
+        ] as const satisfies readonly NoIdProductField[];
 
-        expectTypeOf(q.include_fields).toEqualTypeOf<readonly BaseProductField[] | undefined>();
+        expectTypeOf(validFields).toExtend<readonly NoIdProductField[]>();
+
+        const validField: NoIdProductField = 'name';
+
+        expect(validField).toBe('name');
+
+        // @ts-expect-error id must not be assignable to NoIdProductField
+        const invalidField: NoIdProductField = 'id';
+
+        expect(invalidField).toBeDefined();
+    });
+});
+
+describe('ApiProductQuery type', () => {
+    it('accepts NoIdProductField values for include_fields', () => {
+        expectTypeOf<ApiProductQuery['include_fields']>().toEqualTypeOf<
+            readonly NoIdProductField[] | undefined
+        >();
     });
 
-    it('accepts valid BaseProductField values for exclude_fields', () => {
-        const q: ApiProductQuery = {
-            exclude_fields: ['description', 'weight'],
-        };
-
-        expectTypeOf(q.exclude_fields).toEqualTypeOf<readonly BaseProductField[] | undefined>();
+    it('accepts valid NoIdProductField values for exclude_fields', () => {
+        expectTypeOf<ApiProductQuery['exclude_fields']>().toEqualTypeOf<
+            readonly NoIdProductField[] | undefined
+        >();
     });
 
     it('types id:in as number[] | undefined', () => {
@@ -73,6 +91,16 @@ describe('ApiProductQuery type', () => {
 
     it('types direction as SortDirection | undefined', () => {
         expectTypeOf<ApiProductQuery['direction']>().toEqualTypeOf<SortDirection | undefined>();
+    });
+
+    it('does not allow include_fields and exclude_fields to be supplied together', () => {
+        // @ts-expect-error include_fields and exclude_fields are mutually exclusive
+        const query: ApiProductQuery = {
+            exclude_fields: ['name'],
+            include_fields: ['description'],
+        };
+
+        expect(query).toBeDefined();
     });
 });
 
@@ -182,91 +210,86 @@ describe('CreateProductPayload type', () => {
     });
 });
 
-describe('GetProductsReturnType type', () => {
-    it('returns an array of objects with core BaseProduct fields when nothing is specified', () => {
-        type Result = GetProductsReturnType<Record<string, never>>;
+describe('product return type narrowing', () => {
+    it('returns a plain BaseProduct when no includes are given', () => {
+        type Result = Prettify<BaseProduct & IncludeExpansion<object>>;
 
-        // `GetProductsReturnType` returns an array, so we check the type of the items in the array with Result[number]
-        expectTypeOf<Result[number]>().toHaveProperty('id');
-        expectTypeOf<Result[number]>().toHaveProperty('name');
-        expectTypeOf<Result[number]>().toHaveProperty('sku');
-        expectTypeOf<Result[number]>().toHaveProperty('price');
+        expectTypeOf<Result>().toEqualTypeOf<BaseProduct>();
     });
 
     it('adds variants when variants include is true', () => {
-        type Result = GetProductsReturnType<{ variants: true }>;
+        type Result = Prettify<BaseProduct & IncludeExpansion<{ variants: true }>>;
 
-        expectTypeOf<Result[number]>().toHaveProperty('variants');
-        expectTypeOf<Result[number]['variants']>().toEqualTypeOf<ProductVariant[]>();
+        expectTypeOf<Result>().toHaveProperty('variants');
+        expectTypeOf<Result['variants']>().toEqualTypeOf<ProductVariant[]>();
     });
 
     it('adds images when images include is true', () => {
-        type Result = GetProductsReturnType<{ images: true }>;
+        type Result = Prettify<BaseProduct & IncludeExpansion<{ images: true }>>;
 
-        expectTypeOf<Result[number]>().toHaveProperty('images');
-        expectTypeOf<Result[number]['images']>().toEqualTypeOf<ProductImage[]>();
+        expectTypeOf<Result>().toHaveProperty('images');
+        expectTypeOf<Result['images']>().toEqualTypeOf<ProductImage[]>();
     });
 
     it('adds custom_fields when custom_fields include is true', () => {
-        type Result = GetProductsReturnType<{ custom_fields: true }>;
+        type Result = Prettify<BaseProduct & IncludeExpansion<{ custom_fields: true }>>;
 
-        expectTypeOf<Result[number]>().toHaveProperty('custom_fields');
-        expectTypeOf<Result[number]['custom_fields']>().toEqualTypeOf<ProductCustomField[]>();
+        expectTypeOf<Result>().toHaveProperty('custom_fields');
+        expectTypeOf<Result['custom_fields']>().toEqualTypeOf<ProductCustomField[]>();
     });
 
     it('does not add variants when include is false', () => {
-        type Result = GetProductsReturnType<{ variants: false }>;
+        type Result = Prettify<BaseProduct & IncludeExpansion<{ variants: false }>>;
 
-        expectTypeOf<Result[number]>().not.toHaveProperty('variants');
+        expectTypeOf<Result>().not.toHaveProperty('variants');
     });
 
-    it('always has base BaseProduct fields regardless of includes', () => {
-        type Result = GetProductsReturnType<ProductIncludes>;
+    it('always has base BaseProduct fields alongside included sub-resources', () => {
+        type Result = Prettify<BaseProduct & IncludeExpansion<{ variants: true }>>;
 
-        expectTypeOf<Result[number]>().toHaveProperty('id');
-        expectTypeOf<Result[number]>().toHaveProperty('name');
-        expectTypeOf<Result[number]>().toHaveProperty('sku');
+        expectTypeOf<Result>().toHaveProperty('id');
+        expectTypeOf<Result>().toHaveProperty('name');
+        expectTypeOf<Result>().toHaveProperty('sku');
+        expectTypeOf<Result>().toHaveProperty('variants');
     });
 
     it('narrows base fields to Pick when include_fields is provided', () => {
-        type Result = GetProductsReturnType<Record<string, never>, readonly ['id', 'name']>;
+        type Result = Prettify<Pick<BaseProduct, 'id' | 'name'> & IncludeExpansion<object>>;
 
-        expectTypeOf<Result[number]>().toHaveProperty('id');
-        expectTypeOf<Result[number]>().toHaveProperty('name');
-        expectTypeOf<Result[number]>().not.toHaveProperty('sku');
+        expectTypeOf<Result>().toHaveProperty('id');
+        expectTypeOf<Result>().toHaveProperty('name');
+        expectTypeOf<Result>().not.toHaveProperty('sku');
     });
 
     it('combines include_fields narrowing with sub-resource includes', () => {
-        type Result = GetProductsReturnType<{ images: true }, readonly ['id', 'name']>;
+        type Result = Prettify<
+            Pick<BaseProduct, 'id' | 'name'> & IncludeExpansion<{ images: true }>
+        >;
 
-        expectTypeOf<Result[number]>().toHaveProperty('id');
-        expectTypeOf<Result[number]>().toHaveProperty('name');
-        expectTypeOf<Result[number]>().toHaveProperty('images');
-        expectTypeOf<Result[number]>().not.toHaveProperty('sku');
+        expectTypeOf<Result>().toHaveProperty('id');
+        expectTypeOf<Result>().toHaveProperty('name');
+        expectTypeOf<Result>().toHaveProperty('images');
+        expectTypeOf<Result>().not.toHaveProperty('sku');
     });
 
     it('removes excluded fields when exclude_fields is provided', () => {
-        type Result = GetProductsReturnType<
-            Record<string, never>,
-            undefined,
-            readonly ['description', 'weight']
+        type Result = Prettify<
+            Omit<BaseProduct, 'description' | 'weight'> & IncludeExpansion<object>
         >;
 
-        expectTypeOf<Result[number]>().toHaveProperty('id');
-        expectTypeOf<Result[number]>().toHaveProperty('name');
-        expectTypeOf<Result[number]>().not.toHaveProperty('description');
-        expectTypeOf<Result[number]>().not.toHaveProperty('weight');
+        expectTypeOf<Result>().toHaveProperty('id');
+        expectTypeOf<Result>().toHaveProperty('name');
+        expectTypeOf<Result>().not.toHaveProperty('description');
+        expectTypeOf<Result>().not.toHaveProperty('weight');
     });
 
     it('combines exclude_fields narrowing with sub-resource includes', () => {
-        type Result = GetProductsReturnType<
-            { variants: true },
-            undefined,
-            readonly ['description']
+        type Result = Prettify<
+            Omit<BaseProduct, 'description'> & IncludeExpansion<{ variants: true }>
         >;
 
-        expectTypeOf<Result[number]>().toHaveProperty('id');
-        expectTypeOf<Result[number]>().toHaveProperty('variants');
-        expectTypeOf<Result[number]>().not.toHaveProperty('description');
+        expectTypeOf<Result>().toHaveProperty('id');
+        expectTypeOf<Result>().toHaveProperty('variants');
+        expectTypeOf<Result>().not.toHaveProperty('description');
     });
 });

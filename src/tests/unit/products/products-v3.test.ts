@@ -1,21 +1,20 @@
 // oxlint-disable max-lines-per-function
 
 import {
+    assertErr,
+    assertOk,
+    getCallHeaders,
+    getCallOptions,
+    getCallUrl,
+    makePageResponse,
+} from '@/tests/unit/helpers.ts';
+import {
     DEFAULT_START_PAGE,
     PER_PAGE_DEFAULT,
     PER_PAGE_MAX,
     PER_PAGE_MIN,
 } from '@/v3Api/constants.ts';
 import ProductsV3 from '@/v3Api/Products/Products';
-
-import {
-    assertErr,
-    assertOk,
-    getCallHeaders,
-    getCallOptions,
-    getCallUrl,
-    makeProductsPageResponse,
-} from './helpers';
 
 // vi.mock is hoisted to the top of the file, so mockTchef must be declared
 // with vi.hoisted() to be available inside the factory function.
@@ -50,7 +49,16 @@ describe('ProductsV3 class', () => {
 
             assertErr(result);
             expect(result.statusCode).toBe(400);
-            expect(result.error).toBe('Invalid productId');
+            expect(result.error).toBe('Invalid productId: must be a positive integer.');
+            expect(mockTchef).not.toHaveBeenCalled();
+        });
+
+        it('returns a 400 error without calling the API when productId is negative', async () => {
+            const result = await products.getProduct(-1);
+
+            assertErr(result);
+            expect(result.statusCode).toBe(400);
+            expect(result.error).toBe('Invalid productId: must be a positive integer.');
             expect(mockTchef).not.toHaveBeenCalled();
         });
 
@@ -103,17 +111,17 @@ describe('ProductsV3 class', () => {
     describe('getAllProducts tests', () => {
         describe('getAllProducts — request headers', () => {
             beforeEach(() => {
-                mockTchef.mockResolvedValue(makeProductsPageResponse([], 1, 1));
+                mockTchef.mockResolvedValue(makePageResponse([], 1, 1));
             });
 
             it('sends the access token as X-Auth-Token', async () => {
-                await products.getAllProducts();
+                await products.getProducts();
 
                 expect(getCallHeaders(mockTchef, 0)['X-Auth-Token']).toBe('test-token');
             });
 
             it('sends Accept: application/json', async () => {
-                await products.getAllProducts();
+                await products.getProducts();
 
                 expect(getCallHeaders(mockTchef, 0).Accept).toBe('application/json');
             });
@@ -121,9 +129,9 @@ describe('ProductsV3 class', () => {
 
         describe('getAllProducts — pagination', () => {
             it('fetches a single page when total_pages is 1', async () => {
-                mockTchef.mockResolvedValue(makeProductsPageResponse([{ id: 1 }, { id: 2 }], 1, 1));
+                mockTchef.mockResolvedValue(makePageResponse([{ id: 1 }, { id: 2 }], 1, 1));
 
-                const result = await products.getAllProducts();
+                const result = await products.getProducts();
 
                 assertOk(result);
                 expect(result.data).toHaveLength(2);
@@ -132,11 +140,11 @@ describe('ProductsV3 class', () => {
 
             it('fetches all pages and concatenates results when total_pages > 1', async () => {
                 mockTchef
-                    .mockResolvedValueOnce(makeProductsPageResponse([{ id: 1 }], 1, 3))
-                    .mockResolvedValueOnce(makeProductsPageResponse([{ id: 2 }], 2, 3))
-                    .mockResolvedValueOnce(makeProductsPageResponse([{ id: 3 }], 3, 3));
+                    .mockResolvedValueOnce(makePageResponse([{ id: 1 }], 1, 3))
+                    .mockResolvedValueOnce(makePageResponse([{ id: 2 }], 2, 3))
+                    .mockResolvedValueOnce(makePageResponse([{ id: 3 }], 3, 3));
 
-                const result = await products.getAllProducts();
+                const result = await products.getProducts();
 
                 assertOk(result);
                 expect(result.data).toHaveLength(3);
@@ -145,11 +153,11 @@ describe('ProductsV3 class', () => {
 
             it('requests page=1 on first call, page=2 on second, page=3 on third', async () => {
                 mockTchef
-                    .mockResolvedValueOnce(makeProductsPageResponse([{ id: 1 }], 1, 3))
-                    .mockResolvedValueOnce(makeProductsPageResponse([{ id: 2 }], 2, 3))
-                    .mockResolvedValueOnce(makeProductsPageResponse([{ id: 3 }], 3, 3));
+                    .mockResolvedValueOnce(makePageResponse([{ id: 1 }], 1, 3))
+                    .mockResolvedValueOnce(makePageResponse([{ id: 2 }], 2, 3))
+                    .mockResolvedValueOnce(makePageResponse([{ id: 3 }], 3, 3));
 
-                await products.getAllProducts();
+                await products.getProducts();
 
                 expect(getCallUrl(mockTchef, 0).searchParams.get('page')).toBe('1');
                 expect(getCallUrl(mockTchef, 1).searchParams.get('page')).toBe('2');
@@ -157,10 +165,11 @@ describe('ProductsV3 class', () => {
             });
 
             it('fetches only the user-supplied page and stops', async () => {
-                mockTchef.mockResolvedValueOnce(makeProductsPageResponse([{ id: 2 }], 2, 3));
+                mockTchef.mockResolvedValueOnce(makePageResponse([{ id: 2 }], 2, 3));
 
-                const result = await products.getAllProducts({
-                    query: { limit: 50, page: 2 },
+                const result = await products.getProducts({
+                    limit: 50,
+                    page: 2,
                 });
 
                 assertOk(result);
@@ -172,12 +181,12 @@ describe('ProductsV3 class', () => {
 
             it('walks all pages when only limit is supplied (no page)', async () => {
                 mockTchef
-                    .mockResolvedValueOnce(makeProductsPageResponse([{ id: 1 }], 1, 3))
-                    .mockResolvedValueOnce(makeProductsPageResponse([{ id: 2 }], 2, 3))
-                    .mockResolvedValueOnce(makeProductsPageResponse([{ id: 3 }], 3, 3));
+                    .mockResolvedValueOnce(makePageResponse([{ id: 1 }], 1, 3))
+                    .mockResolvedValueOnce(makePageResponse([{ id: 2 }], 2, 3))
+                    .mockResolvedValueOnce(makePageResponse([{ id: 3 }], 3, 3));
 
-                const result = await products.getAllProducts({
-                    query: { limit: 50 },
+                const result = await products.getProducts({
+                    limit: 50,
                 });
 
                 assertOk(result);
@@ -187,14 +196,14 @@ describe('ProductsV3 class', () => {
 
             it('returns the error result immediately when a page fetch fails', async () => {
                 mockTchef
-                    .mockResolvedValueOnce(makeProductsPageResponse([{ id: 1 }], 1, 3))
+                    .mockResolvedValueOnce(makePageResponse([{ id: 1 }], 1, 3))
                     .mockResolvedValueOnce({
                         error: 'Unauthorized',
                         ok: false,
                         statusCode: 401,
                     });
 
-                const result = await products.getAllProducts();
+                const result = await products.getProducts();
 
                 assertErr(result);
                 expect(result.statusCode).toBe(401);
@@ -205,11 +214,11 @@ describe('ProductsV3 class', () => {
 
         describe('getAllProducts — includes', () => {
             beforeEach(() => {
-                mockTchef.mockResolvedValue(makeProductsPageResponse([], 1, 1));
+                mockTchef.mockResolvedValue(makePageResponse([], 1, 1));
             });
 
             it('includes only keys with value true', async () => {
-                await products.getAllProducts({
+                await products.getProducts({
                     includes: {
                         custom_fields: true,
                         images: false,
@@ -226,7 +235,7 @@ describe('ProductsV3 class', () => {
             });
 
             it('omits include param when all includes are false', async () => {
-                await products.getAllProducts({
+                await products.getProducts({
                     includes: { images: false, variants: false },
                 });
 
@@ -236,7 +245,7 @@ describe('ProductsV3 class', () => {
             });
 
             it('includes sub-resources even when no query is provided', async () => {
-                await products.getAllProducts({
+                await products.getProducts({
                     includes: { custom_fields: true },
                 });
 
@@ -246,7 +255,7 @@ describe('ProductsV3 class', () => {
             });
 
             it('omits include param when no includes provided', async () => {
-                await products.getAllProducts({ query: { id: 1 } });
+                await products.getProducts({ id: 1 });
 
                 const url = getCallUrl(mockTchef, 0);
 
@@ -256,12 +265,13 @@ describe('ProductsV3 class', () => {
 
         describe('getAllProducts — query params', () => {
             beforeEach(() => {
-                mockTchef.mockResolvedValue(makeProductsPageResponse([], 1, 1));
+                mockTchef.mockResolvedValue(makePageResponse([], 1, 1));
             });
 
             it('adds query params to the URL', async () => {
-                await products.getAllProducts({
-                    query: { id: 42, name: 'Widget' },
+                await products.getProducts({
+                    id: 42,
+                    name: 'Widget',
                 });
 
                 const url = getCallUrl(mockTchef, 0);
@@ -271,7 +281,7 @@ describe('ProductsV3 class', () => {
             });
 
             it('URL-encodes query values with special characters', async () => {
-                await products.getAllProducts({ query: { name: 'foo&bar=baz' } });
+                await products.getProducts({ name: 'foo&bar=baz' });
 
                 const url = getCallUrl(mockTchef, 0);
 
@@ -279,7 +289,7 @@ describe('ProductsV3 class', () => {
             });
 
             it('serializes id:in array as comma-separated string', async () => {
-                await products.getAllProducts({ query: { 'id:in': [1, 2, 3] } });
+                await products.getProducts({ 'id:in': [1, 2, 3] });
 
                 const url = getCallUrl(mockTchef, 0);
 
@@ -289,7 +299,7 @@ describe('ProductsV3 class', () => {
             });
 
             it('serializes id:not_in array as comma-separated string', async () => {
-                await products.getAllProducts({ query: { 'id:not_in': [10, 20] } });
+                await products.getProducts({ 'id:not_in': [10, 20] });
 
                 const url = getCallUrl(mockTchef, 0);
 
@@ -297,7 +307,7 @@ describe('ProductsV3 class', () => {
             });
 
             it('handles empty options gracefully', async () => {
-                const result = await products.getAllProducts();
+                const result = await products.getProducts();
 
                 const url = getCallUrl(mockTchef, 0);
 
@@ -308,8 +318,10 @@ describe('ProductsV3 class', () => {
             });
 
             it('does not duplicate user-supplied page and limit in the query string', async () => {
-                await products.getAllProducts({
-                    query: { limit: 25, name: 'Widget', page: 3 },
+                await products.getProducts({
+                    limit: 25,
+                    name: 'Widget',
+                    page: 3,
                 });
 
                 const url = getCallUrl(mockTchef, 0);
@@ -320,9 +332,9 @@ describe('ProductsV3 class', () => {
             });
 
             it('combines query params and includes in the same URL', async () => {
-                await products.getAllProducts({
+                await products.getProducts({
                     includes: { images: true },
-                    query: { name: 'Test' },
+                    name: 'Test',
                 });
 
                 const url = getCallUrl(mockTchef, 0);
@@ -334,29 +346,29 @@ describe('ProductsV3 class', () => {
 
         describe('getAllProducts -- limit clamping', () => {
             beforeEach(() => {
-                mockTchef.mockResolvedValue(makeProductsPageResponse([], 1, 1));
+                mockTchef.mockResolvedValue(makePageResponse([], 1, 1));
             });
 
             it(`clamps limit above ${PER_PAGE_MAX} down to ${PER_PAGE_MAX}`, async () => {
-                await products.getAllProducts({ query: { limit: 500 } });
+                await products.getProducts({ limit: 500 });
 
                 expect(getCallUrl(mockTchef, 0).searchParams.get('limit')).toBe(`${PER_PAGE_MAX}`);
             });
 
             it(`clamps limit below ${PER_PAGE_MIN} up to ${PER_PAGE_MIN}`, async () => {
-                await products.getAllProducts({ query: { limit: 1 } });
+                await products.getProducts({ limit: 1 });
 
                 expect(getCallUrl(mockTchef, 0).searchParams.get('limit')).toBe(`${PER_PAGE_MIN}`);
             });
 
             it('passes through a limit within the valid range unchanged', async () => {
-                await products.getAllProducts({ query: { limit: 100 } });
+                await products.getProducts({ limit: 100 });
 
                 expect(getCallUrl(mockTchef, 0).searchParams.get('limit')).toBe('100');
             });
 
             it(`uses ${PER_PAGE_DEFAULT} as the default when no limit is provided`, async () => {
-                await products.getAllProducts();
+                await products.getProducts();
 
                 expect(getCallUrl(mockTchef, 0).searchParams.get('limit')).toBe(
                     `${PER_PAGE_DEFAULT}`,
@@ -364,13 +376,13 @@ describe('ProductsV3 class', () => {
             });
 
             it(`passes through limit of exactly ${PER_PAGE_MIN} (lower boundary) unchanged`, async () => {
-                await products.getAllProducts({ query: { limit: PER_PAGE_MIN } });
+                await products.getProducts({ limit: PER_PAGE_MIN });
 
                 expect(getCallUrl(mockTchef, 0).searchParams.get('limit')).toBe(`${PER_PAGE_MIN}`);
             });
 
             it(`passes through limit of exactly ${PER_PAGE_MAX} (upper boundary) unchanged`, async () => {
-                await products.getAllProducts({ query: { limit: PER_PAGE_MAX } });
+                await products.getProducts({ limit: PER_PAGE_MAX });
 
                 expect(getCallUrl(mockTchef, 0).searchParams.get('limit')).toBe(`${PER_PAGE_MAX}`);
             });
@@ -430,7 +442,7 @@ describe('ProductsV3 class', () => {
         it('sends Content-Type: application/json header', async () => {
             await products.createProduct(minPayload);
 
-            expect(getCallHeaders(mockTchef, 0)['Content-Type']).toBe('application/json');
+            expect(getCallHeaders(mockTchef, 0)['Content-type']).toBe('application/json');
         });
 
         it('sends Accept: application/json header', async () => {
@@ -718,6 +730,18 @@ describe('ProductsV3 class', () => {
             expect(result.ok).toBe(true);
             expect(mockTchef).toHaveBeenCalledOnce();
         });
+
+        it('appends include_fields to the URL when provided', async () => {
+            await products.createProduct(minPayload, { include_fields: ['name', 'price'] });
+
+            expect(getCallUrl(mockTchef, 0).searchParams.get('include_fields')).toBe('name,price');
+        });
+
+        it('does not include include_fields in the URL when not provided', async () => {
+            await products.createProduct(minPayload);
+
+            expect(getCallUrl(mockTchef, 0).searchParams.has('include_fields')).toBe(false);
+        });
     });
 
     // oxlint-disable-next-line max-statements
@@ -764,7 +788,7 @@ describe('ProductsV3 class', () => {
         it('sends Content-Type: application/json header', async () => {
             await products.updateProduct(42, {});
 
-            expect(getCallHeaders(mockTchef, 0)['Content-Type']).toBe('application/json');
+            expect(getCallHeaders(mockTchef, 0)['Content-type']).toBe('application/json');
         });
 
         it('sends Accept: application/json header', async () => {
@@ -809,11 +833,13 @@ describe('ProductsV3 class', () => {
                 42,
                 {},
                 {
-                    query: { include_fields: ['id', 'name'] as const },
+                    include_fields: ['description', 'name'],
                 },
             );
 
-            expect(getCallUrl(mockTchef, 0).searchParams.get('include_fields')).toBe('id,name');
+            expect(getCallUrl(mockTchef, 0).searchParams.get('include_fields')).toBe(
+                'description,name',
+            );
         });
 
         it('appends include param for sub-resources when provided', async () => {
@@ -833,15 +859,15 @@ describe('ProductsV3 class', () => {
                 42,
                 {},
                 {
+                    include_fields: ['description', 'name'],
                     includes: { images: true },
-                    query: { include_fields: ['id', 'name'] as const },
                 },
             );
 
             const url = getCallUrl(mockTchef, 0);
 
             expect(url.searchParams.get('include')).toBe('images');
-            expect(url.searchParams.get('include_fields')).toBe('id,name');
+            expect(url.searchParams.get('include_fields')).toBe('description,name');
         });
 
         it('returns the error result immediately on failure', async () => {
@@ -931,7 +957,7 @@ describe('ProductsV3 class', () => {
 
             assertErr(result);
             expect(result.statusCode).toBe(400);
-            expect(result.error).toBe('Invalid productId');
+            expect(result.error).toBe('Invalid productId: must be a positive integer.');
             expect(mockTchef).not.toHaveBeenCalled();
         });
 
@@ -940,7 +966,7 @@ describe('ProductsV3 class', () => {
 
             assertErr(result);
             expect(result.statusCode).toBe(400);
-            expect(result.error).toBe('Invalid productId');
+            expect(result.error).toBe('Invalid productId: must be a positive integer.');
             expect(mockTchef).not.toHaveBeenCalled();
         });
 

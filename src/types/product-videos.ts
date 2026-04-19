@@ -8,3 +8,5 @@ export interface ProductVideo {
     product_id: number;
     length: string;
 }
+
+export type ProductVideoPayload = Omit<ProductVideo, 'id' | 'product_id' | 'length'>[];
