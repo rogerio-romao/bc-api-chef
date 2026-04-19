@@ -49,7 +49,7 @@ describe('ProductsV3 class', () => {
 
             assertErr(result);
             expect(result.statusCode).toBe(400);
-            expect(result.error).toBe('Invalid productId');
+            expect(result.error).toBe('Invalid productId: must be a positive integer.');
             expect(mockTchef).not.toHaveBeenCalled();
         });
 
@@ -58,7 +58,7 @@ describe('ProductsV3 class', () => {
 
             assertErr(result);
             expect(result.statusCode).toBe(400);
-            expect(result.error).toBe('Invalid productId');
+            expect(result.error).toBe('Invalid productId: must be a positive integer.');
             expect(mockTchef).not.toHaveBeenCalled();
         });
 
@@ -833,7 +833,7 @@ describe('ProductsV3 class', () => {
                 42,
                 {},
                 {
-                    include_fields: ['description', 'name'] as const,
+                    include_fields: ['description', 'name'],
                 },
             );
 
@@ -859,7 +859,7 @@ describe('ProductsV3 class', () => {
                 42,
                 {},
                 {
-                    include_fields: ['description', 'name'] as const,
+                    include_fields: ['description', 'name'],
                     includes: { images: true },
                 },
             );
@@ -957,7 +957,7 @@ describe('ProductsV3 class', () => {
 
             assertErr(result);
             expect(result.statusCode).toBe(400);
-            expect(result.error).toBe('Invalid productId');
+            expect(result.error).toBe('Invalid productId: must be a positive integer.');
             expect(mockTchef).not.toHaveBeenCalled();
         });
 
@@ -966,7 +966,7 @@ describe('ProductsV3 class', () => {
 
             assertErr(result);
             expect(result.statusCode).toBe(400);
-            expect(result.error).toBe('Invalid productId');
+            expect(result.error).toBe('Invalid productId: must be a positive integer.');
             expect(mockTchef).not.toHaveBeenCalled();
         });
 

@@ -8,56 +8,9 @@ import type { BcRequestResponseMeta } from '@/types/api-types';
 
 const PAGINATION_PARAMS = new Set(['page', 'limit']);
 
-/**
- * Serializes a query object into a URL query string suffix (e.g. `?foo=bar`).
- * `page` and `limit` are always omitted — they are handled separately by
- * pagination helpers in each resource class.
- * @param query - Key/value query params. Arrays are joined with commas.
- * @param options - Optional settings for query string generation.
- * @param options.include - Optional comma-separated include string, appended as `include=...`.
- * @returns { string } The query string with a leading `?`, or an empty string when there are no params.
- */
-export function buildQueryString(
-    query: object | undefined,
-    options?: { include?: string },
-): string {
-    const params = new URLSearchParams();
-
-    if (query) {
-        for (const [key, value] of Object.entries(query)) {
-            if (value !== undefined && !PAGINATION_PARAMS.has(key)) {
-                params.set(key, Array.isArray(value) ? value.join(',') : String(value));
-            }
-        }
-    }
-
-    if (options?.include) {
-        params.set('include', options.include);
-    }
-
-    return params.size > 0 ? `?${params.toString()}` : '';
-}
-
-export function clampPerPageLimits(limit: number | undefined): number {
-    if (limit === undefined) {
-        return PER_PAGE_DEFAULT;
-    }
-
-    return Math.min(Math.max(limit, PER_PAGE_MIN), PER_PAGE_MAX);
-}
-
-/** Validates that a number is a positive integer.
- * @param numbers Number values to validate.
- * @returns {true | string} `true` if all numbers are valid, or an error message for the first invalid number.
- */
-export function validatePositiveIntegers(numbers: Record<string, number>): true | string {
-    for (const [fieldName, value] of Object.entries(numbers)) {
-        if (!Number.isInteger(value) || value <= 0) {
-            return `Invalid ${fieldName}: must be a positive integer.`;
-        }
-    }
-    return true;
-}
+/* -------------------------------------------------------------------------- */
+/*                              FETCHING HELPERS                              */
+/* -------------------------------------------------------------------------- */
 
 /**
  * Fetches a single BC resource and unwraps the `{ data }` envelope.
@@ -268,4 +221,64 @@ export async function updateResource<T, P>(
 
     const { data } = response.data as { data: T };
     return { data, ok: true };
+}
+
+/* -------------------------------------------------------------------------- */
+/*                                GENERAL UTILS                               */
+/* -------------------------------------------------------------------------- */
+
+/**
+ * Serializes a query object into a URL query string suffix (e.g. `?foo=bar`).
+ * `page` and `limit` are always omitted — they are handled separately by
+ * pagination helpers in each resource class.
+ * @param query - Key/value query params. Arrays are joined with commas.
+ * @param options - Optional settings for query string generation.
+ * @param options.include - Optional comma-separated include string, appended as `include=...`.
+ * @returns { string } The query string with a leading `?`, or an empty string when there are no params.
+ */
+export function buildQueryString(
+    query: object | undefined,
+    options?: { include?: string },
+): string {
+    const params = new URLSearchParams();
+
+    if (query) {
+        for (const [key, value] of Object.entries(query)) {
+            if (value !== undefined && !PAGINATION_PARAMS.has(key)) {
+                params.set(key, Array.isArray(value) ? value.join(',') : String(value));
+            }
+        }
+    }
+
+    if (options?.include) {
+        params.set('include', options.include);
+    }
+
+    return params.size > 0 ? `?${params.toString()}` : '';
+}
+
+/**
+ * Clamps a requested page size to BigCommerce's allowed limits, or returns the default when `undefined`.
+ * @param limit - The requested page size, or `undefined` to use the default.
+ * @returns {number} A valid page size within BC's limits.
+ */
+export function clampPerPageLimits(limit: number | undefined): number {
+    if (limit === undefined) {
+        return PER_PAGE_DEFAULT;
+    }
+
+    return Math.min(Math.max(limit, PER_PAGE_MIN), PER_PAGE_MAX);
+}
+
+/** Validates that a number is a positive integer.
+ * @param numbers Number values to validate.
+ * @returns {true | string} `true` if all numbers are valid, or an error message for the first invalid number.
+ */
+export function validatePositiveIntegers(numbers: Record<string, number>): true | string {
+    for (const [fieldName, value] of Object.entries(numbers)) {
+        if (!Number.isInteger(value) || value <= 0) {
+            return `Invalid ${fieldName}: must be a positive integer.`;
+        }
+    }
+    return true;
 }

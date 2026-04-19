@@ -1,4 +1,4 @@
-import type { BcRequestResponseMeta } from './api-types';
+import type { BcRequestResponseMeta, FieldSelectionOptions } from './api-types';
 
 export type PermissionSet =
     | 'app_only'
@@ -39,20 +39,6 @@ export interface BcGetMetafieldsResponse {
     meta: BcRequestResponseMeta;
 }
 
-type FieldSelectionOptions =
-    | {
-          include_fields: readonly BaseMetafieldField[];
-          exclude_fields?: never;
-      }
-    | {
-          include_fields?: never;
-          exclude_fields: readonly BaseMetafieldField[];
-      }
-    | {
-          include_fields?: never;
-          exclude_fields?: never;
-      };
-
 export interface ApiMetafieldQueryBase {
     page?: number;
     limit?: number;
@@ -61,7 +47,7 @@ export interface ApiMetafieldQueryBase {
     'resource_id:in'?: string;
 }
 
-export type ApiMetafieldQuery = ApiMetafieldQueryBase & FieldSelectionOptions;
+export type ApiMetafieldQuery = ApiMetafieldQueryBase & FieldSelectionOptions<BaseMetafieldField>;
 
 /**
  * Applies Omit<ProductMetafield, E[number]> for exclude_fields, with a guard

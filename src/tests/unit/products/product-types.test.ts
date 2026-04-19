@@ -7,7 +7,7 @@ import type {
     BaseProductField,
     CreateProductPayload,
     IncludeExpansion,
-    IncludeableProductField,
+    NoIdProductField,
     ProductSortField,
 } from '@/types/product-types';
 import type { ProductVariant } from '@/types/product-variants';
@@ -19,15 +19,15 @@ describe('BaseProductField type', () => {
 });
 
 describe('ApiProductQuery type', () => {
-    it('accepts IncludeableProductField values for include_fields', () => {
+    it('accepts NoIdProductField values for include_fields', () => {
         expectTypeOf<ApiProductQuery['include_fields']>().toEqualTypeOf<
-            readonly IncludeableProductField[] | undefined
+            readonly NoIdProductField[] | undefined
         >();
     });
 
-    it('accepts valid BaseProductField values for exclude_fields', () => {
+    it('accepts valid NoIdProductField values for exclude_fields', () => {
         expectTypeOf<ApiProductQuery['exclude_fields']>().toEqualTypeOf<
-            readonly BaseProductField[] | undefined
+            readonly NoIdProductField[] | undefined
         >();
     });
 

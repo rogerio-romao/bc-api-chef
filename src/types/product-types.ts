@@ -1,5 +1,5 @@
 // oxlint-disable max-lines
-import type { BcRequestResponseMeta, SortDirection } from './api-types.ts';
+import type { BcRequestResponseMeta, FieldSelectionOptions, SortDirection } from './api-types.ts';
 import type {
     ProductBulkPricingRule,
     ProductBulkPricingRulesPayload,
@@ -12,7 +12,7 @@ import type { ProductVariant } from './product-variants.ts';
 import type { ProductVideo, ProductVideoPayload } from './product-videos.ts';
 
 export type BaseProductField = keyof BaseProduct;
-export type IncludeableProductField = Exclude<BaseProductField, 'id'>;
+export type NoIdProductField = Exclude<BaseProductField, 'id'>;
 
 export interface BaseProduct {
     id: number;
@@ -211,10 +211,7 @@ export interface ApiProductQueryBase {
 /** {@link ApiProductQueryBase} without pagination — for single-product fetches where `page`/`limit` are meaningless. */
 export type ApiGetProductQueryBase = Omit<ApiProductQueryBase, 'page' | 'limit'>;
 
-type ProductFieldSelectionOptions =
-    | { include_fields: readonly IncludeableProductField[]; exclude_fields?: never }
-    | { include_fields?: never; exclude_fields: readonly BaseProductField[] }
-    | { include_fields?: never; exclude_fields?: never };
+type ProductFieldSelectionOptions = FieldSelectionOptions<NoIdProductField>;
 
 /** {@link ApiProductQueryBase} plus mutually-exclusive field-selection options. */
 export type ApiProductQuery = ApiProductQueryBase & ProductFieldSelectionOptions;
@@ -248,6 +245,23 @@ export type ProductCustomFieldsPayload = Omit<ProductCustomField, 'id'>[];
 export type CommonProductValidationPayload = Partial<BaseProduct> & {
     custom_fields?: ProductCustomFieldsPayload;
 };
+
+/** The response shape for `createProduct` when `include_fields` is supplied. */
+export type CreateProductReturnType<F extends readonly NoIdProductField[]> = {
+    id: number;
+} & Pick<BaseProduct, F[number]>;
+
+/** Product narrowed to only the requested fields (plus `id`), with optional sub-resource expansion. */
+export type ProductWithFields<
+    F extends readonly NoIdProductField[],
+    T extends ProductIncludes = NoProductIncludes,
+> = { id: number } & Pick<BaseProduct, F[number]> & IncludeExpansion<T>;
+
+/** Product with specific fields excluded, with optional sub-resource expansion. */
+export type ProductWithoutFields<
+    E extends readonly NoIdProductField[],
+    T extends ProductIncludes = NoProductIncludes,
+> = Omit<BaseProduct, E[number]> & IncludeExpansion<T>;
 
 /**
  * Payload for POST /v3/catalog/products.

@@ -1,4 +1,4 @@
-import type { BcRequestResponseMeta, Prettify } from './api-types';
+import type { BcRequestResponseMeta, FieldSelectionOptions, Prettify } from './api-types';
 
 export interface ProductImage {
     id: number;
@@ -39,21 +39,8 @@ export interface ApiImageQueryBase {
     limit?: number;
 }
 
-type FieldSelectionOptions =
-    | {
-          include_fields: readonly BaseProductImageField[];
-          exclude_fields?: never;
-      }
-    | {
-          include_fields?: never;
-          exclude_fields: readonly BaseProductImageField[];
-      }
-    | {
-          include_fields?: never;
-          exclude_fields?: never;
-      };
-
-export type ApiProductImagesQuery = ApiImageQueryBase & FieldSelectionOptions;
+export type ApiProductImagesQuery = ApiImageQueryBase &
+    FieldSelectionOptions<BaseProductImageField>;
 
 type ProductImageReturnBase<
     I extends readonly BaseProductImageField[] | undefined,

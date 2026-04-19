@@ -8,25 +8,28 @@ import {
     fetchOne,
     fetchPaginated,
     updateResource,
+    validatePositiveIntegers,
 } from '@/v3Api/utils.ts';
 
 import ProductImages from './ProductImages';
 import ProductMetafields from './ProductMetafields';
 
-import type { BcApiChefOptions, BcApiChefResult, Prettify } from '@/types/api-types';
+import type { ApiResult, BcApiChefOptions } from '@/types/api-types';
 import type {
     ApiGetProductQueryBase,
     ApiProductQuery,
     ApiProductQueryBase,
     BaseProduct,
-    BaseProductField,
     CommonProductValidationPayload,
     CreateProductPayload,
+    CreateProductReturnType,
     FullProduct,
     IncludeExpansion,
-    IncludeableProductField,
+    NoIdProductField,
     NoProductIncludes,
     ProductIncludes,
+    ProductWithFields,
+    ProductWithoutFields,
     UpdateProductPayload,
 } from '@/types/product-types';
 
@@ -35,26 +38,21 @@ import type {
  *
  * Not intended to be instantiated directly by package consumers — obtain an
  * instance via `BcApiChef.v3().products()`. All methods return a
- * {@link BcApiChefResult}, so callers must check `result.ok` before using
- * `result.data`.
+ * {@link ApiResult}, which is either `{ data: T; ok: true; }` on success or `{ error: string; ok: false; statusCode: number }` on failure.
  *
  * Public methods:
+ * - {@link ProductsV3.createProduct} — `POST` a new product.
  * - {@link ProductsV3.getProducts} — paginated list, auto-collects every page, or single page if `query.page` is supplied.
  * - {@link ProductsV3.getProduct} — fetch a single product by id.
- * - {@link ProductsV3.createProduct} — `POST` a new product.
  * - {@link ProductsV3.updateProduct} — `PUT` an existing product.
  * - {@link ProductsV3.deleteProduct} — `DELETE` a product by id.
- *
- * The read methods are generic over `ProductIncludes` and
- * `BaseProductField[]` so the return type is narrowed by the requested
- * `include` and `include_fields` query params at compile time.
  */
 export default class ProductsV3 {
     private accessToken: string;
+    private apiUrl: string;
     /** The `Required` here makes typescript happy without having to check for undefined values upstream constantly, but the values are still optional at runtime */
     private options: Required<BcApiChefOptions>;
     private readonly productsApiPath = 'catalog/products';
-    private apiUrl: string;
 
     /**
      * @param baseUrlWithVersion - Store base URL including the `/v3` version segment.
@@ -82,27 +80,31 @@ export default class ProductsV3 {
         };
     }
 
-    /* ===== Product Crud Methods ===== */
+    /* -------------------------------------------------------------------------- */
+    /*                            PRODUCT CRUD METHODS                            */
+    /* -------------------------------------------------------------------------- */
 
-    /** Creates a new product.
+    /* ----------------------------- CREATE PRODUCT ----------------------------- */
+    /**
+     * Creates a new product. There are two overloads of this method:
+     * - The first overload accepts an `options` object with an `include_fields` property, which narrows the returned fields to those specified in the array. The return type is inferred accordingly at compile time.
+     * - The second overload does not accept an `options` object, and returns the full product.
+     *
      * @param productData Product data to create.
      * @param options Query options — `include_fields` narrows the returned fields.
-     * @returns {Promise<BcApiChefResult<Prettify<Pick<BaseProduct, F[number]>>>>} The created product with only the requested fields, or an error result.
+     * @returns {ApiResult<BaseProduct>} The created product with only the requested fields, or an error result.
      */
-    public async createProduct<F extends readonly IncludeableProductField[]>(
+    public async createProduct<F extends readonly NoIdProductField[]>(
         productData: CreateProductPayload,
         options: { include_fields: F },
-    ): Promise<BcApiChefResult<Prettify<{ id: number } & Pick<BaseProduct, F[number]>>>>;
+    ): ApiResult<CreateProductReturnType<F>>;
+
+    public async createProduct(productData: CreateProductPayload): ApiResult<BaseProduct>;
 
     public async createProduct(
         productData: CreateProductPayload,
-        options?: never,
-    ): Promise<BcApiChefResult<Prettify<BaseProduct>>>;
-
-    public async createProduct(
-        productData: CreateProductPayload,
-        options?: { include_fields?: readonly IncludeableProductField[] },
-    ): Promise<BcApiChefResult<Prettify<BaseProduct>>> {
+        options?: { include_fields?: readonly NoIdProductField[] },
+    ): ApiResult<BaseProduct> {
         const validationError = this.validateCreateProductPayload(productData);
 
         if (validationError !== null) {
@@ -120,89 +122,23 @@ export default class ProductsV3 {
         );
     }
 
-    /** Deletes a product by ID.
-     * @param productId Product ID.
-     * @returns {Promise<BcApiChefResult<null>>} `null` on success or an error result.
-     */
-    public async deleteProduct(productId: number): Promise<BcApiChefResult<null>> {
-        if (!Number.isInteger(productId) || productId <= 0) {
-            return { error: 'Invalid productId', ok: false, statusCode: 400 };
-        }
-
-        const url = `${this.apiUrl}/${productId}`;
-
-        return await deleteResource(url, this.accessToken);
-    }
-
-    /** Fetches a single product by ID.
-     * @param productId Product ID.
-     * @param options Query and include options — flat object. `includes` controls sub-resource expansion, remaining keys are query params sent to the API.
+    /* ------------------------------ GET PRODUCTS ------------------------------ */
+    /**
+     * Fetches all products across every page, or a single page if `page` is supplied.
+     * There are three overloads of this method:
+     * - The first overload accepts an `options` object with an `include_fields` property, which narrows the returned fields to those specified in the array. The return type is inferred accordingly at compile time.
+     * - The second overload accepts an `options` object with an `exclude_fields` property, which narrows the returned fields by excluding those specified in the array. The return type is inferred accordingly at compile time.
+     * - The third overload does not accept an `options` object, and returns the full products.
+     *
+     * @param options Query and include options — flat object. Supply `page` to fetch a single page instead of auto-collecting every page, limit to control results per page, and the various filter/sort query params supported by the BC API.
      * @param options.includes - Include sub-resources in the response by setting the relevant flags to `true`. For example, `{ includes: { variants: true, images: true } }` will include both variants and images in the response. Defaults to no sub-resources included.
-     * @returns {Promise<BcApiChefResult>} The product or an error result.
-     */
-    public async getProduct<
-        T extends ProductIncludes = NoProductIncludes,
-        F extends readonly IncludeableProductField[] = readonly IncludeableProductField[],
-    >(
-        productId: number,
-        options: ApiGetProductQueryBase & {
-            includes?: T & ProductIncludes;
-            include_fields: F;
-            exclude_fields?: never;
-        },
-    ): Promise<
-        BcApiChefResult<
-            Prettify<{ id: number } & Pick<BaseProduct, F[number]> & IncludeExpansion<T>>
-        >
-    >;
-
-    public async getProduct<
-        T extends ProductIncludes = NoProductIncludes,
-        E extends readonly BaseProductField[] = readonly BaseProductField[],
-    >(
-        productId: number,
-        options: ApiGetProductQueryBase & {
-            includes?: T & ProductIncludes;
-            include_fields?: never;
-            exclude_fields: E;
-        },
-    ): Promise<BcApiChefResult<Prettify<Omit<BaseProduct, E[number]> & IncludeExpansion<T>>>>;
-
-    public async getProduct<T extends ProductIncludes = NoProductIncludes>(
-        productId: number,
-        options?: ApiGetProductQueryBase & {
-            includes?: T & ProductIncludes;
-        },
-    ): Promise<BcApiChefResult<Prettify<BaseProduct & IncludeExpansion<T>>>>;
-
-    public async getProduct(
-        productId: number,
-        options?: ApiProductQueryBase & {
-            includes?: ProductIncludes;
-            include_fields?: readonly IncludeableProductField[];
-            exclude_fields?: readonly BaseProductField[];
-        },
-    ): Promise<BcApiChefResult<BaseProduct>> {
-        if (!Number.isInteger(productId) || productId <= 0) {
-            return { error: 'Invalid productId', ok: false, statusCode: 400 };
-        }
-
-        const { includes, ...query } = options ?? {};
-        const includesString = this.generateProductIncludes(includes);
-        const querySuffix = buildQueryString(query as ApiProductQuery, { include: includesString });
-        const url = `${this.apiUrl}/${productId}${querySuffix}`;
-
-        return await fetchOne<FullProduct>(url, this.accessToken);
-    }
-
-    /** Fetches all products across every page, or a single page if `page` is supplied.
-     * @param options Query and include options — flat object. `includes` controls sub-resource expansion, remaining keys are query params sent to the API. Supply `page` to fetch a single page instead of auto-collecting every page.
-     * @param options.includes - Include sub-resources in the response by setting the relevant flags to `true`. For example, `{ includes: { variants: true, images: true } }` will include both variants and images in the response. Defaults to no sub-resources included.
-     * @returns {Promise<BcApiChefResult>} The collected products or an error result.
+     * @param options.include_fields - An array of top-level product fields to include in the response. For example, `['name', 'price']` will return only the `id`, `name`, and `price` fields for each product. Mutually exclusive with `exclude_fields`.
+     * @param options.exclude_fields - An array of top-level product fields to exclude from the response. For example, `['description', 'weight']` will return all fields except `description` and `weight` for each product. Mutually exclusive with `include_fields`.
+     * @returns {ApiResult<BaseProduct[]>} The collected products or an error result.
      */
     public async getProducts<
         T extends ProductIncludes = NoProductIncludes,
-        F extends readonly IncludeableProductField[] = readonly IncludeableProductField[],
+        F extends readonly NoIdProductField[] = readonly NoIdProductField[],
     >(
         // BC returns 409 when both include_fields and exclude_fields are supplied, so we enforce mutual exclusion at the type level.
         options: ApiProductQueryBase & {
@@ -210,36 +146,32 @@ export default class ProductsV3 {
             include_fields: F;
             exclude_fields?: never;
         },
-    ): Promise<
-        BcApiChefResult<
-            Prettify<{ id: number } & Pick<BaseProduct, F[number]> & IncludeExpansion<T>>[]
-        >
-    >;
+    ): ApiResult<ProductWithFields<F, T>[]>;
 
     public async getProducts<
         T extends ProductIncludes = NoProductIncludes,
-        E extends readonly BaseProductField[] = readonly BaseProductField[],
+        E extends readonly NoIdProductField[] = readonly NoIdProductField[],
     >(
         options: ApiProductQueryBase & {
             includes?: T & ProductIncludes;
             include_fields?: never;
             exclude_fields: E;
         },
-    ): Promise<BcApiChefResult<Prettify<Omit<BaseProduct, E[number]> & IncludeExpansion<T>>[]>>;
+    ): ApiResult<ProductWithoutFields<E, T>[]>;
 
     public async getProducts<T extends ProductIncludes = NoProductIncludes>(
         options?: ApiProductQueryBase & {
             includes?: T & ProductIncludes;
         },
-    ): Promise<BcApiChefResult<Prettify<BaseProduct & IncludeExpansion<T>>[]>>;
+    ): ApiResult<(BaseProduct & IncludeExpansion<T>)[]>;
 
     public async getProducts(
         options?: ApiProductQueryBase & {
             includes?: ProductIncludes;
-            include_fields?: readonly IncludeableProductField[];
-            exclude_fields?: readonly BaseProductField[];
+            include_fields?: readonly NoIdProductField[];
+            exclude_fields?: readonly NoIdProductField[];
         },
-    ): Promise<BcApiChefResult<BaseProduct[]>> {
+    ): ApiResult<BaseProduct[]> {
         const { includes, ...query } = options ?? {};
         const includesString = this.generateProductIncludes(includes);
         const querySuffix = buildQueryString(query as ApiProductQuery, { include: includesString });
@@ -253,16 +185,89 @@ export default class ProductsV3 {
         );
     }
 
-    /** Updates an existing product by ID.
+    /* ------------------------------ GET PRODUCT ------------------------------ */
+    /**
+     * Fetches a single product by ID. There are three overloads of this method:
+     * - The first overload accepts an `options` object with an `include_fields` property, which narrows the returned fields to those specified in the array. The return type is inferred accordingly at compile time.
+     * - The second overload accepts an `options` object with an `exclude_fields` property, which narrows the returned fields by excluding those specified in the array. The return type is inferred accordingly at compile time.
+     * - The third overload does not accept an `options` object, and returns the full product.
+     *
+     * @param productId Product ID.
+     * @param options Include and exclude options — flat object. There are no other query params supported by this endpoint.
+     * @param options.includes - Include sub-resources in the response by setting the relevant flags to `true`. For example, `{ includes: { variants: true, images: true } }` will include both variants and images in the response. Defaults to no sub-resources included.
+     * @param options.include_fields - An array of top-level product fields to include in the response. For example, `['name', 'price']` will return only the `id`, `name`, and `price` fields for the product. Mutually exclusive with `exclude_fields`.
+     * @param options.exclude_fields - An array of top-level product fields to exclude from the response. For example, `['description', 'weight']` will return all fields except `description` and `weight` for the product. Mutually exclusive with `include_fields`.
+     * @returns {ApiResult<BaseProduct>} The product or an error result.
+     */
+    public async getProduct<
+        T extends ProductIncludes = NoProductIncludes,
+        F extends readonly NoIdProductField[] = readonly NoIdProductField[],
+    >(
+        productId: number,
+        options: ApiGetProductQueryBase & {
+            includes?: T & ProductIncludes;
+            include_fields: F;
+            exclude_fields?: never;
+        },
+    ): ApiResult<ProductWithFields<F, T>>;
+
+    public async getProduct<
+        T extends ProductIncludes = NoProductIncludes,
+        E extends readonly NoIdProductField[] = readonly NoIdProductField[],
+    >(
+        productId: number,
+        options: ApiGetProductQueryBase & {
+            includes?: T & ProductIncludes;
+            include_fields?: never;
+            exclude_fields: E;
+        },
+    ): ApiResult<ProductWithoutFields<E, T>>;
+
+    public async getProduct<T extends ProductIncludes = NoProductIncludes>(
+        productId: number,
+        options?: ApiGetProductQueryBase & {
+            includes?: T & ProductIncludes;
+        },
+    ): ApiResult<BaseProduct & IncludeExpansion<T>>;
+
+    public async getProduct(
+        productId: number,
+        options?: ApiProductQueryBase & {
+            includes?: ProductIncludes;
+            include_fields?: readonly NoIdProductField[];
+            exclude_fields?: readonly NoIdProductField[];
+        },
+    ): ApiResult<BaseProduct> {
+        const idValidOrErrorMsg = validatePositiveIntegers({ productId });
+
+        if (idValidOrErrorMsg !== true) {
+            return { error: idValidOrErrorMsg, ok: false, statusCode: 400 };
+        }
+
+        const { includes, ...query } = options ?? {};
+        const includesString = this.generateProductIncludes(includes);
+        const querySuffix = buildQueryString(query as ApiProductQuery, { include: includesString });
+        const url = `${this.apiUrl}/${productId}${querySuffix}`;
+
+        return await fetchOne<FullProduct>(url, this.accessToken);
+    }
+
+    /* ------------------------------ UPDATE PRODUCT ------------------------------ */
+    /**
+     * Updates an existing product by ID. There are two overloads of this method:
+     * - The first overload accepts an `options` object `includes`, to add sub-resources like variants or images, and with an `include_fields` property, which narrows the returned fields to those specified in the array. The return type is inferred accordingly at compile time.
+     * - The second overload accepts an `options` object with an `includes` property but without `include_fields`, and returns the full product with the included sub-resources.
+     *
      * @param productId Product ID.
      * @param payload Product data to update.
-     * @param options Query and include options — flat object. `includes` controls sub-resource expansion, `include_fields` narrows the returned fields.
+     * @param options Query and include options — flat object.
      * @param options.includes - Include sub-resources in the response by setting the relevant flags to `true`. For example, `{ includes: { variants: true, images: true } }` will include both variants and images in the response. Defaults to no sub-resources included.
-     * @returns {Promise<BcApiChefResult>} The updated product or an error result.
+     * @param options.include_fields - An array of top-level product fields to include in the response. For example, `['name', 'price']` will return only the `id`, `name`, and `price` fields for the product. Ignored if not supplied, in which case all fields are returned.
+     * @returns {ApiResult<BaseProduct>} The updated product or an error result.
      */
     public async updateProduct<
         T extends ProductIncludes = NoProductIncludes,
-        F extends readonly IncludeableProductField[] = readonly IncludeableProductField[],
+        F extends readonly NoIdProductField[] = readonly NoIdProductField[],
     >(
         productId: number,
         payload: UpdateProductPayload,
@@ -270,11 +275,7 @@ export default class ProductsV3 {
             includes?: T & ProductIncludes;
             include_fields: F;
         },
-    ): Promise<
-        BcApiChefResult<
-            Prettify<{ id: number } & Pick<BaseProduct, F[number]> & IncludeExpansion<T>>
-        >
-    >;
+    ): ApiResult<ProductWithFields<F, T>>;
 
     public async updateProduct<T extends ProductIncludes = NoProductIncludes>(
         productId: number,
@@ -282,16 +283,22 @@ export default class ProductsV3 {
         options?: {
             includes?: T & ProductIncludes;
         },
-    ): Promise<BcApiChefResult<Prettify<BaseProduct & IncludeExpansion<T>>>>;
+    ): ApiResult<BaseProduct & IncludeExpansion<T>>;
 
     public async updateProduct(
         productId: number,
         payload: UpdateProductPayload,
         options?: {
             includes?: ProductIncludes;
-            include_fields?: readonly IncludeableProductField[];
+            include_fields?: readonly NoIdProductField[];
         },
-    ): Promise<BcApiChefResult<BaseProduct>> {
+    ): ApiResult<BaseProduct> {
+        const idValidOrErrorMsg = validatePositiveIntegers({ productId });
+
+        if (idValidOrErrorMsg !== true) {
+            return { error: idValidOrErrorMsg, ok: false, statusCode: 400 };
+        }
+
         const validationError = this.validateUpdateProductPayload(payload);
 
         if (validationError !== null) {
@@ -310,9 +317,30 @@ export default class ProductsV3 {
         );
     }
 
-    /* ===== Sub-resource Methods/Classes ===== */
+    /* ------------------------------ DELETE PRODUCT ------------------------------ */
+    /**
+     * Deletes a product by ID.
+     * @param productId Product ID.
+     * @returns {ApiResult<null>} `null` on success or an error result.
+     */
+    public async deleteProduct(productId: number): ApiResult<null> {
+        const idValidOrErrorMsg = validatePositiveIntegers({ productId });
 
-    /** Returns an instance of the {@link ProductImages} class to manage product images, which are accessed via the `/catalog/products/{product_id}/images` endpoint.
+        if (idValidOrErrorMsg !== true) {
+            return { error: idValidOrErrorMsg, ok: false, statusCode: 400 };
+        }
+
+        const url = `${this.apiUrl}/${productId}`;
+
+        return await deleteResource(url, this.accessToken);
+    }
+
+    /* -------------------------------------------------------------------------- */
+    /*                       SUB_RESOURCE METHODS / CLASSES                       */
+    /* -------------------------------------------------------------------------- */
+
+    /**
+     * Returns an instance of the {@link ProductImages} class to manage product images, which are accessed via the `/catalog/products/{product_id}/images` endpoint.
      * @returns {ProductImages} An instance of the ProductImages class.
      */
     public images(): ProductImages {
@@ -327,9 +355,12 @@ export default class ProductsV3 {
         return new ProductMetafields(this.accessToken, this.apiUrl);
     }
 
-    /* ===== Helper Methods ===== */
+    /* -------------------------------------------------------------------------- */
+    /*                                HELPER METHODS                              */
+    /* -------------------------------------------------------------------------- */
 
-    /** Serializes include flags into the API format.
+    /**
+     * Serializes include flags into the API format.
      * @param includes Include flags.
      * @returns {string} A comma-separated include string.
      */
@@ -344,9 +375,12 @@ export default class ProductsV3 {
             .join(',');
     }
 
-    /* ===== Validation Methods ===== */
+    /* -------------------------------------------------------------------------- */
+    /*                            VALIDATION METHODS                              */
+    /* -------------------------------------------------------------------------- */
 
-    /** Validates fields shared by create and update payloads.
+    /**
+     * Validates fields shared by create and update payloads.
      * @param payload Product data to validate.
      * @returns {string | null} A validation error message, or `null` when valid.
      */
@@ -426,7 +460,8 @@ export default class ProductsV3 {
         return null;
     }
 
-    /** Validates the create payload.
+    /**
+     * Validates the create payload.
      * @param payload Product data to validate.
      * @returns {string | null} A validation error message, or `null` when valid.
      */
@@ -460,7 +495,8 @@ export default class ProductsV3 {
         return null;
     }
 
-    /** Validates the update payload.
+    /**
+     * Validates the update payload.
      * @param payload Product data to validate.
      * @returns {string | null} A validation error message, or `null` when valid.
      */

@@ -82,7 +82,7 @@ describe.runIf(hasCredentials)('ProductImages API — integration', () => {
                 .products()
                 .images()
                 .getImage(TEST_PRODUCT_ID, id, {
-                    include_fields: ['is_thumbnail', 'sort_order'] as const,
+                    include_fields: ['is_thumbnail', 'sort_order'],
                 });
 
             assertOk(result);

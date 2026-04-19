@@ -11,7 +11,7 @@ import {
     validatePositiveIntegers,
 } from '@/v3Api/utils.ts';
 
-import type { BcApiChefOptions, BcApiChefResult, Prettify } from '@/types/api-types';
+import type { ApiResult, BcApiChefOptions, BcApiChefResult } from '@/types/api-types';
 import type {
     ApiMetafieldQueryBase,
     BaseMetafieldField,
@@ -20,23 +20,16 @@ import type {
 } from '@/types/product-metafields';
 
 /**
- * Wrapper around the BigCommerce V3 `catalog/products/{productId}/metafields` endpoint.
- *
- * Not intended to be instantiated directly by package consumers — obtain an
- * instance via `ProductsV3.metafields()`. All methods return a
- * {@link BcApiChefResult}, so callers must check `result.ok` before using
- * `result.data`.
+ * ProductMetafields provides methods for managing product metafields in the BigCommerce store.
+ * It is accessible via the `metafields()` method on the main `Products` class.
+ * All methods return a {@link ApiResult}, which is either `{ data: T; ok: true; }` on success or `{ error: string; ok: false; statusCode: number }` on failure.
  *
  * Public methods:
- * - {@link ProductMetafields.getMetafield} — fetch a single metafield by product and metafield id.
- * - {@link ProductMetafields.getMetafields} — paginated list, auto-collects every page.
  * - {@link ProductMetafields.createMetafield} — `POST` a new metafield.
+ * - {@link ProductMetafields.getMetafields} — paginated list, auto-collects every page, or single page if `page` is specified.
+ * - {@link ProductMetafields.getMetafield} — fetch a single metafield by product and metafield id.
  * - {@link ProductMetafields.updateMetafield} — `PUT` an existing metafield.
  * - {@link ProductMetafields.deleteMetafield} — `DELETE` a metafield by id.
- *
- * The read methods are generic over `BaseMetafieldField[]` so the return type
- * is narrowed by the requested `include_fields` or `exclude_fields` query
- * params at compile time.
  */
 export default class ProductMetafields {
     private accessToken: string;
@@ -65,126 +58,21 @@ export default class ProductMetafields {
         };
     }
 
-    /* ===== ProductMetafields Crud Methods ===== */
+    /* -------------------------------------------------------------------------- */
+    /*                       PRODUCT METAFIELDS CRUD METHODS                      */
+    /* -------------------------------------------------------------------------- */
 
-    /** Fetches a single metafield by product and metafield ID.
-     * @param productId Product ID.
-     * @param metafieldId Metafield ID.
-     * @param query Query and include/exclude field options.
-     * @returns {Promise<BcApiChefResult>} The metafield or an error result.
-     */
-    public async getMetafield<I extends readonly BaseMetafieldField[]>(
-        productId: number,
-        metafieldId: number,
-        query: { include_fields: I; exclude_fields?: never },
-    ): Promise<BcApiChefResult<Prettify<Pick<ProductMetafield, 'id' | I[number]>>>>;
-
-    public async getMetafield<E extends readonly BaseMetafieldField[]>(
-        productId: number,
-        metafieldId: number,
-        query: { include_fields?: never; exclude_fields: E },
-    ): Promise<BcApiChefResult<Prettify<Omit<ProductMetafield, E[number]>>>>;
-
-    public async getMetafield(
-        productId: number,
-        metafieldId: number,
-        query?: undefined,
-    ): Promise<BcApiChefResult<ProductMetafield>>;
-
-    public async getMetafield(
-        productId: number,
-        metafieldId: number,
-        query?: ApiMetafieldQueryBase & {
-            include_fields?: readonly BaseMetafieldField[];
-            exclude_fields?: readonly BaseMetafieldField[];
-        },
-    ): Promise<BcApiChefResult<ProductMetafield>> {
-        const idsValidOrErrorMsg = validatePositiveIntegers({ metafieldId, productId });
-
-        if (idsValidOrErrorMsg !== true) {
-            return { error: idsValidOrErrorMsg, ok: false, statusCode: 400 };
-        }
-
-        const querySuffix = buildQueryString(query);
-        const url = `${this.apiUrl}/${productId}/metafields/${metafieldId}${querySuffix}`;
-
-        return await fetchOne<ProductMetafield>(url, this.accessToken);
-    }
-
-    /** Fetches all metafields across every page, or a single page if `query.page` is supplied.
-     * @param productId Product ID.
-     * @param query Query and include/exclude field options.
-     * @returns {Promise<BcApiChefResult>} The collected metafields or an error result.
-     */
-    public async getMetafields<I extends readonly BaseMetafieldField[]>(
-        productId: number,
-        query: ApiMetafieldQueryBase & { include_fields: I; exclude_fields?: never },
-    ): Promise<BcApiChefResult<Prettify<Pick<ProductMetafield, 'id' | I[number]>>[]>>;
-
-    public async getMetafields<E extends readonly BaseMetafieldField[]>(
-        productId: number,
-        query: ApiMetafieldQueryBase & { include_fields?: never; exclude_fields: E },
-    ): Promise<BcApiChefResult<Prettify<Omit<ProductMetafield, E[number]>>[]>>;
-
-    public async getMetafields(
-        productId: number,
-        query?: ApiMetafieldQueryBase,
-    ): Promise<BcApiChefResult<ProductMetafield[]>>;
-
-    public async getMetafields(
-        productId: number,
-        query?: ApiMetafieldQueryBase & {
-            include_fields?: readonly BaseMetafieldField[];
-            exclude_fields?: readonly BaseMetafieldField[];
-        },
-    ): Promise<BcApiChefResult<ProductMetafield[]>> {
-        const idValidOrErrorMsg = validatePositiveIntegers({ productId });
-
-        if (idValidOrErrorMsg !== true) {
-            return { error: idValidOrErrorMsg, ok: false, statusCode: 400 };
-        }
-
-        const limit = clampPerPageLimits(query?.limit);
-        const clampedQuery = query ? { ...query, limit } : undefined;
-        const querySuffix = buildQueryString(clampedQuery);
-        const url = `${this.apiUrl}/${productId}/metafields${querySuffix}`;
-
-        return await fetchPaginated<ProductMetafield>(url, this.accessToken, limit, query?.page);
-    }
-
-    /** Deletes a metafield by product and metafield ID.
-     * @param productId Product ID.
-     * @param metafieldId Metafield ID.
-     * @returns {Promise<BcApiChefResult<null>>} `null` on success or an error result.
-     */
-    public async deleteMetafield(
-        productId: number,
-        metafieldId: number,
-    ): Promise<BcApiChefResult<null>> {
-        const idsValidOrErrorMsg = validatePositiveIntegers({ metafieldId, productId });
-
-        if (idsValidOrErrorMsg !== true) {
-            return {
-                error: idsValidOrErrorMsg,
-                ok: false,
-                statusCode: 400,
-            } as BcApiChefResult<null>;
-        }
-
-        const url = `${this.apiUrl}/${productId}/metafields/${metafieldId}`;
-
-        return await deleteResource(url, this.accessToken);
-    }
-
-    /** Creates a new metafield for a product.
+    /* ---------------------------- CREATE METAFIELD ---------------------------- */
+    /**
+     * Creates a new metafield for a product.
      * @param productId Product ID.
      * @param metafieldData Metafield data to create.
-     * @returns {Promise<BcApiChefResult<ProductMetafield>>} The created metafield or an error result.
+     * @returns {ApiResult<ProductMetafield>} The created metafield or an error result.
      */
     public async createMetafield(
         productId: number,
         metafieldData: CreateMetafieldPayload,
-    ): Promise<BcApiChefResult<Prettify<ProductMetafield>>> {
+    ): ApiResult<ProductMetafield> {
         const idValidOrError = validatePositiveIntegers({ productId });
 
         if (idValidOrError !== true) {
@@ -192,7 +80,7 @@ export default class ProductMetafields {
                 error: idValidOrError,
                 ok: false,
                 statusCode: 400,
-            } as BcApiChefResult<Prettify<ProductMetafield>>;
+            } as BcApiChefResult<ProductMetafield>;
         }
 
         const validationError = this.validateCreateMetafieldPayload(metafieldData);
@@ -210,17 +98,118 @@ export default class ProductMetafields {
         );
     }
 
-    /** Updates an existing metafield by product and metafield ID.
+    /* ----------------------------- GET METAFIELDS ----------------------------- */
+    /**
+     * Fetches all metafields across every page, or a single page if `query.page` is supplied. There are three overloads:
+     * - With `include_fields` to specify which fields to include, returning a narrowed type.
+     * - With `exclude_fields` to specify which fields to exclude, returning a narrowed type.
+     * - With no field options, returning the full `ProductMetafield` type.
+     * @param productId Product ID.
+     * @param options Query and include/exclude field options. Supply `page` to fetch a single page instead of auto-collecting every page, limit to control results per page, and the various filter/sort query params supported by the BC API.
+     * @param options.include_fields When provided, only these fields are included in the returned metafield objects, alongside `id`. Cannot be used with `exclude_fields`.
+     * @param options.exclude_fields When provided, these fields are excluded from the returned metafield objects. Cannot be used with `include_fields`.
+     * @returns {ApiResult<ProductMetafield[]>} The collected metafields or an error result.
+     */
+    public async getMetafields<I extends readonly BaseMetafieldField[]>(
+        productId: number,
+        options: ApiMetafieldQueryBase & { include_fields: I; exclude_fields?: never },
+    ): ApiResult<Pick<ProductMetafield, 'id' | I[number]>[]>;
+
+    public async getMetafields<E extends readonly BaseMetafieldField[]>(
+        productId: number,
+        options: ApiMetafieldQueryBase & { include_fields?: never; exclude_fields: E },
+    ): ApiResult<Omit<ProductMetafield, E[number]>[]>;
+
+    public async getMetafields(
+        productId: number,
+        options?: ApiMetafieldQueryBase,
+    ): ApiResult<ProductMetafield[]>;
+
+    public async getMetafields(
+        productId: number,
+        options?: ApiMetafieldQueryBase & {
+            include_fields?: readonly BaseMetafieldField[];
+            exclude_fields?: readonly BaseMetafieldField[];
+        },
+    ): ApiResult<ProductMetafield[]> {
+        const idValidOrErrorMsg = validatePositiveIntegers({ productId });
+
+        if (idValidOrErrorMsg !== true) {
+            return { error: idValidOrErrorMsg, ok: false, statusCode: 400 };
+        }
+
+        const querySuffix = buildQueryString(options);
+        const url = `${this.apiUrl}/${productId}/metafields${querySuffix}`;
+        const limit = clampPerPageLimits(options?.limit);
+
+        return await fetchPaginated<ProductMetafield>(url, this.accessToken, limit, options?.page);
+    }
+
+    /* ------------------------------ GET METAFIELD ----------------------------- */
+    /**
+     * Fetches a single metafield by product and metafield ID. There are three overloads:
+     * - With `include_fields` to specify which fields to include, returning a narrowed type.
+     * - With `exclude_fields` to specify which fields to exclude, returning a narrowed type.
+     * - With no field options, returning the full `ProductMetafield` type.
+     *
+     * @param productId Product ID.
+     * @param metafieldId Metafield ID.
+     * @param options Include/exclude field options. There are no other query params supported by the BC API for this endpoint.
+     * @param options.include_fields When provided, only these fields are included in the returned metafield object, alongside `id`. Cannot be used with `exclude_fields`.
+     * @param options.exclude_fields When provided, these fields are excluded from the returned metafield object. Cannot be used with `include_fields`.
+     * @returns {ApiResult<ProductMetafield>} The metafield or an error result.
+     */
+    public async getMetafield<I extends readonly BaseMetafieldField[]>(
+        productId: number,
+        metafieldId: number,
+        options: { include_fields: I; exclude_fields?: never },
+    ): ApiResult<Pick<ProductMetafield, 'id' | I[number]>>;
+
+    public async getMetafield<E extends readonly BaseMetafieldField[]>(
+        productId: number,
+        metafieldId: number,
+        options: { include_fields?: never; exclude_fields: E },
+    ): ApiResult<Omit<ProductMetafield, E[number]>>;
+
+    public async getMetafield(
+        productId: number,
+        metafieldId: number,
+        options?: undefined,
+    ): ApiResult<ProductMetafield>;
+
+    public async getMetafield(
+        productId: number,
+        metafieldId: number,
+        options?: ApiMetafieldQueryBase & {
+            include_fields?: readonly BaseMetafieldField[];
+            exclude_fields?: readonly BaseMetafieldField[];
+        },
+    ): ApiResult<ProductMetafield> {
+        const idsValidOrErrorMsg = validatePositiveIntegers({ metafieldId, productId });
+
+        if (idsValidOrErrorMsg !== true) {
+            return { error: idsValidOrErrorMsg, ok: false, statusCode: 400 };
+        }
+
+        const querySuffix = buildQueryString(options);
+        const url = `${this.apiUrl}/${productId}/metafields/${metafieldId}${querySuffix}`;
+
+        return await fetchOne<ProductMetafield>(url, this.accessToken);
+    }
+
+    /* ----------------------------- UPDATE METAFIELD ---------------------------- */
+    /**
+     * Updates an existing metafield by product and metafield ID.
      * @param productId Product ID.
      * @param metafieldId Metafield ID.
      * @param metafieldData Metafield data to update.
-     * @returns {Promise<BcApiChefResult<ProductMetafield>>} The updated metafield or an error result.
+     * @returns {ApiResult<ProductMetafield>} The updated metafield or an error result.
      */
     public async updateMetafield(
         productId: number,
         metafieldId: number,
         metafieldData: Partial<CreateMetafieldPayload>,
-    ): Promise<BcApiChefResult<Prettify<ProductMetafield>>> {
+    ): ApiResult<ProductMetafield> {
         const idsValidOrErrorMsg = validatePositiveIntegers({ metafieldId, productId });
 
         if (idsValidOrErrorMsg !== true) {
@@ -228,7 +217,7 @@ export default class ProductMetafields {
                 error: idsValidOrErrorMsg,
                 ok: false,
                 statusCode: 400,
-            } as BcApiChefResult<Prettify<ProductMetafield>>;
+            };
         }
 
         const validationError = this.validateUpdateMetafieldPayload(metafieldData);
@@ -246,7 +235,31 @@ export default class ProductMetafields {
         );
     }
 
-    /// ===== Validation Methods =====
+    /**
+     * Deletes a metafield by product and metafield ID.
+     * @param productId Product ID.
+     * @param metafieldId Metafield ID.
+     * @returns {ApiResult<null>} `null` on success or an error result.
+     */
+    public async deleteMetafield(productId: number, metafieldId: number): ApiResult<null> {
+        const idsValidOrErrorMsg = validatePositiveIntegers({ metafieldId, productId });
+
+        if (idsValidOrErrorMsg !== true) {
+            return {
+                error: idsValidOrErrorMsg,
+                ok: false,
+                statusCode: 400,
+            };
+        }
+
+        const url = `${this.apiUrl}/${productId}/metafields/${metafieldId}`;
+
+        return await deleteResource(url, this.accessToken);
+    }
+
+    /* -------------------------------------------------------------------------- */
+    /*                             VALIDATION METHODS                             */
+    /* -------------------------------------------------------------------------- */
 
     /** Validates the create payload.
      * @param payload Metafield data to validate.

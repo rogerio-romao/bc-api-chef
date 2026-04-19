@@ -142,7 +142,7 @@ describe('ProductImages class', () => {
 
         it('appends include_fields to the URL when provided', async () => {
             await images.getImage(42, 55, {
-                include_fields: ['is_thumbnail', 'sort_order'] as const,
+                include_fields: ['is_thumbnail', 'sort_order'],
             });
 
             expect(getCallUrl(mockTchef, 0).searchParams.get('include_fields')).toBe(
@@ -152,7 +152,7 @@ describe('ProductImages class', () => {
 
         it('appends exclude_fields to the URL when provided', async () => {
             await images.getImage(42, 55, {
-                exclude_fields: ['description'] as const,
+                exclude_fields: ['description'],
             });
 
             expect(getCallUrl(mockTchef, 0).searchParams.get('exclude_fields')).toBe('description');
@@ -237,7 +237,7 @@ describe('ProductImages class', () => {
 
             it('appends include_fields to the URL when provided', async () => {
                 await images.getImages(42, {
-                    include_fields: ['is_thumbnail', 'sort_order'] as const,
+                    include_fields: ['is_thumbnail', 'sort_order'],
                 });
 
                 expect(getCallUrl(mockTchef, 0).searchParams.get('include_fields')).toBe(
@@ -246,7 +246,7 @@ describe('ProductImages class', () => {
             });
 
             it('appends exclude_fields to the URL when provided', async () => {
-                await images.getImages(42, { exclude_fields: ['description'] as const });
+                await images.getImages(42, { exclude_fields: ['description'] });
 
                 expect(getCallUrl(mockTchef, 0).searchParams.get('exclude_fields')).toBe(
                     'description',

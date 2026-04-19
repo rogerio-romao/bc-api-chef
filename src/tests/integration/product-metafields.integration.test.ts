@@ -111,7 +111,7 @@ describe.runIf(hasCredentials)('ProductMetafields API — integration', () => {
                 .products()
                 .metafields()
                 .getMetafield(TEST_PRODUCT_ID, id, {
-                    include_fields: ['key', 'value'] as const,
+                    include_fields: ['key', 'value'],
                 });
 
             assertOk(result);

@@ -142,7 +142,7 @@ describe('ProductMetafields class', () => {
 
         it('appends include_fields to the URL when provided', async () => {
             await metafields.getMetafield(42, 7, {
-                include_fields: ['key', 'value'] as const,
+                include_fields: ['key', 'value'],
             });
 
             expect(getCallUrl(mockTchef, 0).searchParams.get('include_fields')).toBe('key,value');
@@ -150,7 +150,7 @@ describe('ProductMetafields class', () => {
 
         it('appends exclude_fields to the URL when provided', async () => {
             await metafields.getMetafield(42, 7, {
-                exclude_fields: ['description'] as const,
+                exclude_fields: ['description'],
             });
 
             expect(getCallUrl(mockTchef, 0).searchParams.get('exclude_fields')).toBe('description');
@@ -228,7 +228,7 @@ describe('ProductMetafields class', () => {
 
             it('appends include_fields to the URL when provided', async () => {
                 await metafields.getMetafields(42, {
-                    include_fields: ['key', 'value'] as const,
+                    include_fields: ['key', 'value'],
                 });
 
                 expect(getCallUrl(mockTchef, 0).searchParams.get('include_fields')).toBe(
@@ -238,7 +238,7 @@ describe('ProductMetafields class', () => {
 
             it('appends exclude_fields to the URL when provided', async () => {
                 await metafields.getMetafields(42, {
-                    exclude_fields: ['description'] as const,
+                    exclude_fields: ['description'],
                 });
 
                 expect(getCallUrl(mockTchef, 0).searchParams.get('exclude_fields')).toBe(
