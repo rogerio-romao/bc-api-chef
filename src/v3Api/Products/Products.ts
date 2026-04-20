@@ -1,5 +1,3 @@
-// oxlint-disable max-lines
-
 import {
     buildQueryString,
     clampPerPageLimits,

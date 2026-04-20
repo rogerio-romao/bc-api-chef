@@ -41,8 +41,6 @@ export type Prettify<T> = T extends (infer U)[]
       ? { [K in keyof T]: Prettify<T[K]> } & {}
       : T;
 
-export type BcApiChefResult<T> =
-    | { ok: true; data: T }
-    | { ok: false; error: string; statusCode: number };
-
-export type ApiResult<T> = Promise<Prettify<BcApiChefResult<T>>>;
+export type ApiResult<T> = Promise<
+    Prettify<{ ok: true; data: T } | { ok: false; error: string; statusCode: number }>
+>;

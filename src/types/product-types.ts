@@ -1,5 +1,4 @@
-// oxlint-disable max-lines
-import type { BcRequestResponseMeta, FieldSelectionOptions, SortDirection } from './api-types.ts';
+import type { FieldSelectionOptions, SortDirection } from './api-types.ts';
 import type {
     NoIdProductBulkPricingRule,
     ProductBulkPricingRule,
@@ -118,10 +117,6 @@ export type ProductSortField =
     | 'is_visible'
     | 'total_sold';
 
-export type GetProductsOptions = ApiProductQuery & {
-    includes?: ProductIncludes;
-};
-
 /**
  * Defines which sub-resources to include in product responses. Each key corresponds to an optional sub-resource array on the response product type.
  * Note: include_fields (which controls which base product fields are returned) is intentionally not modelled here.
@@ -216,15 +211,6 @@ type ProductFieldSelectionOptions = FieldSelectionOptions<NoIdProductField>;
 /** {@link ApiProductQueryBase} plus mutually-exclusive field-selection options. */
 export type ApiProductQuery = ApiProductQueryBase & ProductFieldSelectionOptions;
 
-export interface BcGetProductResponse {
-    data: FullProduct;
-}
-
-export interface BcGetProductsResponse {
-    data: FullProduct[];
-    meta: BcRequestResponseMeta;
-}
-
 type ServerComputedProductFields =
     | 'id'
     | 'calculated_price'
@@ -278,10 +264,6 @@ export type CreateProductPayload = Pick<BaseProduct, RequiredCreateProductFields
         videos?: ProductVideoPayload;
     };
 
-export interface BcCreateProductResponse {
-    data: BaseProduct;
-}
-
 /**
  * Payload for PUT /v3/catalog/products/{productId}.
  * All fields are optional. Server-computed fields are excluded.
@@ -292,7 +274,3 @@ export type UpdateProductPayload = Partial<Omit<BaseProduct, ServerComputedProdu
     images?: ProductImagePayload;
     videos?: ProductVideoPayload;
 };
-
-export interface BcUpdateProductResponse {
-    data: BaseProduct;
-}
