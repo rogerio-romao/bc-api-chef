@@ -29,7 +29,7 @@ import type {
  * - {@link ProductImages#getMultiple}: Fetch all images for a product, with pagination support.
  * - {@link ProductImages#getOne}: Fetch a single product image by ID.
  * - {@link ProductImages#update}: Update an existing product image's data.
- * - {@link ProductImages#deleteImage}: Delete a product image by ID.
+ * - {@link ProductImages#remove}: Delete a product image by ID.
  */
 export default class ProductImages {
     private accessToken: string;

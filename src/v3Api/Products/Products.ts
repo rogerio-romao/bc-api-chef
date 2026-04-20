@@ -343,7 +343,7 @@ export default class ProductsV3 {
      * @returns {ProductBulkPricingRules} An instance of the ProductBulkPricingRules class.
      */
     public bulkPricingRules(): ProductBulkPricingRules {
-        return new ProductBulkPricingRules(this.accessToken, this.apiUrl);
+        return new ProductBulkPricingRules(this.accessToken, this.apiUrl, this.options);
     }
 
     /**
@@ -351,7 +351,7 @@ export default class ProductsV3 {
      * @returns {ProductImages} An instance of the ProductImages class.
      */
     public images(): ProductImages {
-        return new ProductImages(this.accessToken, this.apiUrl);
+        return new ProductImages(this.accessToken, this.apiUrl, this.options);
     }
 
     /**
@@ -359,7 +359,7 @@ export default class ProductsV3 {
      * @returns {ProductMetafields} An instance of the ProductMetafields class.
      */
     public metafields(): ProductMetafields {
-        return new ProductMetafields(this.accessToken, this.apiUrl);
+        return new ProductMetafields(this.accessToken, this.apiUrl, this.options);
     }
 
     /* -------------------------------------------------------------------------- */

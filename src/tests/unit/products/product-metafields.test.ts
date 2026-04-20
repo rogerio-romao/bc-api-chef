@@ -51,7 +51,7 @@ describe('ProductMetafields class', () => {
         metafields = new ProductMetafields('test-token', BASE_URL, {});
     });
 
-    describe('getMetafield', () => {
+    describe('get one metafield', () => {
         beforeEach(() => {
             mockTchef.mockResolvedValue(mockMetafieldEnvelope);
         });
@@ -177,8 +177,8 @@ describe('ProductMetafields class', () => {
         });
     });
 
-    describe('getMetafields', () => {
-        describe('getMetafields — request headers', () => {
+    describe('get multiple metafields', () => {
+        describe('request headers', () => {
             beforeEach(() => {
                 mockTchef.mockResolvedValue(makePageResponse([], 1, 1));
             });
@@ -196,7 +196,7 @@ describe('ProductMetafields class', () => {
             });
         });
 
-        describe('getMetafields — URL', () => {
+        describe('URL', () => {
             beforeEach(() => {
                 mockTchef.mockResolvedValue(makePageResponse([], 1, 1));
             });
@@ -256,7 +256,7 @@ describe('ProductMetafields class', () => {
             });
         });
 
-        describe('getMetafields — pagination', () => {
+        describe('pagination', () => {
             it('fetches a single page when total_pages is 1', async () => {
                 mockTchef.mockResolvedValue(
                     makePageResponse([mockMetafield, { ...mockMetafield, id: 2 }], 1, 1),
@@ -324,7 +324,7 @@ describe('ProductMetafields class', () => {
             });
         });
 
-        describe('getMetafields — limit clamping', () => {
+        describe('limit clamping', () => {
             beforeEach(() => {
                 mockTchef.mockResolvedValue(makePageResponse([], 1, 1));
             });
@@ -366,7 +366,7 @@ describe('ProductMetafields class', () => {
     });
 
     // oxlint-disable-next-line max-statements
-    describe('createMetafield', () => {
+    describe('create metafield', () => {
         const minPayload = {
             key: 'my-key',
             namespace: 'my-namespace',
@@ -576,7 +576,7 @@ describe('ProductMetafields class', () => {
         });
     });
 
-    describe('updateMetafield', () => {
+    describe('update metafield', () => {
         beforeEach(() => {
             mockTchef.mockResolvedValue(mockMetafieldEnvelope);
         });
@@ -753,7 +753,7 @@ describe('ProductMetafields class', () => {
         });
     });
 
-    describe('deleteMetafield', () => {
+    describe('delete metafield', () => {
         beforeEach(() => {
             mockTchef.mockResolvedValue({ data: '', ok: true });
         });

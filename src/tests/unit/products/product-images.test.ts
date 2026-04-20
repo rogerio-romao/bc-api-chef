@@ -57,7 +57,7 @@ describe('ProductImages class', () => {
         vi.unstubAllGlobals();
     });
 
-    describe('getImage', () => {
+    describe('get one image', () => {
         beforeEach(() => {
             mockTchef.mockResolvedValue(mockImageEnvelope);
         });
@@ -185,7 +185,7 @@ describe('ProductImages class', () => {
         });
     });
 
-    describe('getImages', () => {
+    describe('get multiple images', () => {
         it('returns a 400 error without calling the API when productId is 0', async () => {
             const result = await images.getMultiple(0);
 
@@ -378,11 +378,11 @@ describe('ProductImages class', () => {
         });
     });
 
-    describe('createImage', () => {
+    describe('create image', () => {
         const mockCreatedImage = { ...mockImage, id: 99 };
         const mockCreateEnvelope = { data: { data: mockCreatedImage }, ok: true };
 
-        describe('createImage — validation', () => {
+        describe('validation', () => {
             it('returns a 400 error without calling the API when productId is 0', async () => {
                 const result = await images.create(0, {
                     image_url: 'https://example.com/img.jpg',
@@ -437,7 +437,7 @@ describe('ProductImages class', () => {
             });
         });
 
-        describe('createImage — image_url path (JSON POST via tchef)', () => {
+        describe('image_url path (JSON POST via tchef)', () => {
             beforeEach(() => {
                 mockTchef.mockResolvedValue(mockCreateEnvelope);
             });
@@ -497,7 +497,7 @@ describe('ProductImages class', () => {
             });
         });
 
-        describe('createImage — image_file path (multipart POST via fetch)', () => {
+        describe('image_file path (multipart POST via fetch)', () => {
             let fetchSpy: ReturnType<typeof vi.spyOn<typeof globalThis, 'fetch'>>;
 
             beforeEach(() => {
@@ -609,7 +609,7 @@ describe('ProductImages class', () => {
         });
     });
 
-    describe('deleteImage', () => {
+    describe('delete image', () => {
         beforeEach(() => {
             mockTchef.mockResolvedValue({ data: '', ok: true });
         });
@@ -699,14 +699,14 @@ describe('ProductImages class', () => {
         });
     });
 
-    describe('updateImage', () => {
+    describe('update image', () => {
         const mockUpdatedImage = { ...mockImage, description: 'Updated description' };
 
         beforeEach(() => {
             mockTchef.mockResolvedValue({ data: { data: mockUpdatedImage }, ok: true });
         });
 
-        describe('updateImage — ID validation', () => {
+        describe('ID validation', () => {
             it('returns a 400 error without calling the API when productId is 0', async () => {
                 const result = await images.update(0, 55, {
                     image_url: 'https://example.com/img.jpg',
@@ -751,7 +751,7 @@ describe('ProductImages class', () => {
             });
         });
 
-        describe('updateImage — payload validation', () => {
+        describe('payload validation', () => {
             it('returns a 400 error when payload contains both image_file and image_url', async () => {
                 const invalidPayload = {
                     image_file: new File(['img'], 'photo.jpg', { type: 'image/jpeg' }),
@@ -863,7 +863,7 @@ describe('ProductImages class', () => {
             });
         });
 
-        describe('updateImage — request', () => {
+        describe('request', () => {
             it('makes exactly one HTTP call', async () => {
                 await images.update(42, 55, { description: 'updated' });
 

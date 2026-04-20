@@ -119,7 +119,7 @@ describe.runIf(hasCredentials)('Products API — write integration', () => {
         }
     });
 
-    describe('createProduct', () => {
+    describe('create product', () => {
         it('creates a product with the minimum required payload', async () => {
             const name = `bc-api-chef integration ${suffix}-1`;
 
@@ -170,10 +170,10 @@ describe.runIf(hasCredentials)('Products API — write integration', () => {
         });
     });
 
-    describe('updateProduct', () => {
+    describe('update product', () => {
         it('updates name and price on an existing product', async () => {
             const id = createdIds[0];
-            assert(id, 'Expected a product ID from the createProduct test');
+            assert(id, 'Expected a product ID from the create product test');
 
             const updatedName = `bc-api-chef integration ${suffix}-1 UPDATED`;
 
@@ -211,10 +211,10 @@ describe.runIf(hasCredentials)('Products API — write integration', () => {
         });
     });
 
-    describe('deleteProduct', () => {
+    describe('delete product', () => {
         it('deletes a product and a subsequent getProduct returns not-found', async () => {
             const id = createdIds.shift();
-            assert(id, 'Expected a product ID from the createProduct test');
+            assert(id, 'Expected a product ID from the create product test');
 
             const deleteResult = await client.v3().products().remove(id);
 

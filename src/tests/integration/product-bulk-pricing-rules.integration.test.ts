@@ -28,9 +28,10 @@ describe.runIf(hasCredentials)('ProductBulkPricingRules API — integration', ()
 
     // Derive a non-overlapping quantity range from the current timestamp.
     // BC rejects rules with overlapping quantity_min/quantity_max ranges on the same product.
-    const base = (Date.now() % 900) + 2;
+    // Combine timestamp with random offset to reduce collision likelihood
+    const base = (Date.now() % 900) * 10 + Math.floor(Math.random() * 10) + 2;
     const TEST_QUANTITY_MIN = base;
-    const TEST_QUANTITY_MAX = base + 5;
+    const TEST_QUANTITY_MAX = base + 8;
 
     afterAll(async () => {
         for (const id of createdIds) {

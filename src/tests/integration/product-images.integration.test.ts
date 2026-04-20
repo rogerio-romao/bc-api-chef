@@ -44,7 +44,7 @@ describe.runIf(hasCredentials)('ProductImages API — integration', () => {
         }
     });
 
-    describe('createImage', () => {
+    describe('create', () => {
         it('creates an image via image_url with minimum payload', async () => {
             const result = await client.v3().products().images().create(TEST_PRODUCT_ID, {
                 description: TEST_DESCRIPTION,
@@ -60,10 +60,10 @@ describe.runIf(hasCredentials)('ProductImages API — integration', () => {
         });
     });
 
-    describe('getImage', () => {
+    describe('getOne', () => {
         it('fetches the created image by id and returns correct fields', async () => {
             const id = createdIds[0];
-            assert(id, 'Expected an image ID from the createImage test');
+            assert(id, 'Expected an image ID from the create test');
 
             const result = await client.v3().products().images().getOne(TEST_PRODUCT_ID, id);
 
@@ -75,7 +75,7 @@ describe.runIf(hasCredentials)('ProductImages API — integration', () => {
 
         it('returns only the requested fields when include_fields is provided', async () => {
             const id = createdIds[0];
-            assert(id, 'Expected an image ID from the createImage test');
+            assert(id, 'Expected an image ID from the create test');
 
             const result = await client
                 .v3()
@@ -93,7 +93,7 @@ describe.runIf(hasCredentials)('ProductImages API — integration', () => {
         });
     });
 
-    describe('getImages', () => {
+    describe('getMultiple', () => {
         it('returns images for the product including the created one', async () => {
             const result = await client.v3().products().images().getMultiple(TEST_PRODUCT_ID);
 
@@ -106,10 +106,10 @@ describe.runIf(hasCredentials)('ProductImages API — integration', () => {
         });
     });
 
-    describe('updateImage', () => {
+    describe('update', () => {
         it('updates the description without re-supplying the image source', async () => {
             const id = createdIds[0];
-            assert(id, 'Expected an image ID from the createImage test');
+            assert(id, 'Expected an image ID from the create test');
 
             const updatedDescription = `${TEST_DESCRIPTION}-updated`;
 
@@ -125,10 +125,10 @@ describe.runIf(hasCredentials)('ProductImages API — integration', () => {
         });
     });
 
-    describe('deleteImage', () => {
-        it('deletes the image and a subsequent getImage returns not-found', async () => {
+    describe('remove', () => {
+        it('removes the image and a subsequent getOne returns not-found', async () => {
             const id = createdIds.at(-1);
-            assert(id, 'Expected an image ID from the createImage test');
+            assert(id, 'Expected an image ID from the create test');
 
             const deleteResult = await client.v3().products().images().remove(TEST_PRODUCT_ID, id);
 

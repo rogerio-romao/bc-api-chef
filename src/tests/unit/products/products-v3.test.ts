@@ -36,7 +36,7 @@ describe('ProductsV3 class', () => {
         );
     });
 
-    describe('getProduct', () => {
+    describe('get product', () => {
         beforeEach(() => {
             mockTchef.mockResolvedValue({
                 data: { data: { id: 42, name: 'Widget' } },
@@ -108,8 +108,8 @@ describe('ProductsV3 class', () => {
         });
     });
 
-    describe('getAllProducts tests', () => {
-        describe('getAllProducts — request headers', () => {
+    describe('get multiple products tests', () => {
+        describe('request headers', () => {
             beforeEach(() => {
                 mockTchef.mockResolvedValue(makePageResponse([], 1, 1));
             });
@@ -127,7 +127,7 @@ describe('ProductsV3 class', () => {
             });
         });
 
-        describe('getAllProducts — pagination', () => {
+        describe('pagination', () => {
             it('fetches a single page when total_pages is 1', async () => {
                 mockTchef.mockResolvedValue(makePageResponse([{ id: 1 }, { id: 2 }], 1, 1));
 
@@ -212,7 +212,7 @@ describe('ProductsV3 class', () => {
             });
         });
 
-        describe('getAllProducts — includes', () => {
+        describe('includes', () => {
             beforeEach(() => {
                 mockTchef.mockResolvedValue(makePageResponse([], 1, 1));
             });
@@ -263,7 +263,7 @@ describe('ProductsV3 class', () => {
             });
         });
 
-        describe('getAllProducts — query params', () => {
+        describe('query params', () => {
             beforeEach(() => {
                 mockTchef.mockResolvedValue(makePageResponse([], 1, 1));
             });
@@ -344,7 +344,7 @@ describe('ProductsV3 class', () => {
             });
         });
 
-        describe('getAllProducts -- limit clamping', () => {
+        describe('limit clamping', () => {
             beforeEach(() => {
                 mockTchef.mockResolvedValue(makePageResponse([], 1, 1));
             });
@@ -390,7 +390,7 @@ describe('ProductsV3 class', () => {
     });
 
     // oxlint-disable-next-line max-statements
-    describe('createProduct', () => {
+    describe('create product', () => {
         const minPayload = {
             name: 'Test Widget',
             price: 29.99,
@@ -745,7 +745,7 @@ describe('ProductsV3 class', () => {
     });
 
     // oxlint-disable-next-line max-statements
-    describe('updateProduct', () => {
+    describe('update product', () => {
         const mockProduct = {
             id: 42,
             name: 'Updated Widget',
@@ -947,7 +947,7 @@ describe('ProductsV3 class', () => {
         });
     });
 
-    describe('deleteProduct', () => {
+    describe('delete product', () => {
         beforeEach(() => {
             mockTchef.mockResolvedValue({ data: '', ok: true });
         });

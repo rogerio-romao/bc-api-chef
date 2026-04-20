@@ -46,7 +46,7 @@ describe('ProductBulkPricingRules class', () => {
     });
 
     // oxlint-disable-next-line max-statements
-    describe('create', () => {
+    describe('create bulk pricing rule', () => {
         const minPayload = {
             amount: 10,
             quantity_max: 10,
@@ -300,7 +300,7 @@ describe('ProductBulkPricingRules class', () => {
         });
     });
 
-    describe('getOne', () => {
+    describe('get one bulk pricing rule', () => {
         beforeEach(() => {
             mockTchef.mockResolvedValue(mockRuleEnvelope);
         });
@@ -428,8 +428,8 @@ describe('ProductBulkPricingRules class', () => {
         });
     });
 
-    describe('getMultiple', () => {
-        describe('getMultiple — ID validation', () => {
+    describe('get multiple bulk pricing rules', () => {
+        describe('ID validation', () => {
             it('returns a 400 error without calling the API when productId is 0', async () => {
                 const result = await bulkPricingRules.getMultiple(0);
 
@@ -456,7 +456,7 @@ describe('ProductBulkPricingRules class', () => {
             });
         });
 
-        describe('getMultiple — request headers', () => {
+        describe('request headers', () => {
             beforeEach(() => {
                 mockTchef.mockResolvedValue(makePageResponse([], 1, 1));
             });
@@ -474,7 +474,7 @@ describe('ProductBulkPricingRules class', () => {
             });
         });
 
-        describe('getMultiple — URL', () => {
+        describe('URL', () => {
             beforeEach(() => {
                 mockTchef.mockResolvedValue(makePageResponse([], 1, 1));
             });
@@ -518,7 +518,7 @@ describe('ProductBulkPricingRules class', () => {
             });
         });
 
-        describe('getMultiple — pagination', () => {
+        describe('pagination', () => {
             it('fetches a single page when total_pages is 1', async () => {
                 mockTchef.mockResolvedValue(
                     makePageResponse([mockRule, { ...mockRule, id: 2 }], 1, 1),
@@ -586,7 +586,7 @@ describe('ProductBulkPricingRules class', () => {
             });
         });
 
-        describe('getMultiple — limit clamping', () => {
+        describe('limit clamping', () => {
             beforeEach(() => {
                 mockTchef.mockResolvedValue(makePageResponse([], 1, 1));
             });
@@ -627,7 +627,7 @@ describe('ProductBulkPricingRules class', () => {
         });
     });
 
-    describe('update', () => {
+    describe('update bulk pricing rule', () => {
         beforeEach(() => {
             mockTchef.mockResolvedValue(mockRuleEnvelope);
         });
@@ -830,7 +830,7 @@ describe('ProductBulkPricingRules class', () => {
         });
     });
 
-    describe('remove', () => {
+    describe('remove bulk pricing rule', () => {
         beforeEach(() => {
             mockTchef.mockResolvedValue({ data: '', ok: true });
         });
