@@ -23,7 +23,7 @@ describe.runIf(hasCredentials)('Products API — integration', () => {
     const client = new BcApiChef(STORE_HASH, ACCESS_TOKEN);
 
     it('fetches at least one product with default options', async () => {
-        const result = await client.v3().products().getProducts();
+        const result = await client.v3().products().getMultiple();
 
         assertOk(result);
         expect(Array.isArray(result.data)).toBe(true);
@@ -38,7 +38,7 @@ describe.runIf(hasCredentials)('Products API — integration', () => {
         const result = await client
             .v3()
             .products()
-            .getProducts({
+            .getMultiple({
                 include_fields: ['description', 'name'],
             });
 
@@ -57,7 +57,7 @@ describe.runIf(hasCredentials)('Products API — integration', () => {
         const result = await client
             .v3()
             .products()
-            .getProducts({
+            .getMultiple({
                 includes: { custom_fields: true, images: true },
             });
 
@@ -70,7 +70,7 @@ describe.runIf(hasCredentials)('Products API — integration', () => {
     });
 
     it('paginates through multiple pages and returns all results', async () => {
-        const result = await client.v3().products().getProducts({ limit: PER_PAGE_MIN });
+        const result = await client.v3().products().getMultiple({ limit: PER_PAGE_MIN });
 
         assertOk(result);
 
@@ -82,7 +82,7 @@ describe.runIf(hasCredentials)('Products API — integration', () => {
         const filtered = await client
             .v3()
             .products()
-            .getProducts({
+            .getMultiple({
                 'id:in': [TEST_PRODUCT_ID],
             });
 
@@ -92,7 +92,7 @@ describe.runIf(hasCredentials)('Products API — integration', () => {
     });
 
     it('fetches a single product by ID and returns a correct product object', async () => {
-        const result = await client.v3().products().getProduct(TEST_PRODUCT_ID);
+        const result = await client.v3().products().getOne(TEST_PRODUCT_ID);
 
         assertOk(result);
         expect(result.data.id).toBe(TEST_PRODUCT_ID);
@@ -112,7 +112,7 @@ describe.runIf(hasCredentials)('Products API — write integration', () => {
             await client
                 .v3()
                 .products()
-                .deleteProduct(id)
+                .remove(id)
                 .catch(() => {
                     // noop: ignore errors for already-deleted products
                 });
@@ -123,7 +123,7 @@ describe.runIf(hasCredentials)('Products API — write integration', () => {
         it('creates a product with the minimum required payload', async () => {
             const name = `bc-api-chef integration ${suffix}-1`;
 
-            const result = await client.v3().products().createProduct({
+            const result = await client.v3().products().create({
                 name,
                 price: 29.99,
                 type: 'physical',
@@ -146,7 +146,7 @@ describe.runIf(hasCredentials)('Products API — write integration', () => {
             const result = await client
                 .v3()
                 .products()
-                .createProduct({
+                .create({
                     custom_fields: [
                         {
                             name: 'Material',
@@ -180,7 +180,7 @@ describe.runIf(hasCredentials)('Products API — write integration', () => {
             const result = await client
                 .v3()
                 .products()
-                .updateProduct(id, { name: updatedName, price: 39.99 });
+                .update(id, { name: updatedName, price: 39.99 });
 
             assertOk(result);
 
@@ -195,7 +195,7 @@ describe.runIf(hasCredentials)('Products API — write integration', () => {
             const result = await client
                 .v3()
                 .products()
-                .updateProduct(
+                .update(
                     id,
                     { description: 'updated description' },
                     {
@@ -216,13 +216,13 @@ describe.runIf(hasCredentials)('Products API — write integration', () => {
             const id = createdIds.shift();
             assert(id, 'Expected a product ID from the createProduct test');
 
-            const deleteResult = await client.v3().products().deleteProduct(id);
+            const deleteResult = await client.v3().products().remove(id);
 
             assertOk(deleteResult);
             expect(deleteResult.data).toBeNull();
 
             // Confirm the product is truly gone server-side
-            const fetchResult = await client.v3().products().getProduct(id);
+            const fetchResult = await client.v3().products().getOne(id);
 
             expect(fetchResult.ok).toBe(false);
         });
@@ -231,7 +231,7 @@ describe.runIf(hasCredentials)('Products API — write integration', () => {
             const id = createdIds.shift();
             assert(id, 'Expected a product ID from the createProduct test');
 
-            const result = await client.v3().products().deleteProduct(id);
+            const result = await client.v3().products().remove(id);
 
             assertOk(result);
             expect(result.data).toBeNull();

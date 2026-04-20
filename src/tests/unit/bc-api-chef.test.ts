@@ -26,7 +26,7 @@ describe('BcApiChef builder chain', () => {
     });
 
     it('builds the correct base URL for the store', async () => {
-        await client.v3().products().getProducts();
+        await client.v3().products().getMultiple();
 
         expect(mockTchef).toHaveBeenCalledOnce();
         expect(getCallUrl(mockTchef).origin).toBe('https://api.bigcommerce.com');

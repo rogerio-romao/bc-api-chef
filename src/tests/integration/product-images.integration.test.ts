@@ -37,7 +37,7 @@ describe.runIf(hasCredentials)('ProductImages API — integration', () => {
                 .v3()
                 .products()
                 .images()
-                .deleteImage(TEST_PRODUCT_ID, id)
+                .remove(TEST_PRODUCT_ID, id)
                 .catch(() => {
                     // noop: ignore errors for already-deleted images
                 });
@@ -46,7 +46,7 @@ describe.runIf(hasCredentials)('ProductImages API — integration', () => {
 
     describe('createImage', () => {
         it('creates an image via image_url with minimum payload', async () => {
-            const result = await client.v3().products().images().createImage(TEST_PRODUCT_ID, {
+            const result = await client.v3().products().images().create(TEST_PRODUCT_ID, {
                 description: TEST_DESCRIPTION,
                 image_url: TEST_IMAGE_URL,
             });
@@ -65,7 +65,7 @@ describe.runIf(hasCredentials)('ProductImages API — integration', () => {
             const id = createdIds[0];
             assert(id, 'Expected an image ID from the createImage test');
 
-            const result = await client.v3().products().images().getImage(TEST_PRODUCT_ID, id);
+            const result = await client.v3().products().images().getOne(TEST_PRODUCT_ID, id);
 
             assertOk(result);
             expect(result.data.id).toBe(id);
@@ -81,7 +81,7 @@ describe.runIf(hasCredentials)('ProductImages API — integration', () => {
                 .v3()
                 .products()
                 .images()
-                .getImage(TEST_PRODUCT_ID, id, {
+                .getOne(TEST_PRODUCT_ID, id, {
                     include_fields: ['is_thumbnail', 'sort_order'],
                 });
 
@@ -95,7 +95,7 @@ describe.runIf(hasCredentials)('ProductImages API — integration', () => {
 
     describe('getImages', () => {
         it('returns images for the product including the created one', async () => {
-            const result = await client.v3().products().images().getImages(TEST_PRODUCT_ID);
+            const result = await client.v3().products().images().getMultiple(TEST_PRODUCT_ID);
 
             assertOk(result);
             expect(result.data.length).toBeGreaterThanOrEqual(1);
@@ -117,7 +117,7 @@ describe.runIf(hasCredentials)('ProductImages API — integration', () => {
                 .v3()
                 .products()
                 .images()
-                .updateImage(TEST_PRODUCT_ID, id, { description: updatedDescription });
+                .update(TEST_PRODUCT_ID, id, { description: updatedDescription });
 
             assertOk(result);
             expect(result.data.id).toBe(id);
@@ -130,11 +130,7 @@ describe.runIf(hasCredentials)('ProductImages API — integration', () => {
             const id = createdIds.at(-1);
             assert(id, 'Expected an image ID from the createImage test');
 
-            const deleteResult = await client
-                .v3()
-                .products()
-                .images()
-                .deleteImage(TEST_PRODUCT_ID, id);
+            const deleteResult = await client.v3().products().images().remove(TEST_PRODUCT_ID, id);
 
             assertOk(deleteResult);
             expect(deleteResult.data).toBeNull();
@@ -143,7 +139,7 @@ describe.runIf(hasCredentials)('ProductImages API — integration', () => {
             createdIds.pop();
 
             // Confirm the image is truly gone server-side
-            const fetchResult = await client.v3().products().images().getImage(TEST_PRODUCT_ID, id);
+            const fetchResult = await client.v3().products().images().getOne(TEST_PRODUCT_ID, id);
 
             expect(fetchResult.ok).toBe(false);
         });

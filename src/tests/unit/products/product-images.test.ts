@@ -63,7 +63,7 @@ describe('ProductImages class', () => {
         });
 
         it('returns a 400 error without calling the API when productId is 0', async () => {
-            const result = await images.getImage(0, 55);
+            const result = await images.getOne(0, 55);
 
             assertErr(result);
             expect(result.statusCode).toBe(400);
@@ -72,7 +72,7 @@ describe('ProductImages class', () => {
         });
 
         it('returns a 400 error without calling the API when productId is negative', async () => {
-            const result = await images.getImage(-1, 55);
+            const result = await images.getOne(-1, 55);
 
             assertErr(result);
             expect(result.statusCode).toBe(400);
@@ -80,7 +80,7 @@ describe('ProductImages class', () => {
         });
 
         it('returns a 400 error without calling the API when productId is a non-integer', async () => {
-            const result = await images.getImage(1.5, 55);
+            const result = await images.getOne(1.5, 55);
 
             assertErr(result);
             expect(result.statusCode).toBe(400);
@@ -88,7 +88,7 @@ describe('ProductImages class', () => {
         });
 
         it('returns a 400 error without calling the API when imageId is 0', async () => {
-            const result = await images.getImage(42, 0);
+            const result = await images.getOne(42, 0);
 
             assertErr(result);
             expect(result.statusCode).toBe(400);
@@ -97,7 +97,7 @@ describe('ProductImages class', () => {
         });
 
         it('returns a 400 error without calling the API when imageId is negative', async () => {
-            const result = await images.getImage(42, -1);
+            const result = await images.getOne(42, -1);
 
             assertErr(result);
             expect(result.statusCode).toBe(400);
@@ -106,7 +106,7 @@ describe('ProductImages class', () => {
         });
 
         it('returns a 400 error without calling the API when imageId is a non-integer', async () => {
-            const result = await images.getImage(42, 1.5);
+            const result = await images.getOne(42, 1.5);
 
             assertErr(result);
             expect(result.statusCode).toBe(400);
@@ -115,31 +115,31 @@ describe('ProductImages class', () => {
         });
 
         it('makes exactly one HTTP call', async () => {
-            await images.getImage(42, 55);
+            await images.getOne(42, 55);
 
             expect(mockTchef).toHaveBeenCalledOnce();
         });
 
         it('includes productId and imageId in the URL path', async () => {
-            await images.getImage(42, 55);
+            await images.getOne(42, 55);
 
             expect(getCallUrl(mockTchef, 0).href).toContain('catalog/products/42/images/55');
         });
 
         it('sends the access token as X-Auth-Token', async () => {
-            await images.getImage(42, 55);
+            await images.getOne(42, 55);
 
             expect(getCallHeaders(mockTchef, 0)['X-Auth-Token']).toBe('test-token');
         });
 
         it('sends Accept: application/json', async () => {
-            await images.getImage(42, 55);
+            await images.getOne(42, 55);
 
             expect(getCallHeaders(mockTchef, 0).Accept).toBe('application/json');
         });
 
         it('uses the GET method (or default)', async () => {
-            await images.getImage(42, 55);
+            await images.getOne(42, 55);
 
             const { method } = getCallOptions(mockTchef, 0);
 
@@ -147,7 +147,7 @@ describe('ProductImages class', () => {
         });
 
         it('appends include_fields to the URL when provided', async () => {
-            await images.getImage(42, 55, {
+            await images.getOne(42, 55, {
                 include_fields: ['is_thumbnail', 'sort_order'],
             });
 
@@ -157,7 +157,7 @@ describe('ProductImages class', () => {
         });
 
         it('appends exclude_fields to the URL when provided', async () => {
-            await images.getImage(42, 55, {
+            await images.getOne(42, 55, {
                 exclude_fields: ['description'],
             });
 
@@ -165,7 +165,7 @@ describe('ProductImages class', () => {
         });
 
         it('unwraps the response envelope and returns data.data', async () => {
-            const result = await images.getImage(42, 55);
+            const result = await images.getOne(42, 55);
 
             assertOk(result);
             expect(result.data).toStrictEqual(mockImage);
@@ -178,7 +178,7 @@ describe('ProductImages class', () => {
                 statusCode: 404,
             });
 
-            const result = await images.getImage(42, 99_999);
+            const result = await images.getOne(42, 99_999);
 
             assertErr(result);
             expect(result.statusCode).toBe(404);
@@ -187,7 +187,7 @@ describe('ProductImages class', () => {
 
     describe('getImages', () => {
         it('returns a 400 error without calling the API when productId is 0', async () => {
-            const result = await images.getImages(0);
+            const result = await images.getMultiple(0);
 
             assertErr(result);
             expect(result.statusCode).toBe(400);
@@ -196,7 +196,7 @@ describe('ProductImages class', () => {
         });
 
         it('returns a 400 error without calling the API when productId is negative', async () => {
-            const result = await images.getImages(-1);
+            const result = await images.getMultiple(-1);
 
             assertErr(result);
             expect(result.statusCode).toBe(400);
@@ -204,7 +204,7 @@ describe('ProductImages class', () => {
         });
 
         it('returns a 400 error without calling the API when productId is a non-integer', async () => {
-            const result = await images.getImages(1.5);
+            const result = await images.getMultiple(1.5);
 
             assertErr(result);
             expect(result.statusCode).toBe(400);
@@ -217,13 +217,13 @@ describe('ProductImages class', () => {
             });
 
             it('sends the access token as X-Auth-Token', async () => {
-                await images.getImages(42);
+                await images.getMultiple(42);
 
                 expect(getCallHeaders(mockTchef, 0)['X-Auth-Token']).toBe('test-token');
             });
 
             it('sends Accept: application/json', async () => {
-                await images.getImages(42);
+                await images.getMultiple(42);
 
                 expect(getCallHeaders(mockTchef, 0).Accept).toBe('application/json');
             });
@@ -235,14 +235,14 @@ describe('ProductImages class', () => {
             });
 
             it('URL contains catalog/products/{productId}/images (no trailing id)', async () => {
-                await images.getImages(42);
+                await images.getMultiple(42);
 
                 expect(getCallUrl(mockTchef, 0).href).toContain('catalog/products/42/images');
                 expect(getCallUrl(mockTchef, 0).pathname).toMatch(/\/42\/images$/u);
             });
 
             it('appends include_fields to the URL when provided', async () => {
-                await images.getImages(42, {
+                await images.getMultiple(42, {
                     include_fields: ['is_thumbnail', 'sort_order'],
                 });
 
@@ -252,7 +252,7 @@ describe('ProductImages class', () => {
             });
 
             it('appends exclude_fields to the URL when provided', async () => {
-                await images.getImages(42, { exclude_fields: ['description'] });
+                await images.getMultiple(42, { exclude_fields: ['description'] });
 
                 expect(getCallUrl(mockTchef, 0).searchParams.get('exclude_fields')).toBe(
                     'description',
@@ -260,7 +260,7 @@ describe('ProductImages class', () => {
             });
 
             it('does not duplicate user-supplied page and limit in the query string', async () => {
-                await images.getImages(42, { limit: 25, page: 2 });
+                await images.getMultiple(42, { limit: 25, page: 2 });
 
                 const url = getCallUrl(mockTchef, 0);
 
@@ -275,7 +275,7 @@ describe('ProductImages class', () => {
                     makePageResponse([mockImage, { ...mockImage, id: 56 }], 1, 1),
                 );
 
-                const result = await images.getImages(42);
+                const result = await images.getMultiple(42);
 
                 assertOk(result);
                 expect(result.data).toHaveLength(2);
@@ -288,7 +288,7 @@ describe('ProductImages class', () => {
                     .mockResolvedValueOnce(makePageResponse([{ id: 2 }], 2, 3))
                     .mockResolvedValueOnce(makePageResponse([{ id: 3 }], 3, 3));
 
-                const result = await images.getImages(42);
+                const result = await images.getMultiple(42);
 
                 assertOk(result);
                 expect(result.data).toHaveLength(3);
@@ -301,7 +301,7 @@ describe('ProductImages class', () => {
                     .mockResolvedValueOnce(makePageResponse([{ id: 2 }], 2, 3))
                     .mockResolvedValueOnce(makePageResponse([{ id: 3 }], 3, 3));
 
-                await images.getImages(42);
+                await images.getMultiple(42);
 
                 expect(getCallUrl(mockTchef, 0).searchParams.get('page')).toBe('1');
                 expect(getCallUrl(mockTchef, 1).searchParams.get('page')).toBe('2');
@@ -311,7 +311,7 @@ describe('ProductImages class', () => {
             it('fetches only the user-supplied page and stops', async () => {
                 mockTchef.mockResolvedValueOnce(makePageResponse([{ id: 56 }], 2, 3));
 
-                const result = await images.getImages(42, { limit: 50, page: 2 });
+                const result = await images.getMultiple(42, { limit: 50, page: 2 });
 
                 assertOk(result);
                 expect(result.data).toHaveLength(1);
@@ -329,7 +329,7 @@ describe('ProductImages class', () => {
                         statusCode: 401,
                     });
 
-                const result = await images.getImages(42);
+                const result = await images.getMultiple(42);
 
                 assertErr(result);
                 expect(result.statusCode).toBe(401);
@@ -343,7 +343,7 @@ describe('ProductImages class', () => {
             });
 
             it(`uses ${PER_PAGE_DEFAULT} as the default when no limit is provided`, async () => {
-                await images.getImages(42);
+                await images.getMultiple(42);
 
                 expect(getCallUrl(mockTchef, 0).searchParams.get('limit')).toBe(
                     `${PER_PAGE_DEFAULT}`,
@@ -351,25 +351,25 @@ describe('ProductImages class', () => {
             });
 
             it(`clamps limit above ${PER_PAGE_MAX} down to ${PER_PAGE_MAX}`, async () => {
-                await images.getImages(42, { limit: 500 });
+                await images.getMultiple(42, { limit: 500 });
 
                 expect(getCallUrl(mockTchef, 0).searchParams.get('limit')).toBe(`${PER_PAGE_MAX}`);
             });
 
             it(`clamps limit below ${PER_PAGE_MIN} up to ${PER_PAGE_MIN}`, async () => {
-                await images.getImages(42, { limit: 1 });
+                await images.getMultiple(42, { limit: 1 });
 
                 expect(getCallUrl(mockTchef, 0).searchParams.get('limit')).toBe(`${PER_PAGE_MIN}`);
             });
 
             it('passes through a limit within the valid range unchanged', async () => {
-                await images.getImages(42, { limit: 100 });
+                await images.getMultiple(42, { limit: 100 });
 
                 expect(getCallUrl(mockTchef, 0).searchParams.get('limit')).toBe('100');
             });
 
             it(`requests page=${DEFAULT_START_PAGE} when no page is provided`, async () => {
-                await images.getImages(42);
+                await images.getMultiple(42);
 
                 expect(getCallUrl(mockTchef, 0).searchParams.get('page')).toBe(
                     `${DEFAULT_START_PAGE}`,
@@ -384,7 +384,7 @@ describe('ProductImages class', () => {
 
         describe('createImage — validation', () => {
             it('returns a 400 error without calling the API when productId is 0', async () => {
-                const result = await images.createImage(0, {
+                const result = await images.create(0, {
                     image_url: 'https://example.com/img.jpg',
                 });
 
@@ -394,7 +394,7 @@ describe('ProductImages class', () => {
             });
 
             it('returns a 400 error without calling the API when productId is negative', async () => {
-                const result = await images.createImage(-1, {
+                const result = await images.create(-1, {
                     image_url: 'https://example.com/img.jpg',
                 });
 
@@ -404,7 +404,7 @@ describe('ProductImages class', () => {
             });
 
             it('returns a 400 error when image_url exceeds 255 characters', async () => {
-                const result = await images.createImage(42, {
+                const result = await images.create(42, {
                     image_url: `https://example.com/${'a'.repeat(240)}`,
                 });
 
@@ -415,7 +415,7 @@ describe('ProductImages class', () => {
             });
 
             it('returns a 400 error when sort_order is a non-integer', async () => {
-                const result = await images.createImage(42, {
+                const result = await images.create(42, {
                     image_url: 'https://example.com/img.jpg',
                     sort_order: 1.5,
                 });
@@ -426,7 +426,7 @@ describe('ProductImages class', () => {
             });
 
             it('returns a 400 error when sort_order exceeds the integer range', async () => {
-                const result = await images.createImage(42, {
+                const result = await images.create(42, {
                     image_url: 'https://example.com/img.jpg',
                     sort_order: 2_147_483_648,
                 });
@@ -443,37 +443,37 @@ describe('ProductImages class', () => {
             });
 
             it('makes exactly one HTTP call', async () => {
-                await images.createImage(42, { image_url: 'https://example.com/img.jpg' });
+                await images.create(42, { image_url: 'https://example.com/img.jpg' });
 
                 expect(mockTchef).toHaveBeenCalledOnce();
             });
 
             it('includes productId in the URL path', async () => {
-                await images.createImage(42, { image_url: 'https://example.com/img.jpg' });
+                await images.create(42, { image_url: 'https://example.com/img.jpg' });
 
                 expect(getCallUrl(mockTchef, 0).pathname).toMatch(/\/42\/images$/u);
             });
 
             it('sends the access token as X-Auth-Token', async () => {
-                await images.createImage(42, { image_url: 'https://example.com/img.jpg' });
+                await images.create(42, { image_url: 'https://example.com/img.jpg' });
 
                 expect(getCallHeaders(mockTchef, 0)['X-Auth-Token']).toBe('test-token');
             });
 
             it('sends Content-type: application/json', async () => {
-                await images.createImage(42, { image_url: 'https://example.com/img.jpg' });
+                await images.create(42, { image_url: 'https://example.com/img.jpg' });
 
                 expect(getCallHeaders(mockTchef, 0)['Content-type']).toBe('application/json');
             });
 
             it('uses the POST method', async () => {
-                await images.createImage(42, { image_url: 'https://example.com/img.jpg' });
+                await images.create(42, { image_url: 'https://example.com/img.jpg' });
 
                 expect(getCallOptions(mockTchef, 0).method).toBe('POST');
             });
 
             it('unwraps the response envelope and returns data.data', async () => {
-                const result = await images.createImage(42, {
+                const result = await images.create(42, {
                     image_url: 'https://example.com/img.jpg',
                 });
 
@@ -488,7 +488,7 @@ describe('ProductImages class', () => {
                     statusCode: 500,
                 });
 
-                const result = await images.createImage(42, {
+                const result = await images.create(42, {
                     image_url: 'https://example.com/img.jpg',
                 });
 
@@ -511,7 +511,7 @@ describe('ProductImages class', () => {
             });
 
             it('does not call tchef', async () => {
-                await images.createImage(42, {
+                await images.create(42, {
                     image_file: new File(['img'], 'photo.jpg', { type: 'image/jpeg' }),
                 });
 
@@ -519,7 +519,7 @@ describe('ProductImages class', () => {
             });
 
             it('calls fetch exactly once', async () => {
-                await images.createImage(42, {
+                await images.create(42, {
                     image_file: new File(['img'], 'photo.jpg', { type: 'image/jpeg' }),
                 });
 
@@ -527,7 +527,7 @@ describe('ProductImages class', () => {
             });
 
             it('includes productId in the URL path', async () => {
-                await images.createImage(42, {
+                await images.create(42, {
                     image_file: new File(['img'], 'photo.jpg', { type: 'image/jpeg' }),
                 });
 
@@ -536,7 +536,7 @@ describe('ProductImages class', () => {
             });
 
             it('uses the POST method', async () => {
-                await images.createImage(42, {
+                await images.create(42, {
                     image_file: new File(['img'], 'photo.jpg', { type: 'image/jpeg' }),
                 });
 
@@ -545,7 +545,7 @@ describe('ProductImages class', () => {
             });
 
             it('sends the access token as X-Auth-Token', async () => {
-                await images.createImage(42, {
+                await images.create(42, {
                     image_file: new File(['img'], 'photo.jpg', { type: 'image/jpeg' }),
                 });
 
@@ -556,7 +556,7 @@ describe('ProductImages class', () => {
             });
 
             it('does not set Content-type (lets fetch set the multipart boundary)', async () => {
-                await images.createImage(42, {
+                await images.create(42, {
                     image_file: new File(['img'], 'photo.jpg', { type: 'image/jpeg' }),
                 });
 
@@ -565,7 +565,7 @@ describe('ProductImages class', () => {
             });
 
             it('sends a FormData body', async () => {
-                await images.createImage(42, {
+                await images.create(42, {
                     image_file: new File(['img'], 'photo.jpg', { type: 'image/jpeg' }),
                 });
 
@@ -574,7 +574,7 @@ describe('ProductImages class', () => {
             });
 
             it('unwraps the response envelope and returns data.data', async () => {
-                const result = await images.createImage(42, {
+                const result = await images.create(42, {
                     image_file: new File(['img'], 'photo.jpg', { type: 'image/jpeg' }),
                 });
 
@@ -587,7 +587,7 @@ describe('ProductImages class', () => {
                     new Response(null, { status: 422, statusText: 'Unprocessable Entity' }),
                 );
 
-                const result = await images.createImage(42, {
+                const result = await images.create(42, {
                     image_file: new File(['img'], 'photo.jpg', { type: 'image/jpeg' }),
                 });
 
@@ -598,7 +598,7 @@ describe('ProductImages class', () => {
             it('returns a 500 error result when fetch throws', async () => {
                 fetchSpy.mockRejectedValue(new Error('Network Error'));
 
-                const result = await images.createImage(42, {
+                const result = await images.create(42, {
                     image_file: new File(['img'], 'photo.jpg', { type: 'image/jpeg' }),
                 });
 
@@ -615,7 +615,7 @@ describe('ProductImages class', () => {
         });
 
         it('returns a 400 error without calling the API when productId is 0', async () => {
-            const result = await images.deleteImage(0, 55);
+            const result = await images.remove(0, 55);
 
             assertErr(result);
             expect(result.statusCode).toBe(400);
@@ -624,7 +624,7 @@ describe('ProductImages class', () => {
         });
 
         it('returns a 400 error without calling the API when productId is a non-integer', async () => {
-            const result = await images.deleteImage(1.5, 55);
+            const result = await images.remove(1.5, 55);
 
             assertErr(result);
             expect(result.statusCode).toBe(400);
@@ -632,7 +632,7 @@ describe('ProductImages class', () => {
         });
 
         it('returns a 400 error without calling the API when imageId is 0', async () => {
-            const result = await images.deleteImage(42, 0);
+            const result = await images.remove(42, 0);
 
             assertErr(result);
             expect(result.statusCode).toBe(400);
@@ -641,7 +641,7 @@ describe('ProductImages class', () => {
         });
 
         it('returns a 400 error without calling the API when imageId is a non-integer', async () => {
-            const result = await images.deleteImage(42, 1.5);
+            const result = await images.remove(42, 1.5);
 
             assertErr(result);
             expect(result.statusCode).toBe(400);
@@ -650,37 +650,37 @@ describe('ProductImages class', () => {
         });
 
         it('makes exactly one HTTP call', async () => {
-            await images.deleteImage(42, 55);
+            await images.remove(42, 55);
 
             expect(mockTchef).toHaveBeenCalledOnce();
         });
 
         it('uses the DELETE method', async () => {
-            await images.deleteImage(42, 55);
+            await images.remove(42, 55);
 
             expect(getCallOptions(mockTchef, 0).method).toBe('DELETE');
         });
 
         it('includes productId and imageId in the URL path', async () => {
-            await images.deleteImage(42, 55);
+            await images.remove(42, 55);
 
             expect(getCallUrl(mockTchef, 0).href).toContain('catalog/products/42/images/55');
         });
 
         it('sends the access token as X-Auth-Token', async () => {
-            await images.deleteImage(42, 55);
+            await images.remove(42, 55);
 
             expect(getCallHeaders(mockTchef, 0)['X-Auth-Token']).toBe('test-token');
         });
 
         it('uses responseFormat: text to handle the empty 204 body', async () => {
-            await images.deleteImage(42, 55);
+            await images.remove(42, 55);
 
             expect(getCallOptions(mockTchef, 0).responseFormat).toBe('text');
         });
 
         it('returns { ok: true, data: null } on success', async () => {
-            const result = await images.deleteImage(42, 55);
+            const result = await images.remove(42, 55);
 
             expect(result).toStrictEqual({ data: null, ok: true });
         });
@@ -692,7 +692,7 @@ describe('ProductImages class', () => {
                 statusCode: 404,
             });
 
-            const result = await images.deleteImage(42, 99_999);
+            const result = await images.remove(42, 99_999);
 
             assertErr(result);
             expect(result.statusCode).toBe(404);
@@ -708,7 +708,7 @@ describe('ProductImages class', () => {
 
         describe('updateImage — ID validation', () => {
             it('returns a 400 error without calling the API when productId is 0', async () => {
-                const result = await images.updateImage(0, 55, {
+                const result = await images.update(0, 55, {
                     image_url: 'https://example.com/img.jpg',
                 });
 
@@ -719,7 +719,7 @@ describe('ProductImages class', () => {
             });
 
             it('returns a 400 error without calling the API when productId is a non-integer', async () => {
-                const result = await images.updateImage(1.5, 55, {
+                const result = await images.update(1.5, 55, {
                     image_url: 'https://example.com/img.jpg',
                 });
 
@@ -729,7 +729,7 @@ describe('ProductImages class', () => {
             });
 
             it('returns a 400 error without calling the API when imageId is 0', async () => {
-                const result = await images.updateImage(42, 0, {
+                const result = await images.update(42, 0, {
                     image_url: 'https://example.com/img.jpg',
                 });
 
@@ -740,7 +740,7 @@ describe('ProductImages class', () => {
             });
 
             it('returns a 400 error without calling the API when imageId is a non-integer', async () => {
-                const result = await images.updateImage(42, 1.5, {
+                const result = await images.update(42, 1.5, {
                     image_url: 'https://example.com/img.jpg',
                 });
 
@@ -758,7 +758,7 @@ describe('ProductImages class', () => {
                     image_url: 'https://example.com/img.jpg',
                 } as unknown as ProductImageUpdatePayload;
 
-                const result = await images.updateImage(42, 55, invalidPayload);
+                const result = await images.update(42, 55, invalidPayload);
 
                 assertErr(result);
                 expect(result.statusCode).toBe(400);
@@ -779,7 +779,7 @@ describe('ProductImages class', () => {
                 vi.stubGlobal('fetch', fetchMock);
 
                 const file = new File(['img'], 'photo.jpg', { type: 'image/jpeg' });
-                const result = await images.updateImage(42, 55, {
+                const result = await images.update(42, 55, {
                     description: 'updated desc',
                     image_file: file,
                     is_thumbnail: true,
@@ -823,14 +823,14 @@ describe('ProductImages class', () => {
             });
 
             it('succeeds when payload contains only non-image fields', async () => {
-                const result = await images.updateImage(42, 55, { description: 'new desc' });
+                const result = await images.update(42, 55, { description: 'new desc' });
 
                 assertOk(result);
                 expect(mockTchef).toHaveBeenCalledOnce();
             });
 
             it('returns a 400 error when image_url exceeds 255 characters', async () => {
-                const result = await images.updateImage(42, 55, {
+                const result = await images.update(42, 55, {
                     image_url: `https://example.com/${'a'.repeat(240)}`,
                 });
 
@@ -841,7 +841,7 @@ describe('ProductImages class', () => {
             });
 
             it('returns a 400 error when sort_order is a non-integer', async () => {
-                const result = await images.updateImage(42, 55, {
+                const result = await images.update(42, 55, {
                     image_url: 'https://example.com/img.jpg',
                     sort_order: 1.5,
                 });
@@ -852,7 +852,7 @@ describe('ProductImages class', () => {
             });
 
             it('returns a 400 error when sort_order exceeds the integer range', async () => {
-                const result = await images.updateImage(42, 55, {
+                const result = await images.update(42, 55, {
                     image_url: 'https://example.com/img.jpg',
                     sort_order: 2_147_483_648,
                 });
@@ -865,44 +865,44 @@ describe('ProductImages class', () => {
 
         describe('updateImage — request', () => {
             it('makes exactly one HTTP call', async () => {
-                await images.updateImage(42, 55, { description: 'updated' });
+                await images.update(42, 55, { description: 'updated' });
 
                 expect(mockTchef).toHaveBeenCalledOnce();
             });
 
             it('uses the PUT method', async () => {
-                await images.updateImage(42, 55, { description: 'updated' });
+                await images.update(42, 55, { description: 'updated' });
 
                 expect(getCallOptions(mockTchef, 0).method).toBe('PUT');
             });
 
             it('includes productId and imageId in the URL path', async () => {
-                await images.updateImage(42, 55, { description: 'updated' });
+                await images.update(42, 55, { description: 'updated' });
 
                 expect(getCallUrl(mockTchef, 0).href).toContain('catalog/products/42/images/55');
             });
 
             it('sends the access token as X-Auth-Token', async () => {
-                await images.updateImage(42, 55, { description: 'updated' });
+                await images.update(42, 55, { description: 'updated' });
 
                 expect(getCallHeaders(mockTchef, 0)['X-Auth-Token']).toBe('test-token');
             });
 
             it('sends Content-type: application/json', async () => {
-                await images.updateImage(42, 55, { description: 'updated' });
+                await images.update(42, 55, { description: 'updated' });
 
                 expect(getCallHeaders(mockTchef, 0)['Content-type']).toBe('application/json');
             });
 
             it('sends Accept: application/json', async () => {
-                await images.updateImage(42, 55, { description: 'updated' });
+                await images.update(42, 55, { description: 'updated' });
 
                 expect(getCallHeaders(mockTchef, 0).Accept).toBe('application/json');
             });
 
             it('serializes the payload as a JSON string in the body', async () => {
                 const payload = { description: 'updated', sort_order: 3 };
-                await images.updateImage(42, 55, payload);
+                await images.update(42, 55, payload);
 
                 const { body } = getCallOptions(mockTchef, 0);
                 expect(body).toBeTypeOf('string');
@@ -910,7 +910,7 @@ describe('ProductImages class', () => {
             });
 
             it('unwraps the response envelope and returns data.data', async () => {
-                const result = await images.updateImage(42, 55, { description: 'updated' });
+                const result = await images.update(42, 55, { description: 'updated' });
 
                 assertOk(result);
                 expect(result.data).toStrictEqual(mockUpdatedImage);
@@ -923,7 +923,7 @@ describe('ProductImages class', () => {
                     statusCode: 404,
                 });
 
-                const result = await images.updateImage(42, 99_999, { description: 'updated' });
+                const result = await images.update(42, 99_999, { description: 'updated' });
 
                 assertErr(result);
                 expect(result.statusCode).toBe(404);

@@ -11,7 +11,7 @@ import {
     validatePositiveIntegers,
 } from '@/v3Api/utils.ts';
 
-import type { ApiResult, BcApiChefOptions, BcApiChefResult } from '@/types/api-types';
+import type { ApiResult, BcApiChefOptions } from '@/types/api-types';
 import type {
     ApiMetafieldQueryBase,
     BaseMetafieldField,
@@ -25,11 +25,11 @@ import type {
  * All methods return a {@link ApiResult}, which is either `{ data: T; ok: true; }` on success or `{ error: string; ok: false; statusCode: number }` on failure.
  *
  * Public methods:
- * - {@link ProductMetafields.createMetafield} — `POST` a new metafield.
- * - {@link ProductMetafields.getMetafields} — paginated list, auto-collects every page, or single page if `page` is specified.
- * - {@link ProductMetafields.getMetafield} — fetch a single metafield by product and metafield id.
- * - {@link ProductMetafields.updateMetafield} — `PUT` an existing metafield.
- * - {@link ProductMetafields.deleteMetafield} — `DELETE` a metafield by id.
+ * - {@link ProductMetafields.create} — `POST` a new metafield.
+ * - {@link ProductMetafields.getMultiple} — paginated list, auto-collects every page, or single page if `page` is specified.
+ * - {@link ProductMetafields.getOne} — fetch a single metafield by product and metafield id.
+ * - {@link ProductMetafields.update} — `PUT` an existing metafield.
+ * - {@link ProductMetafields.remove} — `DELETE` a metafield by id.
  */
 export default class ProductMetafields {
     private accessToken: string;
@@ -69,7 +69,7 @@ export default class ProductMetafields {
      * @param metafieldData Metafield data to create.
      * @returns {ApiResult<ProductMetafield>} The created metafield or an error result.
      */
-    public async createMetafield(
+    public async create(
         productId: number,
         metafieldData: CreateMetafieldPayload,
     ): ApiResult<ProductMetafield> {
@@ -80,7 +80,7 @@ export default class ProductMetafields {
                 error: idValidOrError,
                 ok: false,
                 statusCode: 400,
-            } as BcApiChefResult<ProductMetafield>;
+            };
         }
 
         const validationError = this.validateCreateMetafieldPayload(metafieldData);
@@ -110,22 +110,22 @@ export default class ProductMetafields {
      * @param options.exclude_fields When provided, these fields are excluded from the returned metafield objects. Cannot be used with `include_fields`.
      * @returns {ApiResult<ProductMetafield[]>} The collected metafields or an error result.
      */
-    public async getMetafields<I extends readonly BaseMetafieldField[]>(
+    public async getMultiple<I extends readonly BaseMetafieldField[]>(
         productId: number,
         options: ApiMetafieldQueryBase & { include_fields: I; exclude_fields?: never },
     ): ApiResult<Pick<ProductMetafield, 'id' | I[number]>[]>;
 
-    public async getMetafields<E extends readonly BaseMetafieldField[]>(
+    public async getMultiple<E extends readonly BaseMetafieldField[]>(
         productId: number,
         options: ApiMetafieldQueryBase & { include_fields?: never; exclude_fields: E },
     ): ApiResult<Omit<ProductMetafield, E[number]>[]>;
 
-    public async getMetafields(
+    public async getMultiple(
         productId: number,
         options?: ApiMetafieldQueryBase,
     ): ApiResult<ProductMetafield[]>;
 
-    public async getMetafields(
+    public async getMultiple(
         productId: number,
         options?: ApiMetafieldQueryBase & {
             include_fields?: readonly BaseMetafieldField[];
@@ -159,25 +159,25 @@ export default class ProductMetafields {
      * @param options.exclude_fields When provided, these fields are excluded from the returned metafield object. Cannot be used with `include_fields`.
      * @returns {ApiResult<ProductMetafield>} The metafield or an error result.
      */
-    public async getMetafield<I extends readonly BaseMetafieldField[]>(
+    public async getOne<I extends readonly BaseMetafieldField[]>(
         productId: number,
         metafieldId: number,
         options: { include_fields: I; exclude_fields?: never },
     ): ApiResult<Pick<ProductMetafield, 'id' | I[number]>>;
 
-    public async getMetafield<E extends readonly BaseMetafieldField[]>(
+    public async getOne<E extends readonly BaseMetafieldField[]>(
         productId: number,
         metafieldId: number,
         options: { include_fields?: never; exclude_fields: E },
     ): ApiResult<Omit<ProductMetafield, E[number]>>;
 
-    public async getMetafield(
+    public async getOne(
         productId: number,
         metafieldId: number,
         options?: undefined,
     ): ApiResult<ProductMetafield>;
 
-    public async getMetafield(
+    public async getOne(
         productId: number,
         metafieldId: number,
         options?: {
@@ -205,7 +205,7 @@ export default class ProductMetafields {
      * @param metafieldData Metafield data to update.
      * @returns {ApiResult<ProductMetafield>} The updated metafield or an error result.
      */
-    public async updateMetafield(
+    public async update(
         productId: number,
         metafieldId: number,
         metafieldData: Partial<CreateMetafieldPayload>,
@@ -241,7 +241,7 @@ export default class ProductMetafields {
      * @param metafieldId Metafield ID.
      * @returns {ApiResult<null>} `null` on success or an error result.
      */
-    public async deleteMetafield(productId: number, metafieldId: number): ApiResult<null> {
+    public async remove(productId: number, metafieldId: number): ApiResult<null> {
         const idsValidOrErrorMsg = validatePositiveIntegers({ metafieldId, productId });
 
         if (idsValidOrErrorMsg !== true) {

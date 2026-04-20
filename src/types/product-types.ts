@@ -1,8 +1,8 @@
 // oxlint-disable max-lines
 import type { BcRequestResponseMeta, FieldSelectionOptions, SortDirection } from './api-types.ts';
 import type {
+    NoIdProductBulkPricingRule,
     ProductBulkPricingRule,
-    ProductBulkPricingRulesPayload,
 } from './product-bulk-pricing-rules.ts';
 import type { ProductCustomField } from './product-custom-fields.ts';
 import type { ProductImage, ProductImagePayload } from './product-images.ts';
@@ -273,7 +273,7 @@ export type ProductWithoutFields<
 export type CreateProductPayload = Pick<BaseProduct, RequiredCreateProductFields> &
     Partial<Omit<BaseProduct, ServerComputedProductFields | RequiredCreateProductFields>> & {
         custom_fields?: ProductCustomFieldsPayload;
-        bulk_pricing_rules?: ProductBulkPricingRulesPayload;
+        bulk_pricing_rules?: NoIdProductBulkPricingRule[];
         images?: ProductImagePayload;
         videos?: ProductVideoPayload;
     };
@@ -288,7 +288,7 @@ export interface BcCreateProductResponse {
  */
 export type UpdateProductPayload = Partial<Omit<BaseProduct, ServerComputedProductFields>> & {
     custom_fields?: ProductCustomFieldsPayload;
-    bulk_pricing_rules?: ProductBulkPricingRulesPayload;
+    bulk_pricing_rules?: NoIdProductBulkPricingRule[];
     images?: ProductImagePayload;
     videos?: ProductVideoPayload;
 };
