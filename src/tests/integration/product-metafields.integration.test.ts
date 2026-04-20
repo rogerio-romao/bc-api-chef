@@ -34,7 +34,7 @@ describe.runIf(hasCredentials)('ProductMetafields API — integration', () => {
                 .v3()
                 .products()
                 .metafields()
-                .deleteMetafield(TEST_PRODUCT_ID, id)
+                .remove(TEST_PRODUCT_ID, id)
                 .catch(() => {
                     // noop: ignore errors for already-deleted metafields
                 });
@@ -47,7 +47,7 @@ describe.runIf(hasCredentials)('ProductMetafields API — integration', () => {
                 .v3()
                 .products()
                 .metafields()
-                .createMetafield(TEST_PRODUCT_ID, {
+                .create(TEST_PRODUCT_ID, {
                     key: `key-1-${suffix.toString()}`,
                     namespace: TEST_NAMESPACE,
                     permission_set: 'write',
@@ -69,7 +69,7 @@ describe.runIf(hasCredentials)('ProductMetafields API — integration', () => {
                 .v3()
                 .products()
                 .metafields()
-                .createMetafield(TEST_PRODUCT_ID, {
+                .create(TEST_PRODUCT_ID, {
                     description: 'integration test description',
                     key: `key-2-${suffix.toString()}`,
                     namespace: TEST_NAMESPACE,
@@ -90,11 +90,7 @@ describe.runIf(hasCredentials)('ProductMetafields API — integration', () => {
             const id = createdIds[0];
             assert(id, 'Expected a metafield ID from the createMetafield test');
 
-            const result = await client
-                .v3()
-                .products()
-                .metafields()
-                .getMetafield(TEST_PRODUCT_ID, id);
+            const result = await client.v3().products().metafields().getOne(TEST_PRODUCT_ID, id);
 
             assertOk(result);
             expect(result.data.id).toBe(id);
@@ -110,7 +106,7 @@ describe.runIf(hasCredentials)('ProductMetafields API — integration', () => {
                 .v3()
                 .products()
                 .metafields()
-                .getMetafield(TEST_PRODUCT_ID, id, {
+                .getOne(TEST_PRODUCT_ID, id, {
                     include_fields: ['key', 'value'],
                 });
 
@@ -128,7 +124,7 @@ describe.runIf(hasCredentials)('ProductMetafields API — integration', () => {
                 .v3()
                 .products()
                 .metafields()
-                .getMetafields(TEST_PRODUCT_ID, { namespace: TEST_NAMESPACE });
+                .getMultiple(TEST_PRODUCT_ID, { namespace: TEST_NAMESPACE });
 
             assertOk(result);
             expect(result.data.length).toBeGreaterThanOrEqual(2);
@@ -149,7 +145,7 @@ describe.runIf(hasCredentials)('ProductMetafields API — integration', () => {
                 .v3()
                 .products()
                 .metafields()
-                .updateMetafield(TEST_PRODUCT_ID, id, { value: 'value-1-updated' });
+                .update(TEST_PRODUCT_ID, id, { value: 'value-1-updated' });
 
             assertOk(result);
             expect(result.data.id).toBe(id);
@@ -166,7 +162,7 @@ describe.runIf(hasCredentials)('ProductMetafields API — integration', () => {
                 .v3()
                 .products()
                 .metafields()
-                .deleteMetafield(TEST_PRODUCT_ID, id);
+                .remove(TEST_PRODUCT_ID, id);
 
             assertOk(deleteResult);
             expect(deleteResult.data).toBeNull();
@@ -176,7 +172,7 @@ describe.runIf(hasCredentials)('ProductMetafields API — integration', () => {
                 .v3()
                 .products()
                 .metafields()
-                .getMetafield(TEST_PRODUCT_ID, id);
+                .getOne(TEST_PRODUCT_ID, id);
 
             expect(fetchResult.ok).toBe(false);
         });

@@ -51,13 +51,13 @@ describe('ProductMetafields class', () => {
         metafields = new ProductMetafields('test-token', BASE_URL, {});
     });
 
-    describe('getMetafield', () => {
+    describe('get one metafield', () => {
         beforeEach(() => {
             mockTchef.mockResolvedValue(mockMetafieldEnvelope);
         });
 
         it('returns a 400 error without calling the API when productId is 0', async () => {
-            const result = await metafields.getMetafield(0, 7);
+            const result = await metafields.getOne(0, 7);
 
             assertErr(result);
             expect(result.statusCode).toBe(400);
@@ -66,7 +66,7 @@ describe('ProductMetafields class', () => {
         });
 
         it('returns a 400 error without calling the API when productId is negative', async () => {
-            const result = await metafields.getMetafield(-1, 7);
+            const result = await metafields.getOne(-1, 7);
 
             assertErr(result);
             expect(result.statusCode).toBe(400);
@@ -74,7 +74,7 @@ describe('ProductMetafields class', () => {
         });
 
         it('returns a 400 error without calling the API when productId is a non-integer', async () => {
-            const result = await metafields.getMetafield(1.5, 7);
+            const result = await metafields.getOne(1.5, 7);
 
             assertErr(result);
             expect(result.statusCode).toBe(400);
@@ -82,7 +82,7 @@ describe('ProductMetafields class', () => {
         });
 
         it('returns a 400 error without calling the API when metafieldId is 0', async () => {
-            const result = await metafields.getMetafield(42, 0);
+            const result = await metafields.getOne(42, 0);
 
             assertErr(result);
             expect(result.statusCode).toBe(400);
@@ -91,7 +91,7 @@ describe('ProductMetafields class', () => {
         });
 
         it('returns a 400 error without calling the API when metafieldId is negative', async () => {
-            const result = await metafields.getMetafield(42, -1);
+            const result = await metafields.getOne(42, -1);
 
             assertErr(result);
             expect(result.statusCode).toBe(400);
@@ -100,7 +100,7 @@ describe('ProductMetafields class', () => {
         });
 
         it('returns a 400 error without calling the API when metafieldId is a non-integer', async () => {
-            const result = await metafields.getMetafield(42, 1.5);
+            const result = await metafields.getOne(42, 1.5);
 
             assertErr(result);
             expect(result.statusCode).toBe(400);
@@ -109,31 +109,31 @@ describe('ProductMetafields class', () => {
         });
 
         it('makes exactly one HTTP call', async () => {
-            await metafields.getMetafield(42, 7);
+            await metafields.getOne(42, 7);
 
             expect(mockTchef).toHaveBeenCalledOnce();
         });
 
         it('includes productId and metafieldId in the URL path', async () => {
-            await metafields.getMetafield(42, 7);
+            await metafields.getOne(42, 7);
 
             expect(getCallUrl(mockTchef, 0).href).toContain('catalog/products/42/metafields/7');
         });
 
         it('sends the access token as X-Auth-Token', async () => {
-            await metafields.getMetafield(42, 7);
+            await metafields.getOne(42, 7);
 
             expect(getCallHeaders(mockTchef, 0)['X-Auth-Token']).toBe('test-token');
         });
 
         it('sends Accept: application/json', async () => {
-            await metafields.getMetafield(42, 7);
+            await metafields.getOne(42, 7);
 
             expect(getCallHeaders(mockTchef, 0).Accept).toBe('application/json');
         });
 
         it('uses the GET method (or default)', async () => {
-            await metafields.getMetafield(42, 7);
+            await metafields.getOne(42, 7);
 
             const { method } = getCallOptions(mockTchef, 0);
 
@@ -141,7 +141,7 @@ describe('ProductMetafields class', () => {
         });
 
         it('appends include_fields to the URL when provided', async () => {
-            await metafields.getMetafield(42, 7, {
+            await metafields.getOne(42, 7, {
                 include_fields: ['key', 'value'],
             });
 
@@ -149,7 +149,7 @@ describe('ProductMetafields class', () => {
         });
 
         it('appends exclude_fields to the URL when provided', async () => {
-            await metafields.getMetafield(42, 7, {
+            await metafields.getOne(42, 7, {
                 exclude_fields: ['description'],
             });
 
@@ -157,7 +157,7 @@ describe('ProductMetafields class', () => {
         });
 
         it('unwraps the response envelope and returns data.data', async () => {
-            const result = await metafields.getMetafield(42, 7);
+            const result = await metafields.getOne(42, 7);
 
             assertOk(result);
             expect(result.data).toStrictEqual(mockMetafield);
@@ -170,64 +170,64 @@ describe('ProductMetafields class', () => {
                 statusCode: 404,
             });
 
-            const result = await metafields.getMetafield(42, 99_999);
+            const result = await metafields.getOne(42, 99_999);
 
             assertErr(result);
             expect(result.statusCode).toBe(404);
         });
     });
 
-    describe('getMetafields', () => {
-        describe('getMetafields — request headers', () => {
+    describe('get multiple metafields', () => {
+        describe('request headers', () => {
             beforeEach(() => {
                 mockTchef.mockResolvedValue(makePageResponse([], 1, 1));
             });
 
             it('sends the access token as X-Auth-Token', async () => {
-                await metafields.getMetafields(42);
+                await metafields.getMultiple(42);
 
                 expect(getCallHeaders(mockTchef, 0)['X-Auth-Token']).toBe('test-token');
             });
 
             it('sends Accept: application/json', async () => {
-                await metafields.getMetafields(42);
+                await metafields.getMultiple(42);
 
                 expect(getCallHeaders(mockTchef, 0).Accept).toBe('application/json');
             });
         });
 
-        describe('getMetafields — URL', () => {
+        describe('URL', () => {
             beforeEach(() => {
                 mockTchef.mockResolvedValue(makePageResponse([], 1, 1));
             });
 
             it('URL contains catalog/products/{productId}/metafields (no trailing id)', async () => {
-                await metafields.getMetafields(42);
+                await metafields.getMultiple(42);
 
                 expect(getCallUrl(mockTchef, 0).href).toContain('catalog/products/42/metafields');
                 expect(getCallUrl(mockTchef, 0).pathname).toMatch(/\/42\/metafields$/u);
             });
 
             it('appends namespace filter param when provided', async () => {
-                await metafields.getMetafields(42, { namespace: 'app' });
+                await metafields.getMultiple(42, { namespace: 'app' });
 
                 expect(getCallUrl(mockTchef, 0).searchParams.get('namespace')).toBe('app');
             });
 
             it('appends key filter param when provided', async () => {
-                await metafields.getMetafields(42, { key: 'my-key' });
+                await metafields.getMultiple(42, { key: 'my-key' });
 
                 expect(getCallUrl(mockTchef, 0).searchParams.get('key')).toBe('my-key');
             });
 
             it('appends resource_id:in filter param when provided', async () => {
-                await metafields.getMetafields(42, { 'resource_id:in': '1,2,3' });
+                await metafields.getMultiple(42, { 'resource_id:in': '1,2,3' });
 
                 expect(getCallUrl(mockTchef, 0).searchParams.get('resource_id:in')).toBe('1,2,3');
             });
 
             it('appends include_fields to the URL when provided', async () => {
-                await metafields.getMetafields(42, {
+                await metafields.getMultiple(42, {
                     include_fields: ['key', 'value'],
                 });
 
@@ -237,7 +237,7 @@ describe('ProductMetafields class', () => {
             });
 
             it('appends exclude_fields to the URL when provided', async () => {
-                await metafields.getMetafields(42, {
+                await metafields.getMultiple(42, {
                     exclude_fields: ['description'],
                 });
 
@@ -247,7 +247,7 @@ describe('ProductMetafields class', () => {
             });
 
             it('does not duplicate user-supplied page and limit in the query string', async () => {
-                await metafields.getMetafields(42, { limit: 25, page: 2 });
+                await metafields.getMultiple(42, { limit: 25, page: 2 });
 
                 const url = getCallUrl(mockTchef, 0);
 
@@ -256,13 +256,13 @@ describe('ProductMetafields class', () => {
             });
         });
 
-        describe('getMetafields — pagination', () => {
+        describe('pagination', () => {
             it('fetches a single page when total_pages is 1', async () => {
                 mockTchef.mockResolvedValue(
                     makePageResponse([mockMetafield, { ...mockMetafield, id: 2 }], 1, 1),
                 );
 
-                const result = await metafields.getMetafields(42);
+                const result = await metafields.getMultiple(42);
 
                 assertOk(result);
                 expect(result.data).toHaveLength(2);
@@ -275,7 +275,7 @@ describe('ProductMetafields class', () => {
                     .mockResolvedValueOnce(makePageResponse([{ id: 2 }], 2, 3))
                     .mockResolvedValueOnce(makePageResponse([{ id: 3 }], 3, 3));
 
-                const result = await metafields.getMetafields(42);
+                const result = await metafields.getMultiple(42);
 
                 assertOk(result);
                 expect(result.data).toHaveLength(3);
@@ -288,7 +288,7 @@ describe('ProductMetafields class', () => {
                     .mockResolvedValueOnce(makePageResponse([{ id: 2 }], 2, 3))
                     .mockResolvedValueOnce(makePageResponse([{ id: 3 }], 3, 3));
 
-                await metafields.getMetafields(42);
+                await metafields.getMultiple(42);
 
                 expect(getCallUrl(mockTchef, 0).searchParams.get('page')).toBe('1');
                 expect(getCallUrl(mockTchef, 1).searchParams.get('page')).toBe('2');
@@ -298,7 +298,7 @@ describe('ProductMetafields class', () => {
             it('fetches only the user-supplied page and stops', async () => {
                 mockTchef.mockResolvedValueOnce(makePageResponse([{ id: 2 }], 2, 3));
 
-                const result = await metafields.getMetafields(42, { limit: 50, page: 2 });
+                const result = await metafields.getMultiple(42, { limit: 50, page: 2 });
 
                 assertOk(result);
                 expect(result.data).toHaveLength(1);
@@ -316,7 +316,7 @@ describe('ProductMetafields class', () => {
                         statusCode: 401,
                     });
 
-                const result = await metafields.getMetafields(42);
+                const result = await metafields.getMultiple(42);
 
                 assertErr(result);
                 expect(result.statusCode).toBe(401);
@@ -324,13 +324,13 @@ describe('ProductMetafields class', () => {
             });
         });
 
-        describe('getMetafields — limit clamping', () => {
+        describe('limit clamping', () => {
             beforeEach(() => {
                 mockTchef.mockResolvedValue(makePageResponse([], 1, 1));
             });
 
             it(`uses ${PER_PAGE_DEFAULT} as the default when no limit is provided`, async () => {
-                await metafields.getMetafields(42);
+                await metafields.getMultiple(42);
 
                 expect(getCallUrl(mockTchef, 0).searchParams.get('limit')).toBe(
                     `${PER_PAGE_DEFAULT}`,
@@ -338,25 +338,25 @@ describe('ProductMetafields class', () => {
             });
 
             it(`clamps limit above ${PER_PAGE_MAX} down to ${PER_PAGE_MAX}`, async () => {
-                await metafields.getMetafields(42, { limit: 500 });
+                await metafields.getMultiple(42, { limit: 500 });
 
                 expect(getCallUrl(mockTchef, 0).searchParams.get('limit')).toBe(`${PER_PAGE_MAX}`);
             });
 
             it(`clamps limit below ${PER_PAGE_MIN} up to ${PER_PAGE_MIN}`, async () => {
-                await metafields.getMetafields(42, { limit: 1 });
+                await metafields.getMultiple(42, { limit: 1 });
 
                 expect(getCallUrl(mockTchef, 0).searchParams.get('limit')).toBe(`${PER_PAGE_MIN}`);
             });
 
             it('passes through a limit within the valid range unchanged', async () => {
-                await metafields.getMetafields(42, { limit: 100 });
+                await metafields.getMultiple(42, { limit: 100 });
 
                 expect(getCallUrl(mockTchef, 0).searchParams.get('limit')).toBe('100');
             });
 
             it(`requests page=${DEFAULT_START_PAGE} when no page is provided`, async () => {
-                await metafields.getMetafields(42);
+                await metafields.getMultiple(42);
 
                 expect(getCallUrl(mockTchef, 0).searchParams.get('page')).toBe(
                     `${DEFAULT_START_PAGE}`,
@@ -366,7 +366,7 @@ describe('ProductMetafields class', () => {
     });
 
     // oxlint-disable-next-line max-statements
-    describe('createMetafield', () => {
+    describe('create metafield', () => {
         const minPayload = {
             key: 'my-key',
             namespace: 'my-namespace',
@@ -379,7 +379,7 @@ describe('ProductMetafields class', () => {
         });
 
         it('returns a 400 error without calling the API when productId is invalid', async () => {
-            const result = await metafields.createMetafield(0, minPayload);
+            const result = await metafields.create(0, minPayload);
 
             assertErr(result);
             expect(result.statusCode).toBe(400);
@@ -388,7 +388,7 @@ describe('ProductMetafields class', () => {
         });
 
         it('returns a 400 error when namespace is missing', async () => {
-            const result = await metafields.createMetafield(42, {
+            const result = await metafields.create(42, {
                 ...minPayload,
                 namespace: '',
             });
@@ -399,7 +399,7 @@ describe('ProductMetafields class', () => {
         });
 
         it('returns a 400 error when key is missing', async () => {
-            const result = await metafields.createMetafield(42, {
+            const result = await metafields.create(42, {
                 ...minPayload,
                 key: '',
             });
@@ -410,7 +410,7 @@ describe('ProductMetafields class', () => {
         });
 
         it('returns a 400 error when value is missing', async () => {
-            const result = await metafields.createMetafield(42, {
+            const result = await metafields.create(42, {
                 ...minPayload,
                 value: '',
             });
@@ -421,7 +421,7 @@ describe('ProductMetafields class', () => {
         });
 
         it('returns a 400 error when permission_set is missing', async () => {
-            const result = await metafields.createMetafield(42, {
+            const result = await metafields.create(42, {
                 ...minPayload,
                 // @ts-expect-error intentionally omitting required field
                 permission_set: '',
@@ -433,7 +433,7 @@ describe('ProductMetafields class', () => {
         });
 
         it('returns a 400 error when key exceeds 64 characters', async () => {
-            const result = await metafields.createMetafield(42, {
+            const result = await metafields.create(42, {
                 ...minPayload,
                 key: 'k'.repeat(65),
             });
@@ -445,7 +445,7 @@ describe('ProductMetafields class', () => {
         });
 
         it('accepts a key of exactly 64 characters', async () => {
-            const result = await metafields.createMetafield(42, {
+            const result = await metafields.create(42, {
                 ...minPayload,
                 key: 'k'.repeat(64),
             });
@@ -455,7 +455,7 @@ describe('ProductMetafields class', () => {
         });
 
         it('returns a 400 error when value exceeds 65535 characters', async () => {
-            const result = await metafields.createMetafield(42, {
+            const result = await metafields.create(42, {
                 ...minPayload,
                 value: 'v'.repeat(65_536),
             });
@@ -467,7 +467,7 @@ describe('ProductMetafields class', () => {
         });
 
         it('accepts a value of exactly 65535 characters', async () => {
-            const result = await metafields.createMetafield(42, {
+            const result = await metafields.create(42, {
                 ...minPayload,
                 value: 'v'.repeat(65_535),
             });
@@ -477,7 +477,7 @@ describe('ProductMetafields class', () => {
         });
 
         it('returns a 400 error when namespace exceeds 64 characters', async () => {
-            const result = await metafields.createMetafield(42, {
+            const result = await metafields.create(42, {
                 ...minPayload,
                 namespace: 'n'.repeat(65),
             });
@@ -489,7 +489,7 @@ describe('ProductMetafields class', () => {
         });
 
         it('returns a 400 error when description exceeds 255 characters', async () => {
-            const result = await metafields.createMetafield(42, {
+            const result = await metafields.create(42, {
                 ...minPayload,
                 description: 'd'.repeat(256),
             });
@@ -501,7 +501,7 @@ describe('ProductMetafields class', () => {
         });
 
         it('accepts a description of exactly 255 characters', async () => {
-            const result = await metafields.createMetafield(42, {
+            const result = await metafields.create(42, {
                 ...minPayload,
                 description: 'd'.repeat(255),
             });
@@ -511,43 +511,43 @@ describe('ProductMetafields class', () => {
         });
 
         it('makes exactly one HTTP call', async () => {
-            await metafields.createMetafield(42, minPayload);
+            await metafields.create(42, minPayload);
 
             expect(mockTchef).toHaveBeenCalledOnce();
         });
 
         it('uses the POST method', async () => {
-            await metafields.createMetafield(42, minPayload);
+            await metafields.create(42, minPayload);
 
             expect(getCallOptions(mockTchef, 0).method).toBe('POST');
         });
 
         it('targets catalog/products/{productId}/metafields', async () => {
-            await metafields.createMetafield(42, minPayload);
+            await metafields.create(42, minPayload);
 
             expect(getCallUrl(mockTchef, 0).pathname).toMatch(/\/42\/metafields$/u);
         });
 
         it('sends X-Auth-Token header', async () => {
-            await metafields.createMetafield(42, minPayload);
+            await metafields.create(42, minPayload);
 
             expect(getCallHeaders(mockTchef, 0)['X-Auth-Token']).toBe('test-token');
         });
 
         it('sends Content-Type: application/json header', async () => {
-            await metafields.createMetafield(42, minPayload);
+            await metafields.create(42, minPayload);
 
             expect(getCallHeaders(mockTchef, 0)['Content-type']).toBe('application/json');
         });
 
         it('sends Accept: application/json header', async () => {
-            await metafields.createMetafield(42, minPayload);
+            await metafields.create(42, minPayload);
 
             expect(getCallHeaders(mockTchef, 0).Accept).toBe('application/json');
         });
 
         it('serializes the payload as a JSON string in the body', async () => {
-            await metafields.createMetafield(42, minPayload);
+            await metafields.create(42, minPayload);
 
             const { body } = getCallOptions(mockTchef, 0);
 
@@ -556,7 +556,7 @@ describe('ProductMetafields class', () => {
         });
 
         it('unwraps the response envelope and returns data.data', async () => {
-            const result = await metafields.createMetafield(42, minPayload);
+            const result = await metafields.create(42, minPayload);
 
             assertOk(result);
             expect(result.data).toStrictEqual(mockMetafield);
@@ -569,20 +569,20 @@ describe('ProductMetafields class', () => {
                 statusCode: 422,
             });
 
-            const result = await metafields.createMetafield(42, minPayload);
+            const result = await metafields.create(42, minPayload);
 
             assertErr(result);
             expect(result.statusCode).toBe(422);
         });
     });
 
-    describe('updateMetafield', () => {
+    describe('update metafield', () => {
         beforeEach(() => {
             mockTchef.mockResolvedValue(mockMetafieldEnvelope);
         });
 
         it('returns a 400 error without calling the API when productId is invalid', async () => {
-            const result = await metafields.updateMetafield(0, 7, {});
+            const result = await metafields.update(0, 7, {});
 
             assertErr(result);
             expect(result.statusCode).toBe(400);
@@ -591,7 +591,7 @@ describe('ProductMetafields class', () => {
         });
 
         it('returns a 400 error without calling the API when metafieldId is invalid', async () => {
-            const result = await metafields.updateMetafield(42, 0, {});
+            const result = await metafields.update(42, 0, {});
 
             assertErr(result);
             expect(result.statusCode).toBe(400);
@@ -600,7 +600,7 @@ describe('ProductMetafields class', () => {
         });
 
         it('returns a 400 error without calling the API when productId is a non-integer', async () => {
-            const result = await metafields.updateMetafield(1.5, 7, {});
+            const result = await metafields.update(1.5, 7, {});
 
             assertErr(result);
             expect(result.statusCode).toBe(400);
@@ -608,7 +608,7 @@ describe('ProductMetafields class', () => {
         });
 
         it('returns a 400 error without calling the API when metafieldId is a non-integer', async () => {
-            const result = await metafields.updateMetafield(42, 1.5, {});
+            const result = await metafields.update(42, 1.5, {});
 
             assertErr(result);
             expect(result.statusCode).toBe(400);
@@ -616,14 +616,14 @@ describe('ProductMetafields class', () => {
         });
 
         it('accepts an empty partial payload without error', async () => {
-            const result = await metafields.updateMetafield(42, 7, {});
+            const result = await metafields.update(42, 7, {});
 
             assertOk(result);
             expect(mockTchef).toHaveBeenCalledOnce();
         });
 
         it('returns a 400 error when key is an empty string', async () => {
-            const result = await metafields.updateMetafield(42, 7, { key: '' });
+            const result = await metafields.update(42, 7, { key: '' });
 
             assertErr(result);
             expect(result.statusCode).toBe(400);
@@ -632,7 +632,7 @@ describe('ProductMetafields class', () => {
         });
 
         it('returns a 400 error when value is an empty string', async () => {
-            const result = await metafields.updateMetafield(42, 7, { value: '' });
+            const result = await metafields.update(42, 7, { value: '' });
 
             assertErr(result);
             expect(result.statusCode).toBe(400);
@@ -641,7 +641,7 @@ describe('ProductMetafields class', () => {
         });
 
         it('returns a 400 error when namespace is an empty string', async () => {
-            const result = await metafields.updateMetafield(42, 7, { namespace: '' });
+            const result = await metafields.update(42, 7, { namespace: '' });
 
             assertErr(result);
             expect(result.statusCode).toBe(400);
@@ -650,7 +650,7 @@ describe('ProductMetafields class', () => {
         });
 
         it('returns a 400 error when namespace exceeds 64 characters', async () => {
-            const result = await metafields.updateMetafield(42, 7, {
+            const result = await metafields.update(42, 7, {
                 namespace: 'n'.repeat(65),
             });
 
@@ -661,7 +661,7 @@ describe('ProductMetafields class', () => {
         });
 
         it('returns a 400 error when key exceeds 64 characters', async () => {
-            const result = await metafields.updateMetafield(42, 7, { key: 'k'.repeat(65) });
+            const result = await metafields.update(42, 7, { key: 'k'.repeat(65) });
 
             assertErr(result);
             expect(result.statusCode).toBe(400);
@@ -670,7 +670,7 @@ describe('ProductMetafields class', () => {
         });
 
         it('returns a 400 error when value exceeds 65535 characters', async () => {
-            const result = await metafields.updateMetafield(42, 7, {
+            const result = await metafields.update(42, 7, {
                 value: 'v'.repeat(65_536),
             });
 
@@ -681,7 +681,7 @@ describe('ProductMetafields class', () => {
         });
 
         it('returns a 400 error when description exceeds 255 characters', async () => {
-            const result = await metafields.updateMetafield(42, 7, {
+            const result = await metafields.update(42, 7, {
                 description: 'd'.repeat(256),
             });
 
@@ -692,31 +692,31 @@ describe('ProductMetafields class', () => {
         });
 
         it('uses the PUT method', async () => {
-            await metafields.updateMetafield(42, 7, {});
+            await metafields.update(42, 7, {});
 
             expect(getCallOptions(mockTchef, 0).method).toBe('PUT');
         });
 
         it('includes productId and metafieldId in the URL path', async () => {
-            await metafields.updateMetafield(42, 7, {});
+            await metafields.update(42, 7, {});
 
             expect(getCallUrl(mockTchef, 0).href).toContain('catalog/products/42/metafields/7');
         });
 
         it('sends X-Auth-Token header', async () => {
-            await metafields.updateMetafield(42, 7, {});
+            await metafields.update(42, 7, {});
 
             expect(getCallHeaders(mockTchef, 0)['X-Auth-Token']).toBe('test-token');
         });
 
         it('sends Content-Type: application/json header', async () => {
-            await metafields.updateMetafield(42, 7, {});
+            await metafields.update(42, 7, {});
 
             expect(getCallHeaders(mockTchef, 0)['Content-type']).toBe('application/json');
         });
 
         it('sends Accept: application/json header', async () => {
-            await metafields.updateMetafield(42, 7, {});
+            await metafields.update(42, 7, {});
 
             expect(getCallHeaders(mockTchef, 0).Accept).toBe('application/json');
         });
@@ -724,7 +724,7 @@ describe('ProductMetafields class', () => {
         it('serializes the payload as a JSON string in the body', async () => {
             const payload = { value: 'new-value' };
 
-            await metafields.updateMetafield(42, 7, payload);
+            await metafields.update(42, 7, payload);
 
             const { body } = getCallOptions(mockTchef, 0);
 
@@ -733,7 +733,7 @@ describe('ProductMetafields class', () => {
         });
 
         it('unwraps the response envelope and returns data.data', async () => {
-            const result = await metafields.updateMetafield(42, 7, {});
+            const result = await metafields.update(42, 7, {});
 
             assertOk(result);
             expect(result.data).toStrictEqual(mockMetafield);
@@ -746,20 +746,20 @@ describe('ProductMetafields class', () => {
                 statusCode: 404,
             });
 
-            const result = await metafields.updateMetafield(42, 99_999, {});
+            const result = await metafields.update(42, 99_999, {});
 
             assertErr(result);
             expect(result.statusCode).toBe(404);
         });
     });
 
-    describe('deleteMetafield', () => {
+    describe('delete metafield', () => {
         beforeEach(() => {
             mockTchef.mockResolvedValue({ data: '', ok: true });
         });
 
         it('returns a 400 error without calling the API when productId is 0', async () => {
-            const result = await metafields.deleteMetafield(0, 7);
+            const result = await metafields.remove(0, 7);
 
             assertErr(result);
             expect(result.statusCode).toBe(400);
@@ -768,7 +768,7 @@ describe('ProductMetafields class', () => {
         });
 
         it('returns a 400 error without calling the API when productId is a non-integer', async () => {
-            const result = await metafields.deleteMetafield(1.5, 7);
+            const result = await metafields.remove(1.5, 7);
 
             assertErr(result);
             expect(result.statusCode).toBe(400);
@@ -776,7 +776,7 @@ describe('ProductMetafields class', () => {
         });
 
         it('returns a 400 error without calling the API when metafieldId is 0', async () => {
-            const result = await metafields.deleteMetafield(42, 0);
+            const result = await metafields.remove(42, 0);
 
             assertErr(result);
             expect(result.statusCode).toBe(400);
@@ -785,7 +785,7 @@ describe('ProductMetafields class', () => {
         });
 
         it('returns a 400 error without calling the API when metafieldId is a non-integer', async () => {
-            const result = await metafields.deleteMetafield(42, 1.5);
+            const result = await metafields.remove(42, 1.5);
 
             assertErr(result);
             expect(result.statusCode).toBe(400);
@@ -793,37 +793,37 @@ describe('ProductMetafields class', () => {
         });
 
         it('makes exactly one HTTP call', async () => {
-            await metafields.deleteMetafield(42, 7);
+            await metafields.remove(42, 7);
 
             expect(mockTchef).toHaveBeenCalledOnce();
         });
 
         it('uses the DELETE method', async () => {
-            await metafields.deleteMetafield(42, 7);
+            await metafields.remove(42, 7);
 
             expect(getCallOptions(mockTchef, 0).method).toBe('DELETE');
         });
 
         it('includes productId and metafieldId in the URL path', async () => {
-            await metafields.deleteMetafield(42, 7);
+            await metafields.remove(42, 7);
 
             expect(getCallUrl(mockTchef, 0).href).toContain('catalog/products/42/metafields/7');
         });
 
         it('sends the access token as X-Auth-Token', async () => {
-            await metafields.deleteMetafield(42, 7);
+            await metafields.remove(42, 7);
 
             expect(getCallHeaders(mockTchef, 0)['X-Auth-Token']).toBe('test-token');
         });
 
         it('uses responseFormat: text to handle the empty 204 body', async () => {
-            await metafields.deleteMetafield(42, 7);
+            await metafields.remove(42, 7);
 
             expect(getCallOptions(mockTchef, 0).responseFormat).toBe('text');
         });
 
         it('returns { ok: true, data: null } on success', async () => {
-            const result = await metafields.deleteMetafield(42, 7);
+            const result = await metafields.remove(42, 7);
 
             expect(result).toStrictEqual({ data: null, ok: true });
         });
@@ -835,7 +835,7 @@ describe('ProductMetafields class', () => {
                 statusCode: 404,
             });
 
-            const result = await metafields.deleteMetafield(42, 99_999);
+            const result = await metafields.remove(42, 99_999);
 
             assertErr(result);
             expect(result.statusCode).toBe(404);

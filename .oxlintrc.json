@@ -27,6 +27,7 @@
         "eslint/func-style": ["warn", "declaration", { "allowArrowFunctions": true }],
         "eslint/id-length": "off",
         "eslint/init-declarations": "off",
+        "eslint/max-lines": ["warn", { "max": 600, "skipBlankLines": true, "skipComments": true }],
         "eslint/max-lines-per-function": ["warn", { "max": 100 }],
         "eslint/max-params": ["warn", { "max": 4 }],
         "eslint/max-statements": ["warn", { "max": 24 }],

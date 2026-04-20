@@ -1,5 +1,3 @@
-// oxlint-disable max-lines
-
 import {
     buildQueryString,
     clampPerPageLimits,
@@ -11,6 +9,7 @@ import {
     validatePositiveIntegers,
 } from '@/v3Api/utils.ts';
 
+import ProductBulkPricingRules from './ProductBulkPricingRules';
 import ProductImages from './ProductImages';
 import ProductMetafields from './ProductMetafields';
 
@@ -41,11 +40,11 @@ import type {
  * {@link ApiResult}, which is either `{ data: T; ok: true; }` on success or `{ error: string; ok: false; statusCode: number }` on failure.
  *
  * Public methods:
- * - {@link ProductsV3.createProduct} — `POST` a new product.
- * - {@link ProductsV3.getProducts} — paginated list, auto-collects every page, or single page if `query.page` is supplied.
- * - {@link ProductsV3.getProduct} — fetch a single product by id.
- * - {@link ProductsV3.updateProduct} — `PUT` an existing product.
- * - {@link ProductsV3.deleteProduct} — `DELETE` a product by id.
+ * - {@link ProductsV3.create} — `POST` a new product.
+ * - {@link ProductsV3.getMultiple} — paginated list, auto-collects every page, or single page if `query.page` is supplied.
+ * - {@link ProductsV3.getOne} — fetch a single product by id.
+ * - {@link ProductsV3.update} — `PUT` an existing product.
+ * - {@link ProductsV3.remove} — `DELETE` a product by id.
  */
 export default class ProductsV3 {
     private accessToken: string;
@@ -94,14 +93,14 @@ export default class ProductsV3 {
      * @param options Query options — `include_fields` narrows the returned fields.
      * @returns {ApiResult<BaseProduct>} The created product with only the requested fields, or an error result.
      */
-    public async createProduct<F extends readonly NoIdProductField[]>(
+    public async create<F extends readonly NoIdProductField[]>(
         productData: CreateProductPayload,
         options: { include_fields: F },
     ): ApiResult<CreateProductReturnType<F>>;
 
-    public async createProduct(productData: CreateProductPayload): ApiResult<BaseProduct>;
+    public async create(productData: CreateProductPayload): ApiResult<BaseProduct>;
 
-    public async createProduct(
+    public async create(
         productData: CreateProductPayload,
         options?: { include_fields?: readonly NoIdProductField[] },
     ): ApiResult<BaseProduct> {
@@ -136,7 +135,7 @@ export default class ProductsV3 {
      * @param options.exclude_fields - An array of top-level product fields to exclude from the response. For example, `['description', 'weight']` will return all fields except `description` and `weight` for each product. Mutually exclusive with `include_fields`.
      * @returns {ApiResult<BaseProduct[]>} The collected products or an error result.
      */
-    public async getProducts<
+    public async getMultiple<
         T extends ProductIncludes = NoProductIncludes,
         F extends readonly NoIdProductField[] = readonly NoIdProductField[],
     >(
@@ -148,7 +147,7 @@ export default class ProductsV3 {
         },
     ): ApiResult<ProductWithFields<F, T>[]>;
 
-    public async getProducts<
+    public async getMultiple<
         T extends ProductIncludes = NoProductIncludes,
         E extends readonly NoIdProductField[] = readonly NoIdProductField[],
     >(
@@ -159,13 +158,13 @@ export default class ProductsV3 {
         },
     ): ApiResult<ProductWithoutFields<E, T>[]>;
 
-    public async getProducts<T extends ProductIncludes = NoProductIncludes>(
+    public async getMultiple<T extends ProductIncludes = NoProductIncludes>(
         options?: ApiProductQueryBase & {
             includes?: T & ProductIncludes;
         },
     ): ApiResult<(BaseProduct & IncludeExpansion<T>)[]>;
 
-    public async getProducts(
+    public async getMultiple(
         options?: ApiProductQueryBase & {
             includes?: ProductIncludes;
             include_fields?: readonly NoIdProductField[];
@@ -199,7 +198,7 @@ export default class ProductsV3 {
      * @param options.exclude_fields - An array of top-level product fields to exclude from the response. For example, `['description', 'weight']` will return all fields except `description` and `weight` for the product. Mutually exclusive with `include_fields`.
      * @returns {ApiResult<BaseProduct>} The product or an error result.
      */
-    public async getProduct<
+    public async getOne<
         T extends ProductIncludes = NoProductIncludes,
         F extends readonly NoIdProductField[] = readonly NoIdProductField[],
     >(
@@ -211,7 +210,7 @@ export default class ProductsV3 {
         },
     ): ApiResult<ProductWithFields<F, T>>;
 
-    public async getProduct<
+    public async getOne<
         T extends ProductIncludes = NoProductIncludes,
         E extends readonly NoIdProductField[] = readonly NoIdProductField[],
     >(
@@ -223,14 +222,14 @@ export default class ProductsV3 {
         },
     ): ApiResult<ProductWithoutFields<E, T>>;
 
-    public async getProduct<T extends ProductIncludes = NoProductIncludes>(
+    public async getOne<T extends ProductIncludes = NoProductIncludes>(
         productId: number,
         options?: ApiGetProductQueryBase & {
             includes?: T & ProductIncludes;
         },
     ): ApiResult<BaseProduct & IncludeExpansion<T>>;
 
-    public async getProduct(
+    public async getOne(
         productId: number,
         options?: ApiProductQueryBase & {
             includes?: ProductIncludes;
@@ -265,7 +264,7 @@ export default class ProductsV3 {
      * @param options.include_fields - An array of top-level product fields to include in the response. For example, `['name', 'price']` will return only the `id`, `name`, and `price` fields for the product. Ignored if not supplied, in which case all fields are returned.
      * @returns {ApiResult<BaseProduct>} The updated product or an error result.
      */
-    public async updateProduct<
+    public async update<
         T extends ProductIncludes = NoProductIncludes,
         F extends readonly NoIdProductField[] = readonly NoIdProductField[],
     >(
@@ -277,7 +276,7 @@ export default class ProductsV3 {
         },
     ): ApiResult<ProductWithFields<F, T>>;
 
-    public async updateProduct<T extends ProductIncludes = NoProductIncludes>(
+    public async update<T extends ProductIncludes = NoProductIncludes>(
         productId: number,
         payload: UpdateProductPayload,
         options?: {
@@ -285,7 +284,7 @@ export default class ProductsV3 {
         },
     ): ApiResult<BaseProduct & IncludeExpansion<T>>;
 
-    public async updateProduct(
+    public async update(
         productId: number,
         payload: UpdateProductPayload,
         options?: {
@@ -323,7 +322,7 @@ export default class ProductsV3 {
      * @param productId Product ID.
      * @returns {ApiResult<null>} `null` on success or an error result.
      */
-    public async deleteProduct(productId: number): ApiResult<null> {
+    public async remove(productId: number): ApiResult<null> {
         const idValidOrErrorMsg = validatePositiveIntegers({ productId });
 
         if (idValidOrErrorMsg !== true) {
@@ -340,11 +339,19 @@ export default class ProductsV3 {
     /* -------------------------------------------------------------------------- */
 
     /**
+     * Returns an instance of the {@link ProductBulkPricingRules} class to manage product bulk pricing rules, which are accessed via the `/catalog/products/{product_id}/bulk-pricing-rules` endpoint.
+     * @returns {ProductBulkPricingRules} An instance of the ProductBulkPricingRules class.
+     */
+    public bulkPricingRules(): ProductBulkPricingRules {
+        return new ProductBulkPricingRules(this.accessToken, this.apiUrl, this.options);
+    }
+
+    /**
      * Returns an instance of the {@link ProductImages} class to manage product images, which are accessed via the `/catalog/products/{product_id}/images` endpoint.
      * @returns {ProductImages} An instance of the ProductImages class.
      */
     public images(): ProductImages {
-        return new ProductImages(this.accessToken, this.apiUrl);
+        return new ProductImages(this.accessToken, this.apiUrl, this.options);
     }
 
     /**
@@ -352,7 +359,7 @@ export default class ProductsV3 {
      * @returns {ProductMetafields} An instance of the ProductMetafields class.
      */
     public metafields(): ProductMetafields {
-        return new ProductMetafields(this.accessToken, this.apiUrl);
+        return new ProductMetafields(this.accessToken, this.apiUrl, this.options);
     }
 
     /* -------------------------------------------------------------------------- */

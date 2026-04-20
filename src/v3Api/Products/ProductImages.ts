@@ -1,5 +1,3 @@
-// oxlint-disable max-lines
-
 import {
     buildQueryString,
     clampPerPageLimits,
@@ -27,11 +25,11 @@ import type {
  * All methods return a {@link ApiResult}, which is either `{ data: T; ok: true; }` on success or `{ error: string; ok: false; statusCode: number }` on failure.
  *
  * Public methods:
- * - {@link ProductImages#createImage}: Create a new product image, either by uploading a file or by providing an image URL.
- * - {@link ProductImages#getImages}: Fetch all images for a product, with pagination support.
- * - {@link ProductImages#getImage}: Fetch a single product image by ID.
- * - {@link ProductImages#updateImage}: Update an existing product image's data.
- * - {@link ProductImages#deleteImage}: Delete a product image by ID.
+ * - {@link ProductImages#create}: Create a new product image, either by uploading a file or by providing an image URL.
+ * - {@link ProductImages#getMultiple}: Fetch all images for a product, with pagination support.
+ * - {@link ProductImages#getOne}: Fetch a single product image by ID.
+ * - {@link ProductImages#update}: Update an existing product image's data.
+ * - {@link ProductImages#remove}: Delete a product image by ID.
  */
 export default class ProductImages {
     private accessToken: string;
@@ -68,7 +66,7 @@ export default class ProductImages {
      * @param imageData The data for the new product image, either as a file upload or an image URL, along with optional fields like `is_thumbnail`, `sort_order`, and `description`.
      * @returns {ApiResult<ProductImage>} The created product image or an error result.
      */
-    public async createImage(
+    public async create(
         productId: number,
         imageData: ProductImagePayloadItem,
     ): ApiResult<ProductImage> {
@@ -130,22 +128,22 @@ export default class ProductImages {
      * @param options.exclude_fields - An array of top-level product image fields to exclude from the response. For example, `['url_standard', 'url_zoom']` will return all fields except `url_standard` and `url_zoom` for each product image. Mutually exclusive with `include_fields`.
      * @returns {ApiResult<ProductImage[]>} An array of product images or an error result.
      */
-    public async getImages<I extends readonly BaseProductImageField[]>(
+    public async getMultiple<I extends readonly BaseProductImageField[]>(
         productId: number,
         options: ApiImageQueryBase & { include_fields: I; exclude_fields?: never },
     ): ApiResult<Pick<ProductImage, 'id' | I[number]>[]>;
 
-    public async getImages<E extends readonly BaseProductImageField[]>(
+    public async getMultiple<E extends readonly BaseProductImageField[]>(
         productId: number,
         options: ApiImageQueryBase & { include_fields?: never; exclude_fields: E },
     ): ApiResult<Omit<ProductImage, E[number]>[]>;
 
-    public async getImages(
+    public async getMultiple(
         productId: number,
         options?: ApiImageQueryBase,
     ): ApiResult<ProductImage[]>;
 
-    public async getImages(
+    public async getMultiple(
         productId: number,
         options?: ApiImageQueryBase & {
             include_fields?: readonly BaseProductImageField[];
@@ -183,25 +181,25 @@ export default class ProductImages {
      * @param options.exclude_fields - An array of top-level product image fields to exclude from the response. For example, `['url_standard', 'url_zoom']` will return all fields except `url_standard` and `url_zoom` for the product image. Mutually exclusive with `include_fields`.
      * @returns {ApiResult<ProductImage>} The requested product image or an error result.
      */
-    public async getImage<I extends readonly BaseProductImageField[]>(
+    public async getOne<I extends readonly BaseProductImageField[]>(
         productId: number,
         imageId: number,
         options: { include_fields: I; exclude_fields?: never },
     ): ApiResult<Pick<ProductImage, 'id' | I[number]>>;
 
-    public async getImage<E extends readonly BaseProductImageField[]>(
+    public async getOne<E extends readonly BaseProductImageField[]>(
         productId: number,
         imageId: number,
         options: { include_fields?: never; exclude_fields: E },
     ): ApiResult<Omit<ProductImage, E[number]>>;
 
-    public async getImage(
+    public async getOne(
         productId: number,
         imageId: number,
         options?: undefined,
     ): ApiResult<ProductImage>;
 
-    public async getImage(
+    public async getOne(
         productId: number,
         imageId: number,
         options?: {
@@ -230,7 +228,7 @@ export default class ProductImages {
      * @param imageData The data to update for the product image, either as a file upload or an image URL, along with optional fields like `is_thumbnail`, `sort_order`, and `description`.
      * @returns {ApiResult<ProductImage>} The updated product image or an error result.
      */
-    public async updateImage(
+    public async update(
         productId: number,
         imageId: number,
         imageData: ProductImageUpdatePayload,
@@ -287,7 +285,7 @@ export default class ProductImages {
      * @param imageId ID of the image to delete.
      * @returns {ApiResult<null>} An empty result on success or an error result.
      */
-    public async deleteImage(productId: number, imageId: number): ApiResult<null> {
+    public async remove(productId: number, imageId: number): ApiResult<null> {
         const idsValidOrErrorMsg = validatePositiveIntegers({ imageId, productId });
 
         if (idsValidOrErrorMsg !== true) {

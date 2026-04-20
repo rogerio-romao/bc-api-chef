@@ -6,4 +6,5 @@ export interface ProductBulkPricingRule {
     amount: number | string;
 }
 
-export type ProductBulkPricingRulesPayload = Omit<ProductBulkPricingRule, 'id'>[];
+export type NoIdProductBulkPricingRule = Omit<ProductBulkPricingRule, 'id'>;
+export type ProductBulkPricingRuleField = keyof NoIdProductBulkPricingRule;

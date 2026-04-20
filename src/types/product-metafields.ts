@@ -1,4 +1,4 @@
-import type { BcRequestResponseMeta, FieldSelectionOptions } from './api-types';
+import type { FieldSelectionOptions } from './api-types';
 
 export type PermissionSet =
     | 'app_only'
@@ -33,11 +33,6 @@ export interface ProductMetafield {
 }
 
 export type BaseMetafieldField = keyof Omit<ProductMetafield, 'id'>;
-
-export interface BcGetMetafieldsResponse {
-    data: ProductMetafield[];
-    meta: BcRequestResponseMeta;
-}
 
 export interface ApiMetafieldQueryBase {
     page?: number;
@@ -90,8 +85,4 @@ export interface CreateMetafieldPayload {
     permission_set: PermissionSet;
     description?: string;
     resource_type?: ResourceType;
-}
-
-export interface CreateMetafieldResponse {
-    data: ProductMetafield;
 }

@@ -1,4 +1,4 @@
-import type { BcRequestResponseMeta, FieldSelectionOptions, Prettify } from './api-types';
+import type { FieldSelectionOptions, Prettify } from './api-types';
 
 export interface ProductImage {
     id: number;
@@ -33,11 +33,6 @@ export type ProductImageUpdatePayload =
     | (ProductImagePayloadCommon & { image_file?: never; image_url?: never });
 
 export type ProductImagePayload = ProductImagePayloadItem[];
-
-export interface BcGetProductImagesResponse {
-    data: ProductImage[];
-    meta: BcRequestResponseMeta;
-}
 
 export interface ApiImageQueryBase {
     page?: number;

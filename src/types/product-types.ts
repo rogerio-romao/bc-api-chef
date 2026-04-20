@@ -1,8 +1,7 @@
-// oxlint-disable max-lines
-import type { BcRequestResponseMeta, FieldSelectionOptions, SortDirection } from './api-types.ts';
+import type { FieldSelectionOptions, SortDirection } from './api-types.ts';
 import type {
+    NoIdProductBulkPricingRule,
     ProductBulkPricingRule,
-    ProductBulkPricingRulesPayload,
 } from './product-bulk-pricing-rules.ts';
 import type { ProductCustomField } from './product-custom-fields.ts';
 import type { ProductImage, ProductImagePayload } from './product-images.ts';
@@ -118,10 +117,6 @@ export type ProductSortField =
     | 'is_visible'
     | 'total_sold';
 
-export type GetProductsOptions = ApiProductQuery & {
-    includes?: ProductIncludes;
-};
-
 /**
  * Defines which sub-resources to include in product responses. Each key corresponds to an optional sub-resource array on the response product type.
  * Note: include_fields (which controls which base product fields are returned) is intentionally not modelled here.
@@ -216,15 +211,6 @@ type ProductFieldSelectionOptions = FieldSelectionOptions<NoIdProductField>;
 /** {@link ApiProductQueryBase} plus mutually-exclusive field-selection options. */
 export type ApiProductQuery = ApiProductQueryBase & ProductFieldSelectionOptions;
 
-export interface BcGetProductResponse {
-    data: FullProduct;
-}
-
-export interface BcGetProductsResponse {
-    data: FullProduct[];
-    meta: BcRequestResponseMeta;
-}
-
 type ServerComputedProductFields =
     | 'id'
     | 'calculated_price'
@@ -273,14 +259,10 @@ export type ProductWithoutFields<
 export type CreateProductPayload = Pick<BaseProduct, RequiredCreateProductFields> &
     Partial<Omit<BaseProduct, ServerComputedProductFields | RequiredCreateProductFields>> & {
         custom_fields?: ProductCustomFieldsPayload;
-        bulk_pricing_rules?: ProductBulkPricingRulesPayload;
+        bulk_pricing_rules?: NoIdProductBulkPricingRule[];
         images?: ProductImagePayload;
         videos?: ProductVideoPayload;
     };
-
-export interface BcCreateProductResponse {
-    data: BaseProduct;
-}
 
 /**
  * Payload for PUT /v3/catalog/products/{productId}.
@@ -288,11 +270,7 @@ export interface BcCreateProductResponse {
  */
 export type UpdateProductPayload = Partial<Omit<BaseProduct, ServerComputedProductFields>> & {
     custom_fields?: ProductCustomFieldsPayload;
-    bulk_pricing_rules?: ProductBulkPricingRulesPayload;
+    bulk_pricing_rules?: NoIdProductBulkPricingRule[];
     images?: ProductImagePayload;
     videos?: ProductVideoPayload;
 };
-
-export interface BcUpdateProductResponse {
-    data: BaseProduct;
-}

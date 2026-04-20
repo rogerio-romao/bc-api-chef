@@ -36,7 +36,7 @@ describe('ProductsV3 class', () => {
         );
     });
 
-    describe('getProduct', () => {
+    describe('get product', () => {
         beforeEach(() => {
             mockTchef.mockResolvedValue({
                 data: { data: { id: 42, name: 'Widget' } },
@@ -45,7 +45,7 @@ describe('ProductsV3 class', () => {
         });
 
         it('returns a 400 error without calling the API when productId is not a positive integer', async () => {
-            const result = await products.getProduct(0);
+            const result = await products.getOne(0);
 
             assertErr(result);
             expect(result.statusCode).toBe(400);
@@ -54,7 +54,7 @@ describe('ProductsV3 class', () => {
         });
 
         it('returns a 400 error without calling the API when productId is negative', async () => {
-            const result = await products.getProduct(-1);
+            const result = await products.getOne(-1);
 
             assertErr(result);
             expect(result.statusCode).toBe(400);
@@ -63,31 +63,31 @@ describe('ProductsV3 class', () => {
         });
 
         it('makes exactly one HTTP call', async () => {
-            await products.getProduct(42);
+            await products.getOne(42);
 
             expect(mockTchef).toHaveBeenCalledOnce();
         });
 
         it('includes the product ID in the URL path', async () => {
-            await products.getProduct(42);
+            await products.getOne(42);
 
             expect(getCallUrl(mockTchef, 0).href).toContain('catalog/products/42');
         });
 
         it('sends the access token as X-Auth-Token', async () => {
-            await products.getProduct(42);
+            await products.getOne(42);
 
             expect(getCallHeaders(mockTchef, 0)['X-Auth-Token']).toBe('test-token');
         });
 
         it('appends includes to the URL', async () => {
-            await products.getProduct(42, { includes: { variants: true } });
+            await products.getOne(42, { includes: { variants: true } });
 
             expect(getCallUrl(mockTchef, 0).searchParams.get('include')).toBe('variants');
         });
 
         it('uses the GET method (or default)', async () => {
-            await products.getProduct(42);
+            await products.getOne(42);
 
             const { method } = getCallOptions(mockTchef, 0);
 
@@ -101,37 +101,37 @@ describe('ProductsV3 class', () => {
                 statusCode: 404,
             });
 
-            const result = await products.getProduct(99_999);
+            const result = await products.getOne(99_999);
 
             assertErr(result);
             expect(result.statusCode).toBe(404);
         });
     });
 
-    describe('getAllProducts tests', () => {
-        describe('getAllProducts — request headers', () => {
+    describe('get multiple products tests', () => {
+        describe('request headers', () => {
             beforeEach(() => {
                 mockTchef.mockResolvedValue(makePageResponse([], 1, 1));
             });
 
             it('sends the access token as X-Auth-Token', async () => {
-                await products.getProducts();
+                await products.getMultiple();
 
                 expect(getCallHeaders(mockTchef, 0)['X-Auth-Token']).toBe('test-token');
             });
 
             it('sends Accept: application/json', async () => {
-                await products.getProducts();
+                await products.getMultiple();
 
                 expect(getCallHeaders(mockTchef, 0).Accept).toBe('application/json');
             });
         });
 
-        describe('getAllProducts — pagination', () => {
+        describe('pagination', () => {
             it('fetches a single page when total_pages is 1', async () => {
                 mockTchef.mockResolvedValue(makePageResponse([{ id: 1 }, { id: 2 }], 1, 1));
 
-                const result = await products.getProducts();
+                const result = await products.getMultiple();
 
                 assertOk(result);
                 expect(result.data).toHaveLength(2);
@@ -144,7 +144,7 @@ describe('ProductsV3 class', () => {
                     .mockResolvedValueOnce(makePageResponse([{ id: 2 }], 2, 3))
                     .mockResolvedValueOnce(makePageResponse([{ id: 3 }], 3, 3));
 
-                const result = await products.getProducts();
+                const result = await products.getMultiple();
 
                 assertOk(result);
                 expect(result.data).toHaveLength(3);
@@ -157,7 +157,7 @@ describe('ProductsV3 class', () => {
                     .mockResolvedValueOnce(makePageResponse([{ id: 2 }], 2, 3))
                     .mockResolvedValueOnce(makePageResponse([{ id: 3 }], 3, 3));
 
-                await products.getProducts();
+                await products.getMultiple();
 
                 expect(getCallUrl(mockTchef, 0).searchParams.get('page')).toBe('1');
                 expect(getCallUrl(mockTchef, 1).searchParams.get('page')).toBe('2');
@@ -167,7 +167,7 @@ describe('ProductsV3 class', () => {
             it('fetches only the user-supplied page and stops', async () => {
                 mockTchef.mockResolvedValueOnce(makePageResponse([{ id: 2 }], 2, 3));
 
-                const result = await products.getProducts({
+                const result = await products.getMultiple({
                     limit: 50,
                     page: 2,
                 });
@@ -185,7 +185,7 @@ describe('ProductsV3 class', () => {
                     .mockResolvedValueOnce(makePageResponse([{ id: 2 }], 2, 3))
                     .mockResolvedValueOnce(makePageResponse([{ id: 3 }], 3, 3));
 
-                const result = await products.getProducts({
+                const result = await products.getMultiple({
                     limit: 50,
                 });
 
@@ -203,7 +203,7 @@ describe('ProductsV3 class', () => {
                         statusCode: 401,
                     });
 
-                const result = await products.getProducts();
+                const result = await products.getMultiple();
 
                 assertErr(result);
                 expect(result.statusCode).toBe(401);
@@ -212,13 +212,13 @@ describe('ProductsV3 class', () => {
             });
         });
 
-        describe('getAllProducts — includes', () => {
+        describe('includes', () => {
             beforeEach(() => {
                 mockTchef.mockResolvedValue(makePageResponse([], 1, 1));
             });
 
             it('includes only keys with value true', async () => {
-                await products.getProducts({
+                await products.getMultiple({
                     includes: {
                         custom_fields: true,
                         images: false,
@@ -235,7 +235,7 @@ describe('ProductsV3 class', () => {
             });
 
             it('omits include param when all includes are false', async () => {
-                await products.getProducts({
+                await products.getMultiple({
                     includes: { images: false, variants: false },
                 });
 
@@ -245,7 +245,7 @@ describe('ProductsV3 class', () => {
             });
 
             it('includes sub-resources even when no query is provided', async () => {
-                await products.getProducts({
+                await products.getMultiple({
                     includes: { custom_fields: true },
                 });
 
@@ -255,7 +255,7 @@ describe('ProductsV3 class', () => {
             });
 
             it('omits include param when no includes provided', async () => {
-                await products.getProducts({ id: 1 });
+                await products.getMultiple({ id: 1 });
 
                 const url = getCallUrl(mockTchef, 0);
 
@@ -263,13 +263,13 @@ describe('ProductsV3 class', () => {
             });
         });
 
-        describe('getAllProducts — query params', () => {
+        describe('query params', () => {
             beforeEach(() => {
                 mockTchef.mockResolvedValue(makePageResponse([], 1, 1));
             });
 
             it('adds query params to the URL', async () => {
-                await products.getProducts({
+                await products.getMultiple({
                     id: 42,
                     name: 'Widget',
                 });
@@ -281,7 +281,7 @@ describe('ProductsV3 class', () => {
             });
 
             it('URL-encodes query values with special characters', async () => {
-                await products.getProducts({ name: 'foo&bar=baz' });
+                await products.getMultiple({ name: 'foo&bar=baz' });
 
                 const url = getCallUrl(mockTchef, 0);
 
@@ -289,7 +289,7 @@ describe('ProductsV3 class', () => {
             });
 
             it('serializes id:in array as comma-separated string', async () => {
-                await products.getProducts({ 'id:in': [1, 2, 3] });
+                await products.getMultiple({ 'id:in': [1, 2, 3] });
 
                 const url = getCallUrl(mockTchef, 0);
 
@@ -299,7 +299,7 @@ describe('ProductsV3 class', () => {
             });
 
             it('serializes id:not_in array as comma-separated string', async () => {
-                await products.getProducts({ 'id:not_in': [10, 20] });
+                await products.getMultiple({ 'id:not_in': [10, 20] });
 
                 const url = getCallUrl(mockTchef, 0);
 
@@ -307,7 +307,7 @@ describe('ProductsV3 class', () => {
             });
 
             it('handles empty options gracefully', async () => {
-                const result = await products.getProducts();
+                const result = await products.getMultiple();
 
                 const url = getCallUrl(mockTchef, 0);
 
@@ -318,7 +318,7 @@ describe('ProductsV3 class', () => {
             });
 
             it('does not duplicate user-supplied page and limit in the query string', async () => {
-                await products.getProducts({
+                await products.getMultiple({
                     limit: 25,
                     name: 'Widget',
                     page: 3,
@@ -332,7 +332,7 @@ describe('ProductsV3 class', () => {
             });
 
             it('combines query params and includes in the same URL', async () => {
-                await products.getProducts({
+                await products.getMultiple({
                     includes: { images: true },
                     name: 'Test',
                 });
@@ -344,31 +344,31 @@ describe('ProductsV3 class', () => {
             });
         });
 
-        describe('getAllProducts -- limit clamping', () => {
+        describe('limit clamping', () => {
             beforeEach(() => {
                 mockTchef.mockResolvedValue(makePageResponse([], 1, 1));
             });
 
             it(`clamps limit above ${PER_PAGE_MAX} down to ${PER_PAGE_MAX}`, async () => {
-                await products.getProducts({ limit: 500 });
+                await products.getMultiple({ limit: 500 });
 
                 expect(getCallUrl(mockTchef, 0).searchParams.get('limit')).toBe(`${PER_PAGE_MAX}`);
             });
 
             it(`clamps limit below ${PER_PAGE_MIN} up to ${PER_PAGE_MIN}`, async () => {
-                await products.getProducts({ limit: 1 });
+                await products.getMultiple({ limit: 1 });
 
                 expect(getCallUrl(mockTchef, 0).searchParams.get('limit')).toBe(`${PER_PAGE_MIN}`);
             });
 
             it('passes through a limit within the valid range unchanged', async () => {
-                await products.getProducts({ limit: 100 });
+                await products.getMultiple({ limit: 100 });
 
                 expect(getCallUrl(mockTchef, 0).searchParams.get('limit')).toBe('100');
             });
 
             it(`uses ${PER_PAGE_DEFAULT} as the default when no limit is provided`, async () => {
-                await products.getProducts();
+                await products.getMultiple();
 
                 expect(getCallUrl(mockTchef, 0).searchParams.get('limit')).toBe(
                     `${PER_PAGE_DEFAULT}`,
@@ -376,13 +376,13 @@ describe('ProductsV3 class', () => {
             });
 
             it(`passes through limit of exactly ${PER_PAGE_MIN} (lower boundary) unchanged`, async () => {
-                await products.getProducts({ limit: PER_PAGE_MIN });
+                await products.getMultiple({ limit: PER_PAGE_MIN });
 
                 expect(getCallUrl(mockTchef, 0).searchParams.get('limit')).toBe(`${PER_PAGE_MIN}`);
             });
 
             it(`passes through limit of exactly ${PER_PAGE_MAX} (upper boundary) unchanged`, async () => {
-                await products.getProducts({ limit: PER_PAGE_MAX });
+                await products.getMultiple({ limit: PER_PAGE_MAX });
 
                 expect(getCallUrl(mockTchef, 0).searchParams.get('limit')).toBe(`${PER_PAGE_MAX}`);
             });
@@ -390,7 +390,7 @@ describe('ProductsV3 class', () => {
     });
 
     // oxlint-disable-next-line max-statements
-    describe('createProduct', () => {
+    describe('create product', () => {
         const minPayload = {
             name: 'Test Widget',
             price: 29.99,
@@ -414,19 +414,19 @@ describe('ProductsV3 class', () => {
         });
 
         it('makes exactly one HTTP call', async () => {
-            await products.createProduct(minPayload);
+            await products.create(minPayload);
 
             expect(mockTchef).toHaveBeenCalledOnce();
         });
 
         it('uses the POST method', async () => {
-            await products.createProduct(minPayload);
+            await products.create(minPayload);
 
             expect(getCallOptions(mockTchef, 0).method).toBe('POST');
         });
 
         it('targets the catalog/products path (no ID in URL)', async () => {
-            await products.createProduct(minPayload);
+            await products.create(minPayload);
 
             const url = getCallUrl(mockTchef, 0);
 
@@ -434,25 +434,25 @@ describe('ProductsV3 class', () => {
         });
 
         it('sends X-Auth-Token header', async () => {
-            await products.createProduct(minPayload);
+            await products.create(minPayload);
 
             expect(getCallHeaders(mockTchef, 0)['X-Auth-Token']).toBe('test-token');
         });
 
         it('sends Content-Type: application/json header', async () => {
-            await products.createProduct(minPayload);
+            await products.create(minPayload);
 
             expect(getCallHeaders(mockTchef, 0)['Content-type']).toBe('application/json');
         });
 
         it('sends Accept: application/json header', async () => {
-            await products.createProduct(minPayload);
+            await products.create(minPayload);
 
             expect(getCallHeaders(mockTchef, 0).Accept).toBe('application/json');
         });
 
         it('serializes the payload as a JSON string in the body', async () => {
-            await products.createProduct(minPayload);
+            await products.create(minPayload);
 
             const { body } = getCallOptions(mockTchef, 0);
 
@@ -461,7 +461,7 @@ describe('ProductsV3 class', () => {
         });
 
         it('unwraps the response envelope and returns data.data', async () => {
-            const result = await products.createProduct(minPayload);
+            const result = await products.create(minPayload);
 
             expect(result).toStrictEqual({ data: mockProduct, ok: true });
         });
@@ -503,7 +503,7 @@ describe('ProductsV3 class', () => {
                 width: 10,
             };
 
-            await products.createProduct(fullPayload);
+            await products.create(fullPayload);
 
             const body: unknown = JSON.parse(getCallOptions(mockTchef, 0).body as string);
 
@@ -517,7 +517,7 @@ describe('ProductsV3 class', () => {
                 statusCode: 422,
             });
 
-            const result = await products.createProduct(minPayload);
+            const result = await products.create(minPayload);
 
             assertErr(result);
             expect(result.statusCode).toBe(422);
@@ -525,7 +525,7 @@ describe('ProductsV3 class', () => {
         });
 
         it('returns a 400 error without calling the API when name is empty', async () => {
-            const result = await products.createProduct({
+            const result = await products.create({
                 ...minPayload,
                 name: '',
             });
@@ -537,7 +537,7 @@ describe('ProductsV3 class', () => {
         });
 
         it('returns a 400 error when price is negative', async () => {
-            const result = await products.createProduct({
+            const result = await products.create({
                 ...minPayload,
                 price: -1,
             });
@@ -549,7 +549,7 @@ describe('ProductsV3 class', () => {
         });
 
         it('returns a 400 error when weight exceeds maximum', async () => {
-            const result = await products.createProduct({
+            const result = await products.create({
                 ...minPayload,
                 weight: 10_000_000_000,
             });
@@ -561,7 +561,7 @@ describe('ProductsV3 class', () => {
         });
 
         it('returns a 400 error when an optional string field exceeds its maxLength', async () => {
-            const result = await products.createProduct({
+            const result = await products.create({
                 ...minPayload,
                 upc: 'a'.repeat(33),
             });
@@ -573,7 +573,7 @@ describe('ProductsV3 class', () => {
         });
 
         it('returns a 400 error when an optional number field is out of range', async () => {
-            const result = await products.createProduct({
+            const result = await products.create({
                 ...minPayload,
                 tax_class_id: 256,
             });
@@ -585,7 +585,7 @@ describe('ProductsV3 class', () => {
         });
 
         it('returns a 400 error when sort_order is below minimum', async () => {
-            const result = await products.createProduct({
+            const result = await products.create({
                 ...minPayload,
                 sort_order: -2_147_483_649,
             });
@@ -597,7 +597,7 @@ describe('ProductsV3 class', () => {
         });
 
         it('returns a 400 error when categories exceeds 1000 items', async () => {
-            const result = await products.createProduct({
+            const result = await products.create({
                 ...minPayload,
                 categories: Array.from({ length: 1001 }, (_, i) => i),
             });
@@ -609,7 +609,7 @@ describe('ProductsV3 class', () => {
         });
 
         it('returns a 400 error when custom_fields exceeds 200 items', async () => {
-            const result = await products.createProduct({
+            const result = await products.create({
                 ...minPayload,
                 custom_fields: Array.from({ length: 201 }, (_, i) => ({
                     name: `f${i}`,
@@ -624,7 +624,7 @@ describe('ProductsV3 class', () => {
         });
 
         it('returns a 400 error when a custom_field name is empty', async () => {
-            const result = await products.createProduct({
+            const result = await products.create({
                 ...minPayload,
                 custom_fields: [{ name: '', value: 'some value' }],
             });
@@ -636,7 +636,7 @@ describe('ProductsV3 class', () => {
         });
 
         it('returns a 400 error when a custom_field name exceeds 250 characters', async () => {
-            const result = await products.createProduct({
+            const result = await products.create({
                 ...minPayload,
                 custom_fields: [{ name: 'a'.repeat(251), value: 'some value' }],
             });
@@ -648,7 +648,7 @@ describe('ProductsV3 class', () => {
         });
 
         it('returns a 400 error when a custom_field value is empty', async () => {
-            const result = await products.createProduct({
+            const result = await products.create({
                 ...minPayload,
                 custom_fields: [{ name: 'ISBN', value: '' }],
             });
@@ -662,7 +662,7 @@ describe('ProductsV3 class', () => {
         });
 
         it('reports the correct index when a later custom_field item is invalid', async () => {
-            const result = await products.createProduct({
+            const result = await products.create({
                 ...minPayload,
                 custom_fields: [
                     { name: 'valid', value: 'ok' },
@@ -678,7 +678,7 @@ describe('ProductsV3 class', () => {
         });
 
         it('returns a 400 error without calling the API when name exceeds 250 characters', async () => {
-            const result = await products.createProduct({
+            const result = await products.create({
                 ...minPayload,
                 name: 'a'.repeat(251),
             });
@@ -690,7 +690,7 @@ describe('ProductsV3 class', () => {
         });
 
         it('returns a 400 error without calling the API when sku exceeds 255 characters', async () => {
-            const result = await products.createProduct({
+            const result = await products.create({
                 ...minPayload,
                 sku: 'a'.repeat(256),
             });
@@ -702,7 +702,7 @@ describe('ProductsV3 class', () => {
         });
 
         it('accepts a sku of exactly 255 characters', async () => {
-            const result = await products.createProduct({
+            const result = await products.create({
                 ...minPayload,
                 sku: 'a'.repeat(255),
             });
@@ -712,7 +712,7 @@ describe('ProductsV3 class', () => {
         });
 
         it('accepts an empty sku', async () => {
-            const result = await products.createProduct({
+            const result = await products.create({
                 ...minPayload,
                 sku: '',
             });
@@ -722,7 +722,7 @@ describe('ProductsV3 class', () => {
         });
 
         it('accepts a name of exactly 250 characters', async () => {
-            const result = await products.createProduct({
+            const result = await products.create({
                 ...minPayload,
                 name: 'a'.repeat(250),
             });
@@ -732,20 +732,20 @@ describe('ProductsV3 class', () => {
         });
 
         it('appends include_fields to the URL when provided', async () => {
-            await products.createProduct(minPayload, { include_fields: ['name', 'price'] });
+            await products.create(minPayload, { include_fields: ['name', 'price'] });
 
             expect(getCallUrl(mockTchef, 0).searchParams.get('include_fields')).toBe('name,price');
         });
 
         it('does not include include_fields in the URL when not provided', async () => {
-            await products.createProduct(minPayload);
+            await products.create(minPayload);
 
             expect(getCallUrl(mockTchef, 0).searchParams.has('include_fields')).toBe(false);
         });
     });
 
     // oxlint-disable-next-line max-statements
-    describe('updateProduct', () => {
+    describe('update product', () => {
         const mockProduct = {
             id: 42,
             name: 'Updated Widget',
@@ -762,37 +762,37 @@ describe('ProductsV3 class', () => {
         });
 
         it('makes exactly one HTTP call', async () => {
-            await products.updateProduct(42, { name: 'Updated Widget' });
+            await products.update(42, { name: 'Updated Widget' });
 
             expect(mockTchef).toHaveBeenCalledOnce();
         });
 
         it('uses the PUT method', async () => {
-            await products.updateProduct(42, { name: 'Updated Widget' });
+            await products.update(42, { name: 'Updated Widget' });
 
             expect(getCallOptions(mockTchef, 0).method).toBe('PUT');
         });
 
         it('includes the product ID in the URL path', async () => {
-            await products.updateProduct(42, { name: 'Updated Widget' });
+            await products.update(42, { name: 'Updated Widget' });
 
             expect(getCallUrl(mockTchef, 0).href).toContain('catalog/products/42');
         });
 
         it('sends X-Auth-Token header', async () => {
-            await products.updateProduct(42, {});
+            await products.update(42, {});
 
             expect(getCallHeaders(mockTchef, 0)['X-Auth-Token']).toBe('test-token');
         });
 
         it('sends Content-Type: application/json header', async () => {
-            await products.updateProduct(42, {});
+            await products.update(42, {});
 
             expect(getCallHeaders(mockTchef, 0)['Content-type']).toBe('application/json');
         });
 
         it('sends Accept: application/json header', async () => {
-            await products.updateProduct(42, {});
+            await products.update(42, {});
 
             expect(getCallHeaders(mockTchef, 0).Accept).toBe('application/json');
         });
@@ -800,7 +800,7 @@ describe('ProductsV3 class', () => {
         it('serializes the payload as a JSON string in the body', async () => {
             const payload = { name: 'New Name', price: 9.99 };
 
-            await products.updateProduct(42, payload);
+            await products.update(42, payload);
 
             const { body } = getCallOptions(mockTchef, 0);
 
@@ -809,27 +809,27 @@ describe('ProductsV3 class', () => {
         });
 
         it('accepts an empty payload without error', async () => {
-            const result = await products.updateProduct(42, {});
+            const result = await products.update(42, {});
 
             expect(result.ok).toBe(true);
             expect(mockTchef).toHaveBeenCalledOnce();
         });
 
         it('accepts a payload missing name/price/weight/type', async () => {
-            const result = await products.updateProduct(42, { sku: 'NEW-SKU' });
+            const result = await products.update(42, { sku: 'NEW-SKU' });
 
             expect(result.ok).toBe(true);
             expect(mockTchef).toHaveBeenCalledOnce();
         });
 
         it('unwraps the response envelope and returns data.data', async () => {
-            const result = await products.updateProduct(42, {});
+            const result = await products.update(42, {});
 
             expect(result).toStrictEqual({ data: mockProduct, ok: true });
         });
 
         it('appends include_fields to the URL when provided', async () => {
-            await products.updateProduct(
+            await products.update(
                 42,
                 {},
                 {
@@ -843,7 +843,7 @@ describe('ProductsV3 class', () => {
         });
 
         it('appends include param for sub-resources when provided', async () => {
-            await products.updateProduct(
+            await products.update(
                 42,
                 {},
                 {
@@ -855,7 +855,7 @@ describe('ProductsV3 class', () => {
         });
 
         it('combines include_fields and include in the same URL', async () => {
-            await products.updateProduct(
+            await products.update(
                 42,
                 {},
                 {
@@ -877,7 +877,7 @@ describe('ProductsV3 class', () => {
                 statusCode: 404,
             });
 
-            const result = await products.updateProduct(999, { name: 'Ghost' });
+            const result = await products.update(999, { name: 'Ghost' });
 
             assertErr(result);
             expect(result.statusCode).toBe(404);
@@ -885,7 +885,7 @@ describe('ProductsV3 class', () => {
         });
 
         it('returns a 400 error without calling the API when name is empty', async () => {
-            const result = await products.updateProduct(42, { name: '' });
+            const result = await products.update(42, { name: '' });
 
             assertErr(result);
             expect(result.statusCode).toBe(400);
@@ -894,7 +894,7 @@ describe('ProductsV3 class', () => {
         });
 
         it('returns a 400 error when name exceeds 250 characters', async () => {
-            const result = await products.updateProduct(42, {
+            const result = await products.update(42, {
                 name: 'a'.repeat(251),
             });
 
@@ -905,7 +905,7 @@ describe('ProductsV3 class', () => {
         });
 
         it('returns a 400 error when price is negative', async () => {
-            const result = await products.updateProduct(42, { price: -1 });
+            const result = await products.update(42, { price: -1 });
 
             assertErr(result);
             expect(result.statusCode).toBe(400);
@@ -914,7 +914,7 @@ describe('ProductsV3 class', () => {
         });
 
         it('returns a 400 error when weight exceeds maximum', async () => {
-            const result = await products.updateProduct(42, {
+            const result = await products.update(42, {
                 weight: 10_000_000_000,
             });
 
@@ -925,7 +925,7 @@ describe('ProductsV3 class', () => {
         });
 
         it('returns a 400 error when upc exceeds 32 characters', async () => {
-            const result = await products.updateProduct(42, {
+            const result = await products.update(42, {
                 upc: 'a'.repeat(33),
             });
 
@@ -936,7 +936,7 @@ describe('ProductsV3 class', () => {
         });
 
         it('returns a 400 error when a custom_field is invalid', async () => {
-            const result = await products.updateProduct(42, {
+            const result = await products.update(42, {
                 custom_fields: [{ name: '', value: 'val' }],
             });
 
@@ -947,13 +947,13 @@ describe('ProductsV3 class', () => {
         });
     });
 
-    describe('deleteProduct', () => {
+    describe('delete product', () => {
         beforeEach(() => {
             mockTchef.mockResolvedValue({ data: '', ok: true });
         });
 
         it('returns a 400 error without calling the API when productId is not a positive integer', async () => {
-            const result = await products.deleteProduct(0);
+            const result = await products.remove(0);
 
             assertErr(result);
             expect(result.statusCode).toBe(400);
@@ -962,7 +962,7 @@ describe('ProductsV3 class', () => {
         });
 
         it('returns a 400 error without calling the API when productId is not an integer', async () => {
-            const result = await products.deleteProduct(1.5);
+            const result = await products.remove(1.5);
 
             assertErr(result);
             expect(result.statusCode).toBe(400);
@@ -971,37 +971,37 @@ describe('ProductsV3 class', () => {
         });
 
         it('makes exactly one HTTP call', async () => {
-            await products.deleteProduct(42);
+            await products.remove(42);
 
             expect(mockTchef).toHaveBeenCalledOnce();
         });
 
         it('uses the DELETE method', async () => {
-            await products.deleteProduct(42);
+            await products.remove(42);
 
             expect(getCallOptions(mockTchef, 0).method).toBe('DELETE');
         });
 
         it('includes the product ID in the URL path', async () => {
-            await products.deleteProduct(42);
+            await products.remove(42);
 
             expect(getCallUrl(mockTchef, 0).href).toContain('catalog/products/42');
         });
 
         it('sends the access token as X-Auth-Token', async () => {
-            await products.deleteProduct(42);
+            await products.remove(42);
 
             expect(getCallHeaders(mockTchef, 0)['X-Auth-Token']).toBe('test-token');
         });
 
         it('uses responseFormat: text to handle the empty 204 body', async () => {
-            await products.deleteProduct(42);
+            await products.remove(42);
 
             expect(getCallOptions(mockTchef, 0).responseFormat).toBe('text');
         });
 
         it('returns { ok: true, data: null } on success', async () => {
-            const result = await products.deleteProduct(42);
+            const result = await products.remove(42);
 
             expect(result).toStrictEqual({ data: null, ok: true });
         });
@@ -1013,7 +1013,7 @@ describe('ProductsV3 class', () => {
                 statusCode: 404,
             });
 
-            const result = await products.deleteProduct(999);
+            const result = await products.remove(999);
 
             assertErr(result);
             expect(result.statusCode).toBe(404);
