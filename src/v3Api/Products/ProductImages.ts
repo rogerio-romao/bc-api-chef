@@ -108,11 +108,7 @@ export default class ProductImages {
             return await createResourceMultipart<ProductImage>(url, this.accessToken, formData);
         }
 
-        return await createResource<ProductImage, ProductImagePayloadItem>(
-            url,
-            this.accessToken,
-            imageData,
-        );
+        return await createResource(url, this.accessToken, imageData);
     }
 
     /* ------------------------------- GET IMAGES ------------------------------- */
@@ -181,6 +177,8 @@ export default class ProductImages {
      * @param options.exclude_fields - An array of top-level product image fields to exclude from the response. For example, `['url_standard', 'url_zoom']` will return all fields except `url_standard` and `url_zoom` for the product image. Mutually exclusive with `include_fields`.
      * @returns {ApiResult<ProductImage>} The requested product image or an error result.
      */
+    public async getOne(productId: number, imageId: number): ApiResult<ProductImage>;
+
     public async getOne<I extends readonly BaseProductImageField[]>(
         productId: number,
         imageId: number,
@@ -192,12 +190,6 @@ export default class ProductImages {
         imageId: number,
         options: { include_fields?: never; exclude_fields: E },
     ): ApiResult<Omit<ProductImage, E[number]>>;
-
-    public async getOne(
-        productId: number,
-        imageId: number,
-        options?: undefined,
-    ): ApiResult<ProductImage>;
 
     public async getOne(
         productId: number,
@@ -270,11 +262,7 @@ export default class ProductImages {
             return await this.updateResourceMultipart<ProductImage>(url, formData);
         }
 
-        return await updateResource<ProductImage, ProductImageUpdatePayload>(
-            url,
-            this.accessToken,
-            imageData,
-        );
+        return await updateResource(url, this.accessToken, imageData);
     }
 
     /* ------------------------------- DELETE IMAGE ------------------------------ */

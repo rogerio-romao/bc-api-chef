@@ -35,6 +35,7 @@ export default class ProductBulkPricingRules {
 
     /**
      * Creates an instance of the ProductBulkPricingRules class.
+     *
      * @param accessToken - The BigCommerce API access token to use for requests.
      * @param apiUrl - The base URL for product-related API endpoints, which should be provided by the parent Products class.
      * @param options - Optional configuration for API requests, such as validation and retry behavior.
@@ -54,7 +55,7 @@ export default class ProductBulkPricingRules {
     }
 
     /* -------------------------------------------------------------------------- */
-    /*                         PRODUCT BULK PRICING RULES                         */
+    /*                   PRODUCT BULK PRICING RULES CRUD METHODS                  */
     /* -------------------------------------------------------------------------- */
 
     /* -------------------- CREATE PRODUCT BULK PRICING RULE -------------------- */
@@ -90,11 +91,7 @@ export default class ProductBulkPricingRules {
 
         const url = `${this.apiUrl}/${productId}/bulk-pricing-rules`;
 
-        return await createResource<ProductBulkPricingRule, NoIdProductBulkPricingRule>(
-            url,
-            this.accessToken,
-            ruleData,
-        );
+        return await createResource(url, this.accessToken, ruleData);
     }
 
     /* -------------------- GET PRODUCT BULK PRICING RULES -------------------- */
@@ -207,12 +204,6 @@ export default class ProductBulkPricingRules {
     public async getOne(
         productId: number,
         ruleId: number,
-        options?: undefined,
-    ): ApiResult<ProductBulkPricingRule>;
-
-    public async getOne(
-        productId: number,
-        ruleId: number,
         options?: {
             include_fields?: readonly ProductBulkPricingRuleField[];
             exclude_fields?: readonly ProductBulkPricingRuleField[];
@@ -240,7 +231,7 @@ export default class ProductBulkPricingRules {
      *
      * @param productId - The ID of the product the bulk pricing rule belongs to.
      * @param ruleId - The ID of the bulk pricing rule to update.
-     * @param ruleData - The data to update for the bulk pricing rule. All fields are optional, but at least one must be provided.
+     * @param ruleData - The data to update for the bulk pricing rule. All fields are optional.
      * @returns {ApiResult<ProductBulkPricingRule>} The updated bulk pricing rule, or an error if validation fails or the API request fails.
      */
     public async update(
@@ -270,11 +261,7 @@ export default class ProductBulkPricingRules {
 
         const url = `${this.apiUrl}/${productId}/bulk-pricing-rules/${ruleId}`;
 
-        return await updateResource<ProductBulkPricingRule, Partial<NoIdProductBulkPricingRule>>(
-            url,
-            this.accessToken,
-            ruleData,
-        );
+        return await updateResource(url, this.accessToken, ruleData);
     }
 
     /* ---------------------- DELETE PRODUCT BULK PRICING RULE --------------------- */
