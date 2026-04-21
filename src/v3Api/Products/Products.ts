@@ -10,6 +10,7 @@ import {
 } from '@/v3Api/utils.ts';
 
 import ProductBulkPricingRules from './ProductBulkPricingRules';
+import ProductCustomFields from './ProductCustomFields';
 import ProductImages from './ProductImages';
 import ProductMetafields from './ProductMetafields';
 
@@ -114,11 +115,7 @@ export default class ProductsV3 {
         const querySuffix = buildQueryString(options);
         const url = `${this.apiUrl}${querySuffix}`;
 
-        return await createResource<BaseProduct, CreateProductPayload>(
-            url,
-            this.accessToken,
-            productData,
-        );
+        return await createResource(url, this.accessToken, productData);
     }
 
     /* ------------------------------ GET PRODUCTS ------------------------------ */
@@ -309,11 +306,7 @@ export default class ProductsV3 {
         const querySuffix = buildQueryString(query as ApiProductQuery, { include: includesString });
         const url = `${this.apiUrl}/${productId}${querySuffix}`;
 
-        return await updateResource<BaseProduct, UpdateProductPayload>(
-            url,
-            this.accessToken,
-            payload,
-        );
+        return await updateResource(url, this.accessToken, payload);
     }
 
     /* ------------------------------ DELETE PRODUCT ------------------------------ */
@@ -344,6 +337,14 @@ export default class ProductsV3 {
      */
     public bulkPricingRules(): ProductBulkPricingRules {
         return new ProductBulkPricingRules(this.accessToken, this.apiUrl, this.options);
+    }
+
+    /**
+     * Returns an instance of the {@link ProductCustomFields} class to manage product custom fields, which are accessed via the `/catalog/products/{product_id}/custom-fields` endpoint.
+     * @returns {ProductCustomFields} An instance of the ProductCustomFields class.
+     */
+    public customFields(): ProductCustomFields {
+        return new ProductCustomFields(this.accessToken, this.apiUrl, this.options);
     }
 
     /**

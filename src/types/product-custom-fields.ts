@@ -3,3 +3,6 @@ export interface ProductCustomField {
     name: string;
     value: string;
 }
+
+export type NoIdProductCustomField = Omit<ProductCustomField, 'id'>;
+export type ProductCustomFieldField = keyof NoIdProductCustomField;

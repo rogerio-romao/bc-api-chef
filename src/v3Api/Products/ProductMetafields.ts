@@ -89,11 +89,7 @@ export default class ProductMetafields {
 
         const url = `${this.apiUrl}/${productId}/metafields`;
 
-        return await createResource<ProductMetafield, CreateMetafieldPayload>(
-            url,
-            this.accessToken,
-            metafieldData,
-        );
+        return await createResource(url, this.accessToken, metafieldData);
     }
 
     /* ----------------------------- GET METAFIELDS ----------------------------- */
@@ -157,6 +153,8 @@ export default class ProductMetafields {
      * @param options.exclude_fields When provided, these fields are excluded from the returned metafield object. Cannot be used with `include_fields`.
      * @returns {ApiResult<ProductMetafield>} The metafield or an error result.
      */
+    public async getOne(productId: number, metafieldId: number): ApiResult<ProductMetafield>;
+
     public async getOne<I extends readonly BaseMetafieldField[]>(
         productId: number,
         metafieldId: number,
@@ -168,12 +166,6 @@ export default class ProductMetafields {
         metafieldId: number,
         options: { include_fields?: never; exclude_fields: E },
     ): ApiResult<Omit<ProductMetafield, E[number]>>;
-
-    public async getOne(
-        productId: number,
-        metafieldId: number,
-        options?: undefined,
-    ): ApiResult<ProductMetafield>;
 
     public async getOne(
         productId: number,
@@ -226,11 +218,7 @@ export default class ProductMetafields {
 
         const url = `${this.apiUrl}/${productId}/metafields/${metafieldId}`;
 
-        return await updateResource<ProductMetafield, Partial<CreateMetafieldPayload>>(
-            url,
-            this.accessToken,
-            metafieldData,
-        );
+        return await updateResource(url, this.accessToken, metafieldData);
     }
 
     /**
