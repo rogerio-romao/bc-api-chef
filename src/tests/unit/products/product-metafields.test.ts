@@ -537,7 +537,7 @@ describe('ProductMetafields class', () => {
         it('sends Content-Type: application/json header', async () => {
             await metafields.create(42, minPayload);
 
-            expect(getCallHeaders(mockTchef, 0)['Content-type']).toBe('application/json');
+            expect(getCallHeaders(mockTchef, 0)['Content-Type']).toBe('application/json');
         });
 
         it('sends Accept: application/json header', async () => {
@@ -712,7 +712,7 @@ describe('ProductMetafields class', () => {
         it('sends Content-Type: application/json header', async () => {
             await metafields.update(42, 7, {});
 
-            expect(getCallHeaders(mockTchef, 0)['Content-type']).toBe('application/json');
+            expect(getCallHeaders(mockTchef, 0)['Content-Type']).toBe('application/json');
         });
 
         it('sends Accept: application/json header', async () => {
