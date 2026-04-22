@@ -26,7 +26,7 @@
         "typecheck": "tsc --noEmit"
     },
     "dependencies": {
-        "tchef": "^0.4.14"
+        "tchef": "^0.5.2"
     },
     "devDependencies": {
         "@types/node": "^20.12.11",

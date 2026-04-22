@@ -125,7 +125,7 @@ export async function createResource<T, P>(
         body: JSON.stringify(payload),
         headers: {
             Accept: 'application/json',
-            'Content-type': 'application/json',
+            'Content-Type': 'application/json',
             'X-Auth-Token': accessToken,
         },
         method: 'POST',
@@ -141,9 +141,8 @@ export async function createResource<T, P>(
 
 /**
  * Sends a `multipart/form-data` `POST` request and unwraps the common `{ data }` response envelope.
- * Uses raw `fetch` instead of `tchef` because `tchef` only accepts a `string` body.
- * The `Content-type` header must NOT be set manually — `fetch` auto-generates it with the
- * correct multipart boundary when given a `FormData` body.
+ * The `Content-Type` header must NOT be set manually — the runtime sets it with the correct
+ * multipart boundary when given a `FormData` body.
  * @param url - Fully-built request URL.
  * @param accessToken - BigCommerce API access token.
  * @param formData - The `FormData` body to send.
@@ -154,42 +153,21 @@ export async function createResourceMultipart<T>(
     accessToken: string,
     formData: FormData,
 ): Promise<TchefResult<T>> {
-    try {
-        const response = await fetch(url, {
-            body: formData,
-            headers: {
-                Accept: 'application/json',
-                'X-Auth-Token': accessToken,
-            },
-            method: 'POST',
-        });
+    const response = await tchef(url, {
+        body: formData,
+        headers: {
+            Accept: 'application/json',
+            'X-Auth-Token': accessToken,
+        },
+        method: 'POST',
+    });
 
-        if (!response.ok) {
-            return {
-                error: response.statusText || `Request failed with status ${response.status}`,
-                ok: false,
-                statusCode: response.status,
-            };
-        }
-
-        try {
-            const json = (await response.json()) as { data: T };
-            return { data: json.data, ok: true };
-        } catch {
-            const raw = await response.text().catch(() => null);
-            return {
-                error: raw ? `Invalid JSON response: ${raw}` : 'Invalid JSON response',
-                ok: false,
-                statusCode: response.status,
-            };
-        }
-    } catch (error) {
-        return {
-            error: error instanceof Error ? error.message : 'Network Error',
-            ok: false,
-            statusCode: 500,
-        };
+    if (!response.ok) {
+        return response;
     }
+
+    const { data } = response.data as { data: T };
+    return { data, ok: true };
 }
 
 /**
@@ -209,7 +187,7 @@ export async function updateResource<T, P>(
         body: JSON.stringify(payload),
         headers: {
             Accept: 'application/json',
-            'Content-type': 'application/json',
+            'Content-Type': 'application/json',
             'X-Auth-Token': accessToken,
         },
         method: 'PUT',

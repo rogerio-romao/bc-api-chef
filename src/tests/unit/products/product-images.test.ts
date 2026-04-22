@@ -460,10 +460,10 @@ describe('ProductImages class', () => {
                 expect(getCallHeaders(mockTchef, 0)['X-Auth-Token']).toBe('test-token');
             });
 
-            it('sends Content-type: application/json', async () => {
+            it('sends Content-Type: application/json', async () => {
                 await images.create(42, { image_url: 'https://example.com/img.jpg' });
 
-                expect(getCallHeaders(mockTchef, 0)['Content-type']).toBe('application/json');
+                expect(getCallHeaders(mockTchef, 0)['Content-Type']).toBe('application/json');
             });
 
             it('uses the POST method', async () => {
@@ -497,33 +497,17 @@ describe('ProductImages class', () => {
             });
         });
 
-        describe('image_file path (multipart POST via fetch)', () => {
-            let fetchSpy: ReturnType<typeof vi.spyOn<typeof globalThis, 'fetch'>>;
-
+        describe('image_file path (multipart POST via tchef)', () => {
             beforeEach(() => {
-                fetchSpy = vi
-                    .spyOn(globalThis, 'fetch')
-                    .mockResolvedValue(Response.json({ data: mockCreatedImage }, { status: 200 }));
+                mockTchef.mockResolvedValue(mockCreateEnvelope);
             });
 
-            afterEach(() => {
-                fetchSpy.mockRestore();
-            });
-
-            it('does not call tchef', async () => {
+            it('calls tchef exactly once', async () => {
                 await images.create(42, {
                     image_file: new File(['img'], 'photo.jpg', { type: 'image/jpeg' }),
                 });
 
-                expect(mockTchef).not.toHaveBeenCalled();
-            });
-
-            it('calls fetch exactly once', async () => {
-                await images.create(42, {
-                    image_file: new File(['img'], 'photo.jpg', { type: 'image/jpeg' }),
-                });
-
-                expect(fetchSpy).toHaveBeenCalledOnce();
+                expect(mockTchef).toHaveBeenCalledOnce();
             });
 
             it('includes productId in the URL path', async () => {
@@ -531,8 +515,7 @@ describe('ProductImages class', () => {
                     image_file: new File(['img'], 'photo.jpg', { type: 'image/jpeg' }),
                 });
 
-                const [url] = fetchSpy.mock.calls[0] as [string, RequestInit];
-                expect(new URL(url).pathname).toMatch(/\/42\/images$/u);
+                expect(getCallUrl(mockTchef, 0).pathname).toMatch(/\/42\/images$/u);
             });
 
             it('uses the POST method', async () => {
@@ -540,8 +523,7 @@ describe('ProductImages class', () => {
                     image_file: new File(['img'], 'photo.jpg', { type: 'image/jpeg' }),
                 });
 
-                const [, options] = fetchSpy.mock.calls[0] as [string, RequestInit];
-                expect(options.method).toBe('POST');
+                expect(getCallOptions(mockTchef, 0).method).toBe('POST');
             });
 
             it('sends the access token as X-Auth-Token', async () => {
@@ -549,19 +531,15 @@ describe('ProductImages class', () => {
                     image_file: new File(['img'], 'photo.jpg', { type: 'image/jpeg' }),
                 });
 
-                const [, options] = fetchSpy.mock.calls[0] as [string, RequestInit];
-                expect((options.headers as Record<string, string>)['X-Auth-Token']).toBe(
-                    'test-token',
-                );
+                expect(getCallHeaders(mockTchef, 0)['X-Auth-Token']).toBe('test-token');
             });
 
-            it('does not set Content-type (lets fetch set the multipart boundary)', async () => {
+            it('does not set Content-Type (lets the runtime set the multipart boundary)', async () => {
                 await images.create(42, {
                     image_file: new File(['img'], 'photo.jpg', { type: 'image/jpeg' }),
                 });
 
-                const [, options] = fetchSpy.mock.calls[0] as [string, RequestInit];
-                expect((options.headers as Record<string, string>)['Content-type']).toBeUndefined();
+                expect(getCallHeaders(mockTchef, 0)['Content-Type']).toBeUndefined();
             });
 
             it('sends a FormData body', async () => {
@@ -569,8 +547,7 @@ describe('ProductImages class', () => {
                     image_file: new File(['img'], 'photo.jpg', { type: 'image/jpeg' }),
                 });
 
-                const [, options] = fetchSpy.mock.calls[0] as [string, RequestInit];
-                expect(options.body).toBeInstanceOf(FormData);
+                expect(getCallOptions(mockTchef, 0).body).toBeInstanceOf(FormData);
             });
 
             it('unwraps the response envelope and returns data.data', async () => {
@@ -582,10 +559,12 @@ describe('ProductImages class', () => {
                 expect(result.data).toStrictEqual(mockCreatedImage);
             });
 
-            it('returns an error result when fetch responds with a non-OK status', async () => {
-                fetchSpy.mockResolvedValue(
-                    new Response(null, { status: 422, statusText: 'Unprocessable Entity' }),
-                );
+            it('returns the error result immediately on failure', async () => {
+                mockTchef.mockResolvedValue({
+                    error: 'Unprocessable Entity',
+                    ok: false,
+                    statusCode: 422,
+                });
 
                 const result = await images.create(42, {
                     image_file: new File(['img'], 'photo.jpg', { type: 'image/jpeg' }),
@@ -593,18 +572,6 @@ describe('ProductImages class', () => {
 
                 assertErr(result);
                 expect(result.statusCode).toBe(422);
-            });
-
-            it('returns a 500 error result when fetch throws', async () => {
-                fetchSpy.mockRejectedValue(new Error('Network Error'));
-
-                const result = await images.create(42, {
-                    image_file: new File(['img'], 'photo.jpg', { type: 'image/jpeg' }),
-                });
-
-                assertErr(result);
-                expect(result.statusCode).toBe(500);
-                expect(result.error).toBe('Network Error');
             });
         });
     });
@@ -888,10 +855,10 @@ describe('ProductImages class', () => {
                 expect(getCallHeaders(mockTchef, 0)['X-Auth-Token']).toBe('test-token');
             });
 
-            it('sends Content-type: application/json', async () => {
+            it('sends Content-Type: application/json', async () => {
                 await images.update(42, 55, { description: 'updated' });
 
-                expect(getCallHeaders(mockTchef, 0)['Content-type']).toBe('application/json');
+                expect(getCallHeaders(mockTchef, 0)['Content-Type']).toBe('application/json');
             });
 
             it('sends Accept: application/json', async () => {

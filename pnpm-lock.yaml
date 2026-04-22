@@ -15,8 +15,8 @@ importers:
   .:
     dependencies:
       tchef:
-        specifier: ^0.4.14
-        version: 0.4.14
+        specifier: ^0.5.2
+        version: 0.5.2
     devDependencies:
       '@types/node':
         specifier: ^20.12.11
@@ -967,8 +967,8 @@ packages:
   strip-literal@3.1.0:
     resolution: {integrity: sha512-8r3mkIM/2+PpjHoOtiAW8Rg3jJLHaV7xPwG+YRGrv6FP0wwk/toTpATxWYOW0BKdWwl82VT2tFYi5DlROa0Mxg==}
 
-  tchef@0.4.14:
-    resolution: {integrity: sha512-TCaTpP/lPVuXCbPQNMlKZYHgOBWs6s0SPQxSdl1w19hNM3oUBPHHDQPp0REQ41xLLjED6KxlySWmI/b1cY186w==}
+  tchef@0.5.2:
+    resolution: {integrity: sha512-WuCk0Kis7S1VQ76aWkCVjLmsNcl22CTWxtG/Pdm04OdLiX3zAXmrD03rfK5/CFyF1C6LDb+NQ96AbrQucAhToQ==}
     engines: {node: '>=21.0.0'}
 
   tinybench@2.9.0:
@@ -1004,9 +1004,6 @@ packages:
 
   undici-types@5.26.5:
     resolution: {integrity: sha512-JlCMO+ehdEIKqlFxk6IfVoAUVmgz7cU7zD/h9XZ0qzeosSHmUJVOzSQvvYSYWXkFXC+IfLKSIffhv0sVZup6pA==}
-
-  valibot@0.30.0:
-    resolution: {integrity: sha512-5POBdbSkM+3nvJ6ZlyQHsggisfRtyT4tVTo1EIIShs6qCdXJnyWU5TJ68vr8iTg5zpOLjXLRiBqNx+9zwZz/rA==}
 
   vite-node@3.2.4:
     resolution: {integrity: sha512-EbKSKh+bh1E1IFxeO0pg1n4dvoOTt0UDiXMd/qn++r98+jPO1xtJilvXldeuQ8giIB5IkpjCgMleHMNEsGH6pg==}
@@ -1740,9 +1737,7 @@ snapshots:
     dependencies:
       js-tokens: 9.0.1
 
-  tchef@0.4.14:
-    dependencies:
-      valibot: 0.30.0
+  tchef@0.5.2: {}
 
   tinybench@2.9.0: {}
 
@@ -1764,8 +1759,6 @@ snapshots:
   typescript@5.9.3: {}
 
   undici-types@5.26.5: {}
-
-  valibot@0.30.0: {}
 
   vite-node@3.2.4(@types/node@20.19.39):
     dependencies:

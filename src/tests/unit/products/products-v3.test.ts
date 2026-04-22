@@ -442,7 +442,7 @@ describe('ProductsV3 class', () => {
         it('sends Content-Type: application/json header', async () => {
             await products.create(minPayload);
 
-            expect(getCallHeaders(mockTchef, 0)['Content-type']).toBe('application/json');
+            expect(getCallHeaders(mockTchef, 0)['Content-Type']).toBe('application/json');
         });
 
         it('sends Accept: application/json header', async () => {
@@ -788,7 +788,7 @@ describe('ProductsV3 class', () => {
         it('sends Content-Type: application/json header', async () => {
             await products.update(42, {});
 
-            expect(getCallHeaders(mockTchef, 0)['Content-type']).toBe('application/json');
+            expect(getCallHeaders(mockTchef, 0)['Content-Type']).toBe('application/json');
         });
 
         it('sends Accept: application/json header', async () => {
