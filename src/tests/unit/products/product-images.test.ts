@@ -1,4 +1,4 @@
-// oxlint-disable max-lines-per-function
+// oxlint-disable max-lines-per-function, vitest/max-expects
 
 import {
     assertErr,
@@ -734,8 +734,6 @@ describe('ProductImages class', () => {
             });
 
             it('accepts a file upload payload and sends a multipart PUT request', async () => {
-                mockTchef.mockResolvedValue({ data: { data: mockUpdatedImage }, ok: true });
-
                 const file = new File(['img'], 'photo.jpg', { type: 'image/jpeg' });
                 const result = await images.update(42, 55, {
                     description: 'updated desc',

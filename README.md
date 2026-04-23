@@ -30,7 +30,7 @@ refine the design and add features. Stay tuned for updates!
 
 ## Schema Validation
 
-TypeScript types are the primary way we ensure type safety and we give you the correct expected type for each API response, based on your query parameters. It is still possible for runtime data to deviate from the expected types (e.g., due to API changes or data inconsistencies). As an optional additional safety net at runtime, every data-returning
+TypeScript types are the primary way we ensure type safety, giving you the correct expected type for each API response based on your query parameters. However, runtime data can still deviate from the expected types (e.g., due to API changes or data inconsistencies). As an optional additional safety net, every data-returning
 method accepts a `schema` option that follows the
 [Standard Schema](https://standardschema.dev/) interface (`StandardSchemaV1`).
 This lets you plug in any compatible validation library — such as
@@ -83,7 +83,7 @@ const result = await client
 
 When you narrow the response with `include_fields`, pass a schema that matches
 the narrowed shape — not the full product type — to avoid spurious validation
-failures:
+failures (BC always returns the id field, even if you don't ask for it, so the schema must include it to validate successfully):
 
 ```ts
 const NarrowSchema = v.object({

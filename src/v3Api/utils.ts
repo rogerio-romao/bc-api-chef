@@ -277,6 +277,16 @@ export async function updateResource<T, P>(
     return { data, ok: true };
 }
 
+/**
+ * Sends a `multipart/form-data` `PUT` request and unwraps the common `{ data }` response envelope.
+ * The `Content-Type` header must NOT be set manually — the runtime sets it with the correct
+ * multipart boundary when given a `FormData` body.
+ * @param url - Fully-built request URL.
+ * @param accessToken - BigCommerce API access token.
+ * @param formData - The `FormData` body to send.
+ * @param schema - Optional Standard Schema-compliant schema to validate the unwrapped response data at runtime.
+ * @returns {Promise<TchefResult<T>>} The updated resource or an error result.
+ */
 export async function updateResourceMultipart<T>(
     url: string,
     accessToken: string,

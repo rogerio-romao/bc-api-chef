@@ -175,7 +175,7 @@ export default class ProductImages {
         const { schema, ...queryOptions } = options ?? {};
         const querySuffix = buildQueryString(queryOptions);
         const url = `${this.apiUrl}/${productId}/images${querySuffix}`;
-        const limit = clampPerPageLimits(queryOptions?.limit);
+        const limit = clampPerPageLimits(queryOptions.limit);
 
         return await fetchPaginated<ProductImage>(
             url,
@@ -201,12 +201,6 @@ export default class ProductImages {
      * @param options.schema - A Standard Schema to validate the API response against. If validation fails, the method will return a 422 error with details about the validation failure.
      * @returns {ApiResult<ProductImage>} The requested product image or an error result.
      */
-    public async getOne(
-        productId: number,
-        imageId: number,
-        options?: { schema?: StandardSchemaV1 },
-    ): ApiResult<ProductImage>;
-
     public async getOne<I extends readonly BaseProductImageField[]>(
         productId: number,
         imageId: number,
@@ -218,6 +212,12 @@ export default class ProductImages {
         imageId: number,
         options: { include_fields?: never; exclude_fields: E; schema?: StandardSchemaV1 },
     ): ApiResult<Omit<ProductImage, E[number]>>;
+
+    public async getOne(
+        productId: number,
+        imageId: number,
+        options?: { schema?: StandardSchemaV1 },
+    ): ApiResult<ProductImage>;
 
     public async getOne(
         productId: number,

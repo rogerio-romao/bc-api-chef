@@ -163,13 +163,13 @@ export default class ProductBulkPricingRules {
         const { schema, ...queryOptions } = options ?? {};
         const querySuffix = buildQueryString(queryOptions);
         const url = `${this.apiUrl}/${productId}/bulk-pricing-rules${querySuffix}`;
-        const limit = clampPerPageLimits(queryOptions?.limit);
+        const limit = clampPerPageLimits(queryOptions.limit);
 
         return await fetchPaginated<ProductBulkPricingRule>(
             url,
             this.accessToken,
             limit,
-            queryOptions?.page,
+            queryOptions.page,
             schema,
         );
     }
