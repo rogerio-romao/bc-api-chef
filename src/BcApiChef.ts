@@ -39,13 +39,9 @@ export default class BcApiChef {
      * header on every request.
      * @param options     - Optional client-wide behaviour toggles. All fields default
      * to a safe value so existing callers are unaffected.
-     * @param options.validate - When `true`, runtime validation runs on responses
-     * received from BigCommerce before they are returned to the caller.
-     * Defaults to `false`.
      * @param options.retries  - Number of times to retry a failed HTTP request before
      * surfacing the error. Forwarded to the underlying `tchef` HTTP client.
      * Defaults to `0` (no retries).
-     * @todo `options.validate` is not yet implemented.
      * @todo `options.retries` is not yet forwarded to `tchef()` calls in `ProductsV3`.
      */
     constructor(storeHash: string, accessToken: string, options: BcApiChefOptions = {}) {
@@ -53,7 +49,6 @@ export default class BcApiChef {
         this.baseUrl = `${BC_API_BASE_URL}/${storeHash}`;
         this.options = {
             retries: 0,
-            validate: false,
             ...options,
         };
     }

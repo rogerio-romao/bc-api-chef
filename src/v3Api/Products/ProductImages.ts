@@ -7,10 +7,11 @@ import {
     fetchOne,
     fetchPaginated,
     updateResource,
+    updateResourceMultipart,
     validatePositiveIntegers,
 } from '@/v3Api/utils';
 
-import type { ApiResult, BcApiChefOptions, Prettify } from '@/types/api-types';
+import type { ApiResult, BcApiChefOptions, StandardSchemaV1 } from '@/types/api-types';
 import type {
     ApiImageQueryBase,
     BaseProductImageField,
@@ -39,10 +40,8 @@ export default class ProductImages {
     /**
      * @param accessToken BigCommerce API access token.
      * @param apiUrl Base URL for product images endpoint.
-     * @param options Optional configuration for API requests, such as retries and validation.
-     * @param options.validate When `true`, runtime validation runs on responses received from BigCommerce before they are returned to the caller. Defaults to `false`.
+     * @param options Optional configuration for API requests, such as retries.
      * @param options.retries Number of times to retry a failed HTTP request before surfacing the error. Forwarded to the underlying `tchef` HTTP client. Defaults to `0` (no retries).
-     * @todo Gate runtime response validation on `this.options.validate`.
      * @todo Forward `this.options.retries` to every `tchef()` call in this class.
      */
     constructor(accessToken: string, apiUrl: string, options?: BcApiChefOptions) {
@@ -50,7 +49,6 @@ export default class ProductImages {
         this.apiUrl = apiUrl;
         this.options = {
             retries: 0,
-            validate: false,
             ...options,
         };
     }
@@ -64,11 +62,14 @@ export default class ProductImages {
      * Create a new product image, either by uploading a file or by providing an image URL. The payload must contain exactly one of `image_file` or `image_url`. That means sending a multipart form-data request with an `image_file` field, or a JSON request with an `image_url` field.
      * @param productId The ID of the product to create the image for.
      * @param imageData The data for the new product image, either as a file upload or an image URL, along with optional fields like `is_thumbnail`, `sort_order`, and `description`.
+     * @param options Optional parameters for the request.
+     * @param options.schema - A Standard Schema to validate the API response against. If validation fails, the method will return a 422 error with details about the validation failure.
      * @returns {ApiResult<ProductImage>} The created product image or an error result.
      */
     public async create(
         productId: number,
         imageData: ProductImagePayloadItem,
+        options?: { schema?: StandardSchemaV1 },
     ): ApiResult<ProductImage> {
         const idValidOrError = validatePositiveIntegers({ productId });
 
@@ -105,10 +106,15 @@ export default class ProductImages {
             if (imageData.description !== undefined) {
                 formData.append('description', imageData.description);
             }
-            return await createResourceMultipart<ProductImage>(url, this.accessToken, formData);
+            return await createResourceMultipart<ProductImage>(
+                url,
+                this.accessToken,
+                formData,
+                options?.schema,
+            );
         }
 
-        return await createResource(url, this.accessToken, imageData);
+        return await createResource(url, this.accessToken, imageData, options?.schema);
     }
 
     /* ------------------------------- GET IMAGES ------------------------------- */
@@ -122,21 +128,30 @@ export default class ProductImages {
      * @param options Query options for pagination and field selection. The pagination options are `page` and `limit`.
      * @param options.include_fields - An array of top-level product image fields to include in the response. For example, `['description', 'sort_order']` will return only the `id`, `description`, and `sort_order` fields for each product image. Mutually exclusive with `exclude_fields`.
      * @param options.exclude_fields - An array of top-level product image fields to exclude from the response. For example, `['url_standard', 'url_zoom']` will return all fields except `url_standard` and `url_zoom` for each product image. Mutually exclusive with `include_fields`.
+     * @param options.schema - A Standard Schema to validate each item in the API response against. If validation fails for any item, the method will return a 422 error with details about the validation failure. Validation is performed on each page of results as they are fetched, so if you are paginating through results and a later page contains invalid data, you will still get a 422 error without having to wait for all pages to be fetched.
      * @returns {ApiResult<ProductImage[]>} An array of product images or an error result.
      */
     public async getMultiple<I extends readonly BaseProductImageField[]>(
         productId: number,
-        options: ApiImageQueryBase & { include_fields: I; exclude_fields?: never },
+        options: ApiImageQueryBase & {
+            include_fields: I;
+            exclude_fields?: never;
+            schema?: StandardSchemaV1;
+        },
     ): ApiResult<Pick<ProductImage, 'id' | I[number]>[]>;
 
     public async getMultiple<E extends readonly BaseProductImageField[]>(
         productId: number,
-        options: ApiImageQueryBase & { include_fields?: never; exclude_fields: E },
+        options: ApiImageQueryBase & {
+            include_fields?: never;
+            exclude_fields: E;
+            schema?: StandardSchemaV1;
+        },
     ): ApiResult<Omit<ProductImage, E[number]>[]>;
 
     public async getMultiple(
         productId: number,
-        options?: ApiImageQueryBase,
+        options?: ApiImageQueryBase & { schema?: StandardSchemaV1 },
     ): ApiResult<ProductImage[]>;
 
     public async getMultiple(
@@ -144,6 +159,7 @@ export default class ProductImages {
         options?: ApiImageQueryBase & {
             include_fields?: readonly BaseProductImageField[];
             exclude_fields?: readonly BaseProductImageField[];
+            schema?: StandardSchemaV1;
         },
     ): ApiResult<ProductImage[]> {
         const idValidOrError = validatePositiveIntegers({ productId });
@@ -156,11 +172,18 @@ export default class ProductImages {
             };
         }
 
-        const querySuffix = buildQueryString(options);
+        const { schema, ...queryOptions } = options ?? {};
+        const querySuffix = buildQueryString(queryOptions);
         const url = `${this.apiUrl}/${productId}/images${querySuffix}`;
-        const limit = clampPerPageLimits(options?.limit);
+        const limit = clampPerPageLimits(queryOptions.limit);
 
-        return await fetchPaginated<ProductImage>(url, this.accessToken, limit, options?.page);
+        return await fetchPaginated<ProductImage>(
+            url,
+            this.accessToken,
+            limit,
+            queryOptions?.page,
+            schema,
+        );
     }
 
     /* -------------------------------- GET IMAGE ------------------------------- */
@@ -175,21 +198,26 @@ export default class ProductImages {
      * @param options Optional parameters to include or exclude specific fields.
      * @param options.include_fields - An array of top-level product image fields to include in the response. For example, `['description', 'sort_order']` will return only the `id`, `description`, and `sort_order` fields for the product image. Mutually exclusive with `exclude_fields`.
      * @param options.exclude_fields - An array of top-level product image fields to exclude from the response. For example, `['url_standard', 'url_zoom']` will return all fields except `url_standard` and `url_zoom` for the product image. Mutually exclusive with `include_fields`.
+     * @param options.schema - A Standard Schema to validate the API response against. If validation fails, the method will return a 422 error with details about the validation failure.
      * @returns {ApiResult<ProductImage>} The requested product image or an error result.
      */
-    public async getOne(productId: number, imageId: number): ApiResult<ProductImage>;
-
     public async getOne<I extends readonly BaseProductImageField[]>(
         productId: number,
         imageId: number,
-        options: { include_fields: I; exclude_fields?: never },
+        options: { include_fields: I; exclude_fields?: never; schema?: StandardSchemaV1 },
     ): ApiResult<Pick<ProductImage, 'id' | I[number]>>;
 
     public async getOne<E extends readonly BaseProductImageField[]>(
         productId: number,
         imageId: number,
-        options: { include_fields?: never; exclude_fields: E },
+        options: { include_fields?: never; exclude_fields: E; schema?: StandardSchemaV1 },
     ): ApiResult<Omit<ProductImage, E[number]>>;
+
+    public async getOne(
+        productId: number,
+        imageId: number,
+        options?: { schema?: StandardSchemaV1 },
+    ): ApiResult<ProductImage>;
 
     public async getOne(
         productId: number,
@@ -197,6 +225,7 @@ export default class ProductImages {
         options?: {
             include_fields?: readonly BaseProductImageField[];
             exclude_fields?: readonly BaseProductImageField[];
+            schema?: StandardSchemaV1;
         },
     ): ApiResult<ProductImage> {
         const idsValidOrErrorMsg = validatePositiveIntegers({ imageId, productId });
@@ -205,10 +234,11 @@ export default class ProductImages {
             return { error: idsValidOrErrorMsg, ok: false, statusCode: 400 };
         }
 
-        const querySuffix = buildQueryString(options);
+        const { schema, ...queryOptions } = options ?? {};
+        const querySuffix = buildQueryString(queryOptions);
         const url = `${this.apiUrl}/${productId}/images/${imageId}${querySuffix}`;
 
-        return await fetchOne<ProductImage>(url, this.accessToken);
+        return await fetchOne<ProductImage>(url, this.accessToken, schema);
     }
 
     /* ------------------------------- UPDATE IMAGE ------------------------------ */
@@ -218,12 +248,15 @@ export default class ProductImages {
      * @param productId ID of the product the image belongs to.
      * @param imageId ID of the image to update.
      * @param imageData The data to update for the product image, either as a file upload or an image URL, along with optional fields like `is_thumbnail`, `sort_order`, and `description`.
+     * @param options Optional parameters for the request.
+     * @param options.schema - A Standard Schema to validate the API response against. If validation fails, the method will return a 422 error with details about the validation failure.
      * @returns {ApiResult<ProductImage>} The updated product image or an error result.
      */
     public async update(
         productId: number,
         imageId: number,
         imageData: ProductImageUpdatePayload,
+        options?: { schema?: StandardSchemaV1 },
     ): ApiResult<ProductImage> {
         const idsValidOrErrorMsg = validatePositiveIntegers({ imageId, productId });
 
@@ -259,10 +292,15 @@ export default class ProductImages {
             if (imageData.description !== undefined) {
                 formData.append('description', imageData.description);
             }
-            return await this.updateResourceMultipart<ProductImage>(url, formData);
+            return await updateResourceMultipart<ProductImage>(
+                url,
+                this.accessToken,
+                formData,
+                options?.schema,
+            );
         }
 
-        return await updateResource(url, this.accessToken, imageData);
+        return await updateResource(url, this.accessToken, imageData, options?.schema);
     }
 
     /* ------------------------------- DELETE IMAGE ------------------------------ */
@@ -339,42 +377,5 @@ export default class ProductImages {
         }
 
         return null;
-    }
-
-    /**
-     * Sends a multipart `PUT` request for image updates that include a file upload.
-     * @param url Fully-built request URL.
-     * @param formData Multipart payload to send.
-     * @returns {ApiResult<T>} The updated resource or an error result.
-     */
-    private async updateResourceMultipart<T>(url: string, formData: FormData): ApiResult<T> {
-        try {
-            const response = await fetch(url, {
-                body: formData,
-                headers: {
-                    Accept: 'application/json',
-                    'X-Auth-Token': this.accessToken,
-                },
-                method: 'PUT',
-            });
-
-            if (!response.ok) {
-                return {
-                    error: response.statusText || `Request failed with status ${response.status}`,
-                    ok: false,
-                    statusCode: response.status,
-                };
-            }
-
-            const json = (await response.json()) as { data: T };
-
-            return { data: json.data as Prettify<T>, ok: true };
-        } catch (error) {
-            return {
-                error: error instanceof Error ? error.message : 'Network Error',
-                ok: false,
-                statusCode: 500,
-            };
-        }
     }
 }

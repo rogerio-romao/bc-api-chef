@@ -14,7 +14,7 @@ import ProductCustomFields from './ProductCustomFields';
 import ProductImages from './ProductImages';
 import ProductMetafields from './ProductMetafields';
 
-import type { ApiResult, BcApiChefOptions } from '@/types/api-types';
+import type { ApiResult, BcApiChefOptions, StandardSchemaV1 } from '@/types/api-types';
 import type {
     ApiGetProductQueryBase,
     ApiProductQuery,
@@ -59,15 +59,10 @@ export default class ProductsV3 {
      * @param accessToken - BigCommerce API access token, sent as `X-Auth-Token`
      * on every request.
      * @param options - Shared client options propagated from `BcApiChef`.
-     * `validate` controls runtime response validation before results are returned
-     * to callers, and `retries` is reserved for retry support in downstream HTTP
-     * calls.
-     * @param options.validate - When `true`, runtime validation runs on responses
-     * received from BigCommerce before they are returned to the caller. Defaults to `false`.
+     * `retries` is reserved for retry support in downstream HTTP calls.
      * @param options.retries  - Number of times to retry a failed HTTP request before
      * surfacing the error. Forwarded to the underlying `tchef` HTTP client.
      * Defaults to `0` (no retries).
-     * @todo Gate runtime response validation on `this.options.validate`.
      * @todo Forward `this.options.retries` to every `tchef()` call in this class.
      */
     constructor(baseUrlWithVersion: string, accessToken: string, options: BcApiChefOptions = {}) {
@@ -75,7 +70,6 @@ export default class ProductsV3 {
         this.apiUrl = `${baseUrlWithVersion}/${this.productsApiPath}`;
         this.options = {
             retries: 0,
-            validate: false,
             ...options,
         };
     }
@@ -91,19 +85,24 @@ export default class ProductsV3 {
      * - The second overload does not accept an `options` object, and returns the full product.
      *
      * @param productData Product data to create.
-     * @param options Query options — `include_fields` narrows the returned fields.
+     * @param options Query options.
+     * @param options.include_fields - An array of top-level product fields to include in the response. For example, `['name', 'price']` will return only the `id`, `name`, and `price` fields for the created product. Mutually exclusive with `exclude_fields`.
+     * @param options.schema - A Standard Schema to validate the API response against. If validation fails, the method will return a 422 error with details about the validation failure.
      * @returns {ApiResult<BaseProduct>} The created product with only the requested fields, or an error result.
      */
     public async create<F extends readonly NoIdProductField[]>(
         productData: CreateProductPayload,
-        options: { include_fields: F },
+        options: { include_fields: F; schema?: StandardSchemaV1 },
     ): ApiResult<CreateProductReturnType<F>>;
-
-    public async create(productData: CreateProductPayload): ApiResult<BaseProduct>;
 
     public async create(
         productData: CreateProductPayload,
-        options?: { include_fields?: readonly NoIdProductField[] },
+        options?: { schema?: StandardSchemaV1 },
+    ): ApiResult<BaseProduct>;
+
+    public async create(
+        productData: CreateProductPayload,
+        options?: { include_fields?: readonly NoIdProductField[]; schema?: StandardSchemaV1 },
     ): ApiResult<BaseProduct> {
         const validationError = this.validateCreateProductPayload(productData);
 
@@ -112,10 +111,11 @@ export default class ProductsV3 {
             return { error: validationError, ok: false, statusCode: 400 };
         }
 
-        const querySuffix = buildQueryString(options);
+        const { schema, ...queryOptions } = options ?? {};
+        const querySuffix = buildQueryString(queryOptions);
         const url = `${this.apiUrl}${querySuffix}`;
 
-        return await createResource(url, this.accessToken, productData);
+        return await createResource(url, this.accessToken, productData, schema);
     }
 
     /* ------------------------------ GET PRODUCTS ------------------------------ */
@@ -130,6 +130,7 @@ export default class ProductsV3 {
      * @param options.includes - Include sub-resources in the response by setting the relevant flags to `true`. For example, `{ includes: { variants: true, images: true } }` will include both variants and images in the response. Defaults to no sub-resources included.
      * @param options.include_fields - An array of top-level product fields to include in the response. For example, `['name', 'price']` will return only the `id`, `name`, and `price` fields for each product. Mutually exclusive with `exclude_fields`.
      * @param options.exclude_fields - An array of top-level product fields to exclude from the response. For example, `['description', 'weight']` will return all fields except `description` and `weight` for each product. Mutually exclusive with `include_fields`.
+     * @param options.schema - A Standard Schema to validate each item in the API response against. If validation fails for any item, the method will return a 422 error with details about the validation failure. Validation is performed on each page of results as they are fetched, so if you are paginating through results and a later page contains invalid data, you will still get a 422 error without having to wait for all pages to be fetched.
      * @returns {ApiResult<BaseProduct[]>} The collected products or an error result.
      */
     public async getMultiple<
@@ -141,6 +142,7 @@ export default class ProductsV3 {
             includes?: T & ProductIncludes;
             include_fields: F;
             exclude_fields?: never;
+            schema?: StandardSchemaV1;
         },
     ): ApiResult<ProductWithFields<F, T>[]>;
 
@@ -152,12 +154,14 @@ export default class ProductsV3 {
             includes?: T & ProductIncludes;
             include_fields?: never;
             exclude_fields: E;
+            schema?: StandardSchemaV1;
         },
     ): ApiResult<ProductWithoutFields<E, T>[]>;
 
     public async getMultiple<T extends ProductIncludes = NoProductIncludes>(
         options?: ApiProductQueryBase & {
             includes?: T & ProductIncludes;
+            schema?: StandardSchemaV1;
         },
     ): ApiResult<(BaseProduct & IncludeExpansion<T>)[]>;
 
@@ -166,9 +170,10 @@ export default class ProductsV3 {
             includes?: ProductIncludes;
             include_fields?: readonly NoIdProductField[];
             exclude_fields?: readonly NoIdProductField[];
+            schema?: StandardSchemaV1;
         },
     ): ApiResult<BaseProduct[]> {
-        const { includes, ...query } = options ?? {};
+        const { includes, schema, ...query } = options ?? {};
         const includesString = this.generateProductIncludes(includes);
         const querySuffix = buildQueryString(query as ApiProductQuery, { include: includesString });
         const url = `${this.apiUrl}${querySuffix}`;
@@ -178,6 +183,7 @@ export default class ProductsV3 {
             this.accessToken,
             clampPerPageLimits(query?.limit),
             query?.page,
+            schema,
         );
     }
 
@@ -193,6 +199,7 @@ export default class ProductsV3 {
      * @param options.includes - Include sub-resources in the response by setting the relevant flags to `true`. For example, `{ includes: { variants: true, images: true } }` will include both variants and images in the response. Defaults to no sub-resources included.
      * @param options.include_fields - An array of top-level product fields to include in the response. For example, `['name', 'price']` will return only the `id`, `name`, and `price` fields for the product. Mutually exclusive with `exclude_fields`.
      * @param options.exclude_fields - An array of top-level product fields to exclude from the response. For example, `['description', 'weight']` will return all fields except `description` and `weight` for the product. Mutually exclusive with `include_fields`.
+     * @param options.schema - A Standard Schema to validate the API response against. If validation fails, the method will return a 422 error with details about the validation failure.
      * @returns {ApiResult<BaseProduct>} The product or an error result.
      */
     public async getOne<
@@ -204,6 +211,7 @@ export default class ProductsV3 {
             includes?: T & ProductIncludes;
             include_fields: F;
             exclude_fields?: never;
+            schema?: StandardSchemaV1;
         },
     ): ApiResult<ProductWithFields<F, T>>;
 
@@ -216,6 +224,7 @@ export default class ProductsV3 {
             includes?: T & ProductIncludes;
             include_fields?: never;
             exclude_fields: E;
+            schema?: StandardSchemaV1;
         },
     ): ApiResult<ProductWithoutFields<E, T>>;
 
@@ -223,6 +232,7 @@ export default class ProductsV3 {
         productId: number,
         options?: ApiGetProductQueryBase & {
             includes?: T & ProductIncludes;
+            schema?: StandardSchemaV1;
         },
     ): ApiResult<BaseProduct & IncludeExpansion<T>>;
 
@@ -232,6 +242,7 @@ export default class ProductsV3 {
             includes?: ProductIncludes;
             include_fields?: readonly NoIdProductField[];
             exclude_fields?: readonly NoIdProductField[];
+            schema?: StandardSchemaV1;
         },
     ): ApiResult<BaseProduct> {
         const idValidOrErrorMsg = validatePositiveIntegers({ productId });
@@ -240,12 +251,12 @@ export default class ProductsV3 {
             return { error: idValidOrErrorMsg, ok: false, statusCode: 400 };
         }
 
-        const { includes, ...query } = options ?? {};
+        const { includes, schema, ...query } = options ?? {};
         const includesString = this.generateProductIncludes(includes);
         const querySuffix = buildQueryString(query as ApiProductQuery, { include: includesString });
         const url = `${this.apiUrl}/${productId}${querySuffix}`;
 
-        return await fetchOne<FullProduct>(url, this.accessToken);
+        return await fetchOne<FullProduct>(url, this.accessToken, schema);
     }
 
     /* ------------------------------ UPDATE PRODUCT ------------------------------ */
@@ -259,6 +270,7 @@ export default class ProductsV3 {
      * @param options Query and include options — flat object.
      * @param options.includes - Include sub-resources in the response by setting the relevant flags to `true`. For example, `{ includes: { variants: true, images: true } }` will include both variants and images in the response. Defaults to no sub-resources included.
      * @param options.include_fields - An array of top-level product fields to include in the response. For example, `['name', 'price']` will return only the `id`, `name`, and `price` fields for the product. Ignored if not supplied, in which case all fields are returned.
+     * @param options.schema - A Standard Schema to validate the API response against. If validation fails, the method will return a 422 error with details about the validation failure.
      * @returns {ApiResult<BaseProduct>} The updated product or an error result.
      */
     public async update<
@@ -270,6 +282,7 @@ export default class ProductsV3 {
         options: {
             includes?: T & ProductIncludes;
             include_fields: F;
+            schema?: StandardSchemaV1;
         },
     ): ApiResult<ProductWithFields<F, T>>;
 
@@ -278,6 +291,7 @@ export default class ProductsV3 {
         payload: UpdateProductPayload,
         options?: {
             includes?: T & ProductIncludes;
+            schema?: StandardSchemaV1;
         },
     ): ApiResult<BaseProduct & IncludeExpansion<T>>;
 
@@ -287,6 +301,7 @@ export default class ProductsV3 {
         options?: {
             includes?: ProductIncludes;
             include_fields?: readonly NoIdProductField[];
+            schema?: StandardSchemaV1;
         },
     ): ApiResult<BaseProduct> {
         const idValidOrErrorMsg = validatePositiveIntegers({ productId });
@@ -301,12 +316,12 @@ export default class ProductsV3 {
             return { error: validationError, ok: false, statusCode: 400 };
         }
 
-        const { includes, ...query } = options ?? {};
+        const { includes, schema, ...query } = options ?? {};
         const includesString = this.generateProductIncludes(includes);
         const querySuffix = buildQueryString(query as ApiProductQuery, { include: includesString });
         const url = `${this.apiUrl}/${productId}${querySuffix}`;
 
-        return await updateResource(url, this.accessToken, payload);
+        return await updateResource(url, this.accessToken, payload, schema);
     }
 
     /* ------------------------------ DELETE PRODUCT ------------------------------ */

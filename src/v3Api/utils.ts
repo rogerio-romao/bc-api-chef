@@ -4,9 +4,30 @@ import { DEFAULT_START_PAGE, PER_PAGE_DEFAULT, PER_PAGE_MAX, PER_PAGE_MIN } from
 
 import type { TchefResult } from 'tchef';
 
-import type { BcRequestResponseMeta } from '@/types/api-types';
+import type { BcRequestResponseMeta, StandardSchemaV1 } from '@/types/api-types';
 
 const PAGINATION_PARAMS = new Set(['page', 'limit']);
+
+/* -------------------------------------------------------------------------- */
+/*                           SCHEMA VALIDATION                                */
+/* -------------------------------------------------------------------------- */
+
+async function runSchemaValidation(
+    schema: StandardSchemaV1,
+    data: unknown,
+): Promise<{ ok: false; error: string; statusCode: number } | null> {
+    const result = await schema['~standard'].validate(data);
+
+    if (result.issues) {
+        return {
+            error: `Schema validation failed: ${result.issues.map((i) => i.message).join('; ')}`,
+            ok: false,
+            statusCode: 422,
+        };
+    }
+
+    return null;
+}
 
 /* -------------------------------------------------------------------------- */
 /*                              FETCHING HELPERS                              */
@@ -16,9 +37,14 @@ const PAGINATION_PARAMS = new Set(['page', 'limit']);
  * Fetches a single BC resource and unwraps the `{ data }` envelope.
  * @param url - Fully-built request URL.
  * @param accessToken - BigCommerce API access token.
+ * @param schema - Optional Standard Schema-compliant schema to validate the unwrapped response data at runtime.
  * @returns {Promise<TchefResult<T>>} The resource or an error result.
  */
-export async function fetchOne<T>(url: string, accessToken: string): Promise<TchefResult<T>> {
+export async function fetchOne<T>(
+    url: string,
+    accessToken: string,
+    schema?: StandardSchemaV1,
+): Promise<TchefResult<T>> {
     const response = await tchef(url, {
         headers: {
             Accept: 'application/json',
@@ -31,6 +57,14 @@ export async function fetchOne<T>(url: string, accessToken: string): Promise<Tch
     }
 
     const { data } = response.data as { data: T };
+
+    if (schema) {
+        const validationError = await runSchemaValidation(schema, data);
+        if (validationError) {
+            return validationError;
+        }
+    }
+
     return { data, ok: true };
 }
 
@@ -41,6 +75,7 @@ export async function fetchOne<T>(url: string, accessToken: string): Promise<Tch
  * @param accessToken - BigCommerce API access token.
  * @param limit - Page size (should already be clamped by the caller).
  * @param singlePage - When provided, only that page is fetched and returned.
+ * @param schema - Optional Standard Schema-compliant schema to validate each item. Short-circuits on the first failure.
  * @returns {Promise<TchefResult<T[]>>} The collected rows or an error result.
  */
 export async function fetchPaginated<T>(
@@ -48,6 +83,7 @@ export async function fetchPaginated<T>(
     accessToken: string,
     limit: number,
     singlePage?: number,
+    schema?: StandardSchemaV1,
 ): Promise<TchefResult<T[]>> {
     const results: T[] = [];
 
@@ -72,7 +108,17 @@ export async function fetchPaginated<T>(
 
         const { data, meta } = response.data as { data: T[]; meta: BcRequestResponseMeta };
 
-        results.push(...data);
+        if (schema) {
+            for (const item of data) {
+                const validationError = await runSchemaValidation(schema, item);
+                if (validationError) {
+                    return validationError;
+                }
+                results.push(item);
+            }
+        } else {
+            results.push(...data);
+        }
 
         if (singlePage !== undefined) {
             return { data: results, ok: true };
@@ -114,12 +160,14 @@ export async function deleteResource(url: string, accessToken: string): Promise<
  * @param url - Fully-built request URL.
  * @param accessToken - BigCommerce API access token.
  * @param payload - Request body to serialize as JSON.
+ * @param schema - Optional Standard Schema-compliant schema to validate the unwrapped response data at runtime.
  * @returns {Promise<TchefResult<T>>} The created resource or an error result.
  */
 export async function createResource<T, P>(
     url: string,
     accessToken: string,
     payload: P,
+    schema?: StandardSchemaV1,
 ): Promise<TchefResult<T>> {
     const response = await tchef(url, {
         body: JSON.stringify(payload),
@@ -136,6 +184,14 @@ export async function createResource<T, P>(
     }
 
     const { data } = response.data as { data: T };
+
+    if (schema) {
+        const validationError = await runSchemaValidation(schema, data);
+        if (validationError) {
+            return validationError;
+        }
+    }
+
     return { data, ok: true };
 }
 
@@ -146,12 +202,14 @@ export async function createResource<T, P>(
  * @param url - Fully-built request URL.
  * @param accessToken - BigCommerce API access token.
  * @param formData - The `FormData` body to send.
+ * @param schema - Optional Standard Schema-compliant schema to validate the unwrapped response data at runtime.
  * @returns {Promise<TchefResult<T>>} The created resource or an error result.
  */
 export async function createResourceMultipart<T>(
     url: string,
     accessToken: string,
     formData: FormData,
+    schema?: StandardSchemaV1,
 ): Promise<TchefResult<T>> {
     const response = await tchef(url, {
         body: formData,
@@ -167,6 +225,14 @@ export async function createResourceMultipart<T>(
     }
 
     const { data } = response.data as { data: T };
+
+    if (schema) {
+        const validationError = await runSchemaValidation(schema, data);
+        if (validationError) {
+            return validationError;
+        }
+    }
+
     return { data, ok: true };
 }
 
@@ -176,12 +242,14 @@ export async function createResourceMultipart<T>(
  * @param url - Fully-built request URL.
  * @param accessToken - BigCommerce API access token.
  * @param payload - Request body to serialize as JSON.
+ * @param schema - Optional Standard Schema-compliant schema to validate the unwrapped response data at runtime.
  * @returns {Promise<TchefResult<T>>} The updated resource or an error result.
  */
 export async function updateResource<T, P>(
     url: string,
     accessToken: string,
     payload: P,
+    schema?: StandardSchemaV1,
 ): Promise<TchefResult<T>> {
     const response = await tchef(url, {
         body: JSON.stringify(payload),
@@ -198,6 +266,55 @@ export async function updateResource<T, P>(
     }
 
     const { data } = response.data as { data: T };
+
+    if (schema) {
+        const validationError = await runSchemaValidation(schema, data);
+        if (validationError) {
+            return validationError;
+        }
+    }
+
+    return { data, ok: true };
+}
+
+/**
+ * Sends a `multipart/form-data` `PUT` request and unwraps the common `{ data }` response envelope.
+ * The `Content-Type` header must NOT be set manually — the runtime sets it with the correct
+ * multipart boundary when given a `FormData` body.
+ * @param url - Fully-built request URL.
+ * @param accessToken - BigCommerce API access token.
+ * @param formData - The `FormData` body to send.
+ * @param schema - Optional Standard Schema-compliant schema to validate the unwrapped response data at runtime.
+ * @returns {Promise<TchefResult<T>>} The updated resource or an error result.
+ */
+export async function updateResourceMultipart<T>(
+    url: string,
+    accessToken: string,
+    formData: FormData,
+    schema?: StandardSchemaV1,
+): Promise<TchefResult<T>> {
+    const response = await tchef(url, {
+        body: formData,
+        headers: {
+            Accept: 'application/json',
+            'X-Auth-Token': accessToken,
+        },
+        method: 'PUT',
+    });
+
+    if (!response.ok) {
+        return response;
+    }
+
+    const { data } = response.data as { data: T };
+
+    if (schema) {
+        const validationError = await runSchemaValidation(schema, data);
+        if (validationError) {
+            return validationError;
+        }
+    }
+
     return { data, ok: true };
 }
 
