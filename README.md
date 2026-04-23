@@ -27,3 +27,75 @@ refine the design and add features. Stay tuned for updates!
   issues.
 - **Validation**: Validates request parameters and response data against the API
   schema.
+
+## Schema Validation
+
+TypeScript types are the primary way we ensure type safety and we give you the correct expected type for each API response, based on your query parameters. It is still possible for runtime data to deviate from the expected types (e.g., due to API changes or data inconsistencies). As an optional additional safety net at runtime, every data-returning
+method accepts a `schema` option that follows the
+[Standard Schema](https://standardschema.dev/) interface (`StandardSchemaV1`).
+This lets you plug in any compatible validation library — such as
+[Zod](https://zod.dev/), [Valibot](https://valibot.dev/), or
+[ArkType](https://arktype.io/) — without the client taking a hard dependency on
+any of them.
+
+When a schema is provided, it is applied to the unwrapped response data
+(i.e. after the BigCommerce `{ data: T }` envelope is stripped) before the
+result is returned. On failure the method returns
+`{ ok: false, statusCode: 422, error: 'Schema validation failed: <message>' }`
+instead of the data. For paginated methods validation runs per item and
+short-circuits on the first failure, so subsequent pages are never fetched.
+
+### Example — getOne
+
+```ts
+import * as v from 'valibot';
+import { BcApiChef } from 'bc-api-chef';
+
+const ProductSchema = v.object({
+    id: v.number(),
+    name: v.string(),
+    price: v.number(),
+});
+
+const client = new BcApiChef(storeHash, accessToken);
+const result = await client.v3().products().getOne(123, {
+    schema: ProductSchema,
+});
+
+if (!result.ok) {
+    // result.error is 'Schema validation failed: ...' if schema rejected the response
+    console.error(result.error);
+} else {
+    console.log(result.data.name);
+}
+```
+
+### Example — create and update
+
+```ts
+const result = await client
+    .v3()
+    .products()
+    .create({ name: 'My Product', type: 'physical', weight: 0.5 }, { schema: ProductSchema });
+```
+
+### Using include_fields alongside a schema
+
+When you narrow the response with `include_fields`, pass a schema that matches
+the narrowed shape — not the full product type — to avoid spurious validation
+failures:
+
+```ts
+const NarrowSchema = v.object({
+    id: v.number(),
+    name: v.string(),
+});
+
+const result = await client
+    .v3()
+    .products()
+    .getOne(123, {
+        include_fields: ['name'],
+        schema: NarrowSchema,
+    });
+```

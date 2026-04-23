@@ -28,16 +28,10 @@ export default class V3Api {
      * without the API version segment.
      * @param accessToken - BigCommerce API access token, forwarded to every request.
      * @param options - Shared client options propagated from `BcApiChef`.
-     * `validate` controls runtime response validation before results are returned
-     * to callers, and `retries` is reserved for retry support in downstream HTTP
-     * calls.
-     * @param options.validate - When `true`, runtime validation runs on responses
-     * received from BigCommerce before they are returned to the caller.
-     * Defaults to `false`.
+     * `retries` is reserved for retry support in downstream HTTP calls.
      * @param options.retries  - Number of times to retry a failed HTTP request before
      * surfacing the error. Forwarded to the underlying `tchef` HTTP client.
      * Defaults to `0` (no retries).
-     * @todo `validate` is not yet honoured by `ProductsV3`.
      * @todo `retries` is not yet forwarded to `tchef()` by `ProductsV3`.
      */
     constructor(baseUrl: string, accessToken: string, options: BcApiChefOptions = {}) {
@@ -46,7 +40,6 @@ export default class V3Api {
         this.baseUrlWithVersion = `${this.baseUrl}/${this.version}`;
         this.options = {
             retries: 0,
-            validate: false,
             ...options,
         };
     }

@@ -1,6 +1,28 @@
 export interface BcApiChefOptions {
-    validate?: boolean;
     retries?: number;
+}
+
+export interface StandardSchemaIssue {
+    readonly message: string;
+    readonly path?: readonly (PropertyKey | { readonly key: PropertyKey })[];
+}
+
+export type StandardSchemaResult<Output> =
+    | { readonly value: Output; readonly issues?: undefined }
+    | { readonly issues: readonly StandardSchemaIssue[] };
+
+export interface StandardSchemaV1<Input = unknown, Output = Input> {
+    readonly '~standard': {
+        readonly version: 1;
+        readonly vendor: string;
+        readonly validate: (
+            value: unknown,
+        ) => StandardSchemaResult<Output> | Promise<StandardSchemaResult<Output>>;
+        readonly types?: {
+            readonly input: Input;
+            readonly output: Output;
+        };
+    };
 }
 
 export interface BcRequestResponseMeta {

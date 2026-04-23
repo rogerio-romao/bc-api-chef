@@ -9,7 +9,7 @@ import {
     validatePositiveIntegers,
 } from '@/v3Api/utils.ts';
 
-import type { ApiResult, BcApiChefOptions } from '@/types/api-types';
+import type { ApiResult, BcApiChefOptions, StandardSchemaV1 } from '@/types/api-types';
 import type {
     ApiMetafieldQueryBase,
     BaseMetafieldField,
@@ -38,12 +38,8 @@ export default class ProductMetafields {
      * @param accessToken BigCommerce API access token, sent as `X-Auth-Token` on every request.
      * @param apiUrl Base metafields API URL, already scoped to `catalog/products/{productId}/metafields`.
      * @param options Shared client options propagated from `BcApiChef`.
-     * `validate` controls runtime response validation before results are returned
-     * to callers, and `retries` is reserved for retry support in downstream HTTP
-     * calls.
-     * @param options.validate When `true`, runtime validation runs on responses received from BigCommerce before they are returned to the caller. Defaults to `false`.
+     * `retries` is reserved for retry support in downstream HTTP calls.
      * @param options.retries Number of times to retry a failed HTTP request before surfacing the error. Forwarded to the underlying `tchef` HTTP client. Defaults to `0` (no retries).
-     * @todo Gate runtime response validation on `this.options.validate`.
      * @todo Forward `this.options.retries` to every `tchef()` call in this class.
      */
     constructor(accessToken: string, apiUrl: string, options: BcApiChefOptions = {}) {
@@ -51,7 +47,6 @@ export default class ProductMetafields {
         this.apiUrl = apiUrl;
         this.options = {
             retries: 0,
-            validate: false,
             ...options,
         };
     }
@@ -65,11 +60,14 @@ export default class ProductMetafields {
      * Creates a new metafield for a product.
      * @param productId Product ID.
      * @param metafieldData Metafield data to create.
+     * @param options Optional parameters for the request.
+     * @param options.schema - A Standard Schema to validate the API response against. If validation fails, the method will return a 422 error with details about the validation failure.
      * @returns {ApiResult<ProductMetafield>} The created metafield or an error result.
      */
     public async create(
         productId: number,
         metafieldData: CreateMetafieldPayload,
+        options?: { schema?: StandardSchemaV1 },
     ): ApiResult<ProductMetafield> {
         const idValidOrError = validatePositiveIntegers({ productId });
 
@@ -89,7 +87,7 @@ export default class ProductMetafields {
 
         const url = `${this.apiUrl}/${productId}/metafields`;
 
-        return await createResource(url, this.accessToken, metafieldData);
+        return await createResource(url, this.accessToken, metafieldData, options?.schema);
     }
 
     /* ----------------------------- GET METAFIELDS ----------------------------- */
@@ -102,21 +100,30 @@ export default class ProductMetafields {
      * @param options Query and include/exclude field options. Supply `page` to fetch a single page instead of auto-collecting every page, limit to control results per page, and the various filter/sort query params supported by the BC API.
      * @param options.include_fields When provided, only these fields are included in the returned metafield objects, alongside `id`. Cannot be used with `exclude_fields`.
      * @param options.exclude_fields When provided, these fields are excluded from the returned metafield objects. Cannot be used with `include_fields`.
+     * @param options.schema - A Standard Schema to validate each item in the API response against. If validation fails for any item, the method will return a 422 error with details about the validation failure. Validation is performed on each page of results as they are fetched, so if you are paginating through results and a later page contains invalid data, you will still get a 422 error without having to wait for all pages to be fetched.
      * @returns {ApiResult<ProductMetafield[]>} The collected metafields or an error result.
      */
     public async getMultiple<I extends readonly BaseMetafieldField[]>(
         productId: number,
-        options: ApiMetafieldQueryBase & { include_fields: I; exclude_fields?: never },
+        options: ApiMetafieldQueryBase & {
+            include_fields: I;
+            exclude_fields?: never;
+            schema?: StandardSchemaV1;
+        },
     ): ApiResult<Pick<ProductMetafield, 'id' | I[number]>[]>;
 
     public async getMultiple<E extends readonly BaseMetafieldField[]>(
         productId: number,
-        options: ApiMetafieldQueryBase & { include_fields?: never; exclude_fields: E },
+        options: ApiMetafieldQueryBase & {
+            include_fields?: never;
+            exclude_fields: E;
+            schema?: StandardSchemaV1;
+        },
     ): ApiResult<Omit<ProductMetafield, E[number]>[]>;
 
     public async getMultiple(
         productId: number,
-        options?: ApiMetafieldQueryBase,
+        options?: ApiMetafieldQueryBase & { schema?: StandardSchemaV1 },
     ): ApiResult<ProductMetafield[]>;
 
     public async getMultiple(
@@ -124,6 +131,7 @@ export default class ProductMetafields {
         options?: ApiMetafieldQueryBase & {
             include_fields?: readonly BaseMetafieldField[];
             exclude_fields?: readonly BaseMetafieldField[];
+            schema?: StandardSchemaV1;
         },
     ): ApiResult<ProductMetafield[]> {
         const idValidOrErrorMsg = validatePositiveIntegers({ productId });
@@ -132,11 +140,18 @@ export default class ProductMetafields {
             return { error: idValidOrErrorMsg, ok: false, statusCode: 400 };
         }
 
-        const querySuffix = buildQueryString(options);
+        const { schema, ...queryOptions } = options ?? {};
+        const querySuffix = buildQueryString(queryOptions);
         const url = `${this.apiUrl}/${productId}/metafields${querySuffix}`;
-        const limit = clampPerPageLimits(options?.limit);
+        const limit = clampPerPageLimits(queryOptions?.limit);
 
-        return await fetchPaginated<ProductMetafield>(url, this.accessToken, limit, options?.page);
+        return await fetchPaginated<ProductMetafield>(
+            url,
+            this.accessToken,
+            limit,
+            queryOptions?.page,
+            schema,
+        );
     }
 
     /* ------------------------------ GET METAFIELD ----------------------------- */
@@ -151,20 +166,25 @@ export default class ProductMetafields {
      * @param options Include/exclude field options. There are no other query params supported by the BC API for this endpoint.
      * @param options.include_fields When provided, only these fields are included in the returned metafield object, alongside `id`. Cannot be used with `exclude_fields`.
      * @param options.exclude_fields When provided, these fields are excluded from the returned metafield object. Cannot be used with `include_fields`.
+     * @param options.schema - A Standard Schema to validate the API response against. If validation fails, the method will return a 422 error with details about the validation failure.
      * @returns {ApiResult<ProductMetafield>} The metafield or an error result.
      */
-    public async getOne(productId: number, metafieldId: number): ApiResult<ProductMetafield>;
+    public async getOne(
+        productId: number,
+        metafieldId: number,
+        options?: { schema?: StandardSchemaV1 },
+    ): ApiResult<ProductMetafield>;
 
     public async getOne<I extends readonly BaseMetafieldField[]>(
         productId: number,
         metafieldId: number,
-        options: { include_fields: I; exclude_fields?: never },
+        options: { include_fields: I; exclude_fields?: never; schema?: StandardSchemaV1 },
     ): ApiResult<Pick<ProductMetafield, 'id' | I[number]>>;
 
     public async getOne<E extends readonly BaseMetafieldField[]>(
         productId: number,
         metafieldId: number,
-        options: { include_fields?: never; exclude_fields: E },
+        options: { include_fields?: never; exclude_fields: E; schema?: StandardSchemaV1 },
     ): ApiResult<Omit<ProductMetafield, E[number]>>;
 
     public async getOne(
@@ -173,6 +193,7 @@ export default class ProductMetafields {
         options?: {
             include_fields?: readonly BaseMetafieldField[];
             exclude_fields?: readonly BaseMetafieldField[];
+            schema?: StandardSchemaV1;
         },
     ): ApiResult<ProductMetafield> {
         const idsValidOrErrorMsg = validatePositiveIntegers({ metafieldId, productId });
@@ -181,10 +202,11 @@ export default class ProductMetafields {
             return { error: idsValidOrErrorMsg, ok: false, statusCode: 400 };
         }
 
-        const querySuffix = buildQueryString(options);
+        const { schema, ...queryOptions } = options ?? {};
+        const querySuffix = buildQueryString(queryOptions);
         const url = `${this.apiUrl}/${productId}/metafields/${metafieldId}${querySuffix}`;
 
-        return await fetchOne<ProductMetafield>(url, this.accessToken);
+        return await fetchOne<ProductMetafield>(url, this.accessToken, schema);
     }
 
     /* ----------------------------- UPDATE METAFIELD ---------------------------- */
@@ -193,12 +215,15 @@ export default class ProductMetafields {
      * @param productId Product ID.
      * @param metafieldId Metafield ID.
      * @param metafieldData Metafield data to update.
+     * @param options Optional parameters for the request.
+     * @param options.schema - A Standard Schema to validate the API response against. If validation fails, the method will return a 422 error with details about the validation failure.
      * @returns {ApiResult<ProductMetafield>} The updated metafield or an error result.
      */
     public async update(
         productId: number,
         metafieldId: number,
         metafieldData: Partial<CreateMetafieldPayload>,
+        options?: { schema?: StandardSchemaV1 },
     ): ApiResult<ProductMetafield> {
         const idsValidOrErrorMsg = validatePositiveIntegers({ metafieldId, productId });
 
@@ -218,7 +243,7 @@ export default class ProductMetafields {
 
         const url = `${this.apiUrl}/${productId}/metafields/${metafieldId}`;
 
-        return await updateResource(url, this.accessToken, metafieldData);
+        return await updateResource(url, this.accessToken, metafieldData, options?.schema);
     }
 
     /**

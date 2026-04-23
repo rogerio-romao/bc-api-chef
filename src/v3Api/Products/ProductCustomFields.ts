@@ -9,7 +9,7 @@ import {
     validatePositiveIntegers,
 } from '@/v3Api/utils.ts';
 
-import type { ApiResult, BcApiChefOptions } from '@/types/api-types';
+import type { ApiResult, BcApiChefOptions, StandardSchemaV1 } from '@/types/api-types';
 import type {
     NoIdProductCustomField,
     ProductCustomField,
@@ -40,10 +40,8 @@ export default class ProductCustomFields {
      *
      * @param accessToken - The access token for authenticating API requests.
      * @param apiUrl - The base URL for the product custom fields API endpoints, typically in the format `${baseUrlWithVersion}/products`.
-     * @param options - Optional configuration options for the API client, such as validation and retry settings.
-     * @param options.validate When `true`, runtime validation runs on responses received from BigCommerce before they are returned to the caller. Defaults to `false`.
+     * @param options - Optional configuration options for the API client, such as retry settings.
      * @param options.retries Number of times to retry a failed HTTP request before surfacing the error. Forwarded to the underlying `tchef` HTTP client. Defaults to `0` (no retries).
-     * @todo Gate runtime response validation on `this.options.validate`.
      * @todo Forward `this.options.retries` to every `tchef()` call in this class.
      */
     constructor(accessToken: string, apiUrl: string, options: BcApiChefOptions = {}) {
@@ -51,7 +49,6 @@ export default class ProductCustomFields {
         this.apiUrl = apiUrl;
         this.options = {
             retries: 0,
-            validate: false,
             ...options,
         };
     }
@@ -66,11 +63,14 @@ export default class ProductCustomFields {
      *
      * @param productId - The ID of the product to create the custom field for.
      * @param customFieldData - The data for the new custom field.
+     * @param options - Optional. Pass `schema` to validate the returned data against a Standard Schema.
+     * @param options.schema - A Standard Schema to validate the API response against. If validation fails, the method will return a 422 error with details about the validation failure.
      * @returns {ApiResult<ProductCustomField>} The created product custom field, or an error if validation fails or the API request fails.
      */
     public async create(
         productId: number,
         customFieldData: NoIdProductCustomField,
+        options?: { schema?: StandardSchemaV1 },
     ): ApiResult<ProductCustomField> {
         const idsValidOrErrorMsg = validatePositiveIntegers({ productId });
 
@@ -94,7 +94,7 @@ export default class ProductCustomFields {
 
         const url = `${this.apiUrl}/${productId}/custom-fields`;
 
-        return await createResource(url, this.accessToken, customFieldData);
+        return await createResource(url, this.accessToken, customFieldData, options?.schema);
     }
 
     /* ------------------------ GET PRODUCT CUSTOM FIELDS ----------------------- */
@@ -110,6 +110,7 @@ export default class ProductCustomFields {
      * @param options.exclude_fields - An array of field names to exclude from the response. Cannot be used with `include_fields`.
      * @param options.page - The page number to fetch.
      * @param options.limit - The number of items per page.
+     * @param options.schema - A Standard Schema to validate each item in the API response against. If validation fails for any item, the method will return a 422 error with details about the validation failure. Validation is performed on each page of results as they are fetched, so if you are paginating through results and a later page contains invalid data, you will still get a 422 error without having to wait for all pages to be fetched.
      * @returns {ApiResult<ProductCustomField[]>} The requested product custom fields, or an error if validation fails or the API request fails.
      */
     public async getMultiple<I extends readonly ProductCustomFieldField[]>(
@@ -119,6 +120,7 @@ export default class ProductCustomFields {
             exclude_fields?: never;
             page?: number;
             limit?: number;
+            schema?: StandardSchemaV1;
         },
     ): ApiResult<Pick<ProductCustomField, 'id' | I[number]>[]>;
 
@@ -129,6 +131,7 @@ export default class ProductCustomFields {
             exclude_fields?: E;
             page?: number;
             limit?: number;
+            schema?: StandardSchemaV1;
         },
     ): ApiResult<Omit<ProductCustomField, E[number]>[]>;
 
@@ -137,6 +140,7 @@ export default class ProductCustomFields {
         options?: {
             page?: number;
             limit?: number;
+            schema?: StandardSchemaV1;
         },
     ): ApiResult<ProductCustomField[]>;
 
@@ -147,6 +151,7 @@ export default class ProductCustomFields {
             exclude_fields?: readonly ProductCustomFieldField[];
             page?: number;
             limit?: number;
+            schema?: StandardSchemaV1;
         },
     ): ApiResult<ProductCustomField[]> {
         const idsValidOrErrorMsg = validatePositiveIntegers({ productId });
@@ -159,15 +164,17 @@ export default class ProductCustomFields {
             };
         }
 
-        const querySuffix = buildQueryString(options);
+        const { schema, ...queryOptions } = options ?? {};
+        const querySuffix = buildQueryString(queryOptions);
         const url = `${this.apiUrl}/${productId}/custom-fields${querySuffix}`;
-        const limit = clampPerPageLimits(options?.limit);
+        const limit = clampPerPageLimits(queryOptions?.limit);
 
         return await fetchPaginated<ProductCustomField>(
             url,
             this.accessToken,
             limit,
-            options?.page,
+            queryOptions?.page,
+            schema,
         );
     }
 
@@ -183,6 +190,7 @@ export default class ProductCustomFields {
      * @param options - Optional query parameters to specify which fields to include or exclude in the response.
      * @param options.include_fields - An array of field names to include in the response. Cannot be used with `exclude_fields`.
      * @param options.exclude_fields - An array of field names to exclude from the response. Cannot be used with `include_fields`.
+     * @param options.schema - A Standard Schema to validate the API response against. If validation fails, the method will return a 422 error with details about the validation failure.
      * @returns {ApiResult<ProductCustomField>} The requested product custom field, or an error if validation fails or the API request fails.
      */
     public async getOne<I extends readonly ProductCustomFieldField[]>(
@@ -191,6 +199,7 @@ export default class ProductCustomFields {
         options?: {
             include_fields: I;
             exclude_fields?: never;
+            schema?: StandardSchemaV1;
         },
     ): ApiResult<Pick<ProductCustomField, 'id' | I[number]>>;
 
@@ -200,6 +209,7 @@ export default class ProductCustomFields {
         options?: {
             include_fields?: never;
             exclude_fields: E;
+            schema?: StandardSchemaV1;
         },
     ): ApiResult<Omit<ProductCustomField, E[number]>>;
 
@@ -209,6 +219,7 @@ export default class ProductCustomFields {
         options?: {
             include_fields?: readonly ProductCustomFieldField[];
             exclude_fields?: readonly ProductCustomFieldField[];
+            schema?: StandardSchemaV1;
         },
     ): ApiResult<ProductCustomField> {
         const idsValidOrErrorMsg = validatePositiveIntegers({ customFieldId, productId });
@@ -221,10 +232,11 @@ export default class ProductCustomFields {
             };
         }
 
-        const querySuffix = buildQueryString(options);
+        const { schema, ...queryOptions } = options ?? {};
+        const querySuffix = buildQueryString(queryOptions);
         const url = `${this.apiUrl}/${productId}/custom-fields/${customFieldId}${querySuffix}`;
 
-        return await fetchOne<ProductCustomField>(url, this.accessToken);
+        return await fetchOne<ProductCustomField>(url, this.accessToken, schema);
     }
 
     /* ----------------------- UPDATE PRODUCT CUSTOM FIELD ---------------------- */
@@ -234,12 +246,15 @@ export default class ProductCustomFields {
      * @param productId - The ID of the product.
      * @param customFieldId - The ID of the custom field to update.
      * @param customFieldData - The partial custom field data to update.
+     * @param options - Optional. Pass `schema` to validate the returned data against a Standard Schema.
+     * @param options.schema - A Standard Schema to validate the API response against. If validation fails, the method will return a 422 error with details about the validation failure.
      * @returns {ApiResult<ProductCustomField>} The result of the update operation.
      */
     public async update(
         productId: number,
         customFieldId: number,
         customFieldData: Partial<NoIdProductCustomField>,
+        options?: { schema?: StandardSchemaV1 },
     ): ApiResult<ProductCustomField> {
         const idsValidOrErrorMsg = validatePositiveIntegers({ customFieldId, productId });
 
@@ -263,7 +278,7 @@ export default class ProductCustomFields {
 
         const url = `${this.apiUrl}/${productId}/custom-fields/${customFieldId}`;
 
-        return await updateResource(url, this.accessToken, customFieldData);
+        return await updateResource(url, this.accessToken, customFieldData, options?.schema);
     }
 
     /* ----------------------- DELETE PRODUCT CUSTOM FIELD ---------------------- */

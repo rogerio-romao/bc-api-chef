@@ -734,16 +734,7 @@ describe('ProductImages class', () => {
             });
 
             it('accepts a file upload payload and sends a multipart PUT request', async () => {
-                const fetchResponse = {
-                    json: vi.fn().mockResolvedValue({ data: mockUpdatedImage }),
-                    ok: true,
-                    status: 200,
-                    statusText: 'OK',
-                } as unknown as Response;
-
-                const fetchMock = vi.fn().mockResolvedValue(fetchResponse);
-
-                vi.stubGlobal('fetch', fetchMock);
+                mockTchef.mockResolvedValue({ data: { data: mockUpdatedImage }, ok: true });
 
                 const file = new File(['img'], 'photo.jpg', { type: 'image/jpeg' });
                 const result = await images.update(42, 55, {
@@ -753,26 +744,18 @@ describe('ProductImages class', () => {
                     sort_order: 3,
                 });
 
-                expect(fetch).toHaveBeenCalledOnce();
+                expect(mockTchef).toHaveBeenCalledOnce();
                 expect(result).toMatchObject({ data: mockUpdatedImage, ok: true });
 
-                const [url, init] = fetchMock.mock.calls[0] as [string | URL, RequestInit?];
+                expect(getCallUrl(mockTchef, 0).toString()).toContain(
+                    'catalog/products/42/images/55',
+                );
+                expect(getCallOptions(mockTchef, 0).method).toBe('PUT');
+                expect(getCallHeaders(mockTchef, 0)['Accept']).toBe('application/json');
+                expect(getCallHeaders(mockTchef, 0)['X-Auth-Token']).toBe('test-token');
+                expect(getCallHeaders(mockTchef, 0)['Content-Type']).toBeUndefined();
 
-                expect({
-                    init,
-                    url: String(url),
-                }).toMatchObject({
-                    init: expect.objectContaining({
-                        headers: expect.objectContaining({
-                            Accept: 'application/json',
-                            'X-Auth-Token': 'test-token',
-                        }),
-                        method: 'PUT',
-                    }),
-                    url: expect.stringContaining('catalog/products/42/images/55'),
-                });
-
-                const formData = init?.body as FormData;
+                const formData = getCallOptions(mockTchef, 0).body as FormData;
 
                 expect({
                     description: formData.get('description'),
@@ -785,8 +768,6 @@ describe('ProductImages class', () => {
                     isThumbnail: 'true',
                     sortOrder: '3',
                 });
-
-                expect(mockTchef).not.toHaveBeenCalled();
             });
 
             it('succeeds when payload contains only non-image fields', async () => {
