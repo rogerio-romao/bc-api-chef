@@ -54,6 +54,7 @@ export default class ProductBulkPricingRules {
      * @param ruleData - The data for the new bulk pricing rule. Must include `quantity_min`, `quantity_max`, `type`, and `amount`.
      * @param options - Optional. Pass `schema` to validate the returned data against a Standard Schema.
      * @param options.schema - A Standard Schema to validate the API response against. If validation fails, the method will return a 422 error with details about the validation failure.
+     * @param options.retries - Configuration for retrying the request in case of transient errors.
      * @returns {ApiResult<ProductBulkPricingRule>} The created bulk pricing rule, or an error if validation fails or the API request fails.
      */
     public async create(
@@ -105,6 +106,7 @@ export default class ProductBulkPricingRules {
      * @param options.include_fields - An array of field names to include in the response. Cannot be used with `exclude_fields`.
      * @param options.exclude_fields - An array of field names to exclude from the response. Cannot be used with `include_fields`.
      * @param options.schema - A Standard Schema to validate each item in the API response against. If validation fails for any item, the method will return a 422 error with details about the validation failure. Validation is performed on each page of results as they are fetched, so if you are paginating through results and a later page contains invalid data, you will still get a 422 error without having to wait for all pages to be fetched.
+     * @param options.retries - Configuration for retrying the request in case of transient errors.
      * @returns {ApiResult<ProductBulkPricingRule[]>} An array of bulk pricing rules, or an error if validation fails or the API request fails.
      */
     public async getMultiple<I extends readonly ProductBulkPricingRuleField[]>(
@@ -162,7 +164,7 @@ export default class ProductBulkPricingRules {
             };
         }
 
-        const { schema, ...queryOptions } = options ?? {};
+        const { schema, retries, ...queryOptions } = options ?? {};
         const querySuffix = buildQueryString(queryOptions);
         const url = `${this.apiUrl}/${productId}/bulk-pricing-rules${querySuffix}`;
         const limit = clampPerPageLimits(queryOptions.limit);
@@ -173,7 +175,7 @@ export default class ProductBulkPricingRules {
             limit,
             queryOptions.page,
             schema,
-            options?.retries,
+            retries,
         );
     }
 
@@ -190,6 +192,7 @@ export default class ProductBulkPricingRules {
      * @param options.include_fields - An array of field names to include in the response. Cannot be used with `exclude_fields`.
      * @param options.exclude_fields - An array of field names to exclude from the response. Cannot be used with `include_fields`.
      * @param options.schema - A Standard Schema to validate the API response against. If validation fails, the method will return a 422 error with details about the validation failure.
+     * @param options.retries - Configuration for retrying the request in case of transient errors.
      * @returns {ApiResult<ProductBulkPricingRule>} The requested bulk pricing rule, or an error if validation fails or the API request fails.
      */
     public async getOne<I extends readonly ProductBulkPricingRuleField[]>(
@@ -234,16 +237,11 @@ export default class ProductBulkPricingRules {
             };
         }
 
-        const { schema, ...queryOptions } = options ?? {};
+        const { schema, retries, ...queryOptions } = options ?? {};
         const querySuffix = buildQueryString(queryOptions);
         const url = `${this.apiUrl}/${productId}/bulk-pricing-rules/${ruleId}${querySuffix}`;
 
-        return await fetchOne<ProductBulkPricingRule>(
-            url,
-            this.accessToken,
-            schema,
-            options?.retries,
-        );
+        return await fetchOne<ProductBulkPricingRule>(url, this.accessToken, schema, retries);
     }
 
     /* ---------------------- UPDATE PRODUCT BULK PRICING RULE --------------------- */

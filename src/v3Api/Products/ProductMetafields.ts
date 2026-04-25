@@ -53,6 +53,7 @@ export default class ProductMetafields {
      * @param metafieldData Metafield data to create.
      * @param options Optional parameters for the request.
      * @param options.schema - A Standard Schema to validate the API response against. If validation fails, the method will return a 422 error with details about the validation failure.
+     * @param options.retries - Configuration for retrying the request in case of transient errors.
      * @returns {ApiResult<ProductMetafield>} The created metafield or an error result.
      */
     public async create(
@@ -98,6 +99,7 @@ export default class ProductMetafields {
      * @param options.include_fields When provided, only these fields are included in the returned metafield objects, alongside `id`. Cannot be used with `exclude_fields`.
      * @param options.exclude_fields When provided, these fields are excluded from the returned metafield objects. Cannot be used with `include_fields`.
      * @param options.schema - A Standard Schema to validate each item in the API response against. If validation fails for any item, the method will return a 422 error with details about the validation failure. Validation is performed on each page of results as they are fetched, so if you are paginating through results and a later page contains invalid data, you will still get a 422 error without having to wait for all pages to be fetched.
+     * @param options.retries - Configuration for retrying the request in case of transient errors.
      * @returns {ApiResult<ProductMetafield[]>} The collected metafields or an error result.
      */
     public async getMultiple<I extends readonly BaseMetafieldField[]>(
@@ -140,7 +142,7 @@ export default class ProductMetafields {
             return { error: idValidOrErrorMsg, ok: false, statusCode: 400 };
         }
 
-        const { schema, ...queryOptions } = options ?? {};
+        const { schema, retries, ...queryOptions } = options ?? {};
         const querySuffix = buildQueryString(queryOptions);
         const url = `${this.apiUrl}/${productId}/metafields${querySuffix}`;
         const limit = clampPerPageLimits(queryOptions?.limit);
@@ -151,7 +153,7 @@ export default class ProductMetafields {
             limit,
             queryOptions?.page,
             schema,
-            options?.retries,
+            retries,
         );
     }
 
@@ -168,6 +170,7 @@ export default class ProductMetafields {
      * @param options.include_fields When provided, only these fields are included in the returned metafield object, alongside `id`. Cannot be used with `exclude_fields`.
      * @param options.exclude_fields When provided, these fields are excluded from the returned metafield object. Cannot be used with `include_fields`.
      * @param options.schema - A Standard Schema to validate the API response against. If validation fails, the method will return a 422 error with details about the validation failure.
+     * @param options.retries - Configuration for retrying the request in case of transient errors.
      * @returns {ApiResult<ProductMetafield>} The metafield or an error result.
      */
     public async getOne(
@@ -214,11 +217,11 @@ export default class ProductMetafields {
             return { error: idsValidOrErrorMsg, ok: false, statusCode: 400 };
         }
 
-        const { schema, ...queryOptions } = options ?? {};
+        const { schema, retries, ...queryOptions } = options ?? {};
         const querySuffix = buildQueryString(queryOptions);
         const url = `${this.apiUrl}/${productId}/metafields/${metafieldId}${querySuffix}`;
 
-        return await fetchOne<ProductMetafield>(url, this.accessToken, schema, options?.retries);
+        return await fetchOne<ProductMetafield>(url, this.accessToken, schema, retries);
     }
 
     /* ----------------------------- UPDATE METAFIELD ---------------------------- */
@@ -265,6 +268,7 @@ export default class ProductMetafields {
         );
     }
 
+    /* ----------------------------- DELETE METAFIELD ---------------------------- */
     /**
      * Deletes a metafield by product and metafield ID.
      * @param productId Product ID.
