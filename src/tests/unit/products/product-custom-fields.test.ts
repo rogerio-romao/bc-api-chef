@@ -40,7 +40,7 @@ describe('ProductCustomFields class', () => {
 
     beforeEach(() => {
         mockTchef.mockReset();
-        customFields = new ProductCustomFields('test-token', BASE_URL, {});
+        customFields = new ProductCustomFields('test-token', BASE_URL);
     });
 
     describe('get one custom field', () => {
@@ -557,6 +557,19 @@ describe('ProductCustomFields class', () => {
 
             assertErr(result);
             expect(result.statusCode).toBe(404);
+        });
+    });
+
+    describe('retries forwarding', () => {
+        it('passes retries and retryDelayMs to the underlying HTTP call', async () => {
+            mockTchef.mockResolvedValue(mockCustomFieldEnvelope);
+
+            await customFields.getOne(42, 55, { retries: { repeat: 2, retryDelay: 0 } });
+
+            const opts = getCallOptions(mockTchef, 0);
+
+            expect(opts.retries).toBe(2);
+            expect(opts.retryDelayMs).toBe(0);
         });
     });
 });

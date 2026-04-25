@@ -99,3 +99,86 @@ const result = await client
         schema: NarrowSchema,
     });
 ```
+
+## Retry Logic
+
+Every data-returning method accepts an optional `retries` key inside its
+options object. When provided, failed requests are automatically retried by the
+underlying HTTP layer ([tchef](https://github.com/rogerio-romao/tchef)).
+
+### RetryConfig shape
+
+```ts
+interface RetryConfig {
+    /** Number of additional retries after the initial attempt. Total calls = repeat + 1. */
+    repeat: number;
+    /**
+     * Delay between retries.
+     * - number — fixed delay in milliseconds (e.g. 500 → 500 ms between each retry).
+     * - 'exponential' — exponential back-off: 2000 × 2^(attempt+1) ms
+     *   (1st retry: 4 000 ms, 2nd: 8 000 ms, 3rd: 16 000 ms …).
+     * Omitting this field uses a 100 ms fixed default.
+     */
+    retryDelay?: number | 'exponential';
+}
+```
+
+Retries are triggered on:
+
+- Non-2xx HTTP responses
+- Invalid / unparseable response bodies (JSON, text, blob)
+- Network errors and request timeouts
+
+When all retries are exhausted the method returns:
+
+```ts
+{ ok: false, statusCode: <last HTTP status>, error: 'Max retries reached. <last error message>' }
+```
+
+### Example — fixed delay in milliseconds
+
+```ts
+const client = new BcApiChef(storeHash, accessToken);
+
+const result = await client
+    .v3()
+    .products()
+    .getOne(123, {
+        retries: { repeat: 3, retryDelay: 500 }, // up to 4 total attempts, 500 ms apart
+    });
+
+if (!result.ok) {
+    console.error(result.error); // 'Max retries reached. ...' if all attempts failed
+} else {
+    console.log(result.data.name);
+}
+```
+
+### Example — exponential back-off
+
+```ts
+const result = await client
+    .v3()
+    .products()
+    .create(
+        { name: 'New Product', type: 'physical', weight: 1.0 },
+        {
+            retries: {
+                repeat: 4,
+                retryDelay: 'exponential', // 4 s → 8 s → 16 s → 32 s
+            },
+        },
+    );
+```
+
+### Example — retries on sub-resources
+
+```ts
+const result = await client
+    .v3()
+    .products()
+    .images(42)
+    .getMultiple({
+        retries: { repeat: 2, retryDelay: 1000 },
+    });
+```

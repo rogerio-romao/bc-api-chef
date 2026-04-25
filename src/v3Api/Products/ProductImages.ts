@@ -11,7 +11,7 @@ import {
     validatePositiveIntegers,
 } from '@/v3Api/utils';
 
-import type { ApiResult, BcApiChefOptions, StandardSchemaV1 } from '@/types/api-types';
+import type { ApiResult, RetryConfig, StandardSchemaV1 } from '@/types/api-types';
 import type {
     ApiImageQueryBase,
     BaseProductImageField,
@@ -35,22 +35,14 @@ import type {
 export default class ProductImages {
     private accessToken: string;
     private apiUrl: string;
-    private options: Required<BcApiChefOptions>;
 
     /**
      * @param accessToken BigCommerce API access token.
      * @param apiUrl Base URL for product images endpoint.
-     * @param options Optional configuration for API requests, such as retries.
-     * @param options.retries Number of times to retry a failed HTTP request before surfacing the error. Forwarded to the underlying `tchef` HTTP client. Defaults to `0` (no retries).
-     * @todo Forward `this.options.retries` to every `tchef()` call in this class.
      */
-    constructor(accessToken: string, apiUrl: string, options?: BcApiChefOptions) {
+    constructor(accessToken: string, apiUrl: string) {
         this.accessToken = accessToken;
         this.apiUrl = apiUrl;
-        this.options = {
-            retries: 0,
-            ...options,
-        };
     }
 
     /* -------------------------------------------------------------------------- */
@@ -69,7 +61,7 @@ export default class ProductImages {
     public async create(
         productId: number,
         imageData: ProductImagePayloadItem,
-        options?: { schema?: StandardSchemaV1 },
+        options?: { schema?: StandardSchemaV1; retries?: RetryConfig },
     ): ApiResult<ProductImage> {
         const idValidOrError = validatePositiveIntegers({ productId });
 
@@ -111,10 +103,17 @@ export default class ProductImages {
                 this.accessToken,
                 formData,
                 options?.schema,
+                options?.retries,
             );
         }
 
-        return await createResource(url, this.accessToken, imageData, options?.schema);
+        return await createResource(
+            url,
+            this.accessToken,
+            imageData,
+            options?.schema,
+            options?.retries,
+        );
     }
 
     /* ------------------------------- GET IMAGES ------------------------------- */
@@ -137,6 +136,7 @@ export default class ProductImages {
             include_fields: I;
             exclude_fields?: never;
             schema?: StandardSchemaV1;
+            retries?: RetryConfig;
         },
     ): ApiResult<Pick<ProductImage, 'id' | I[number]>[]>;
 
@@ -146,12 +146,13 @@ export default class ProductImages {
             include_fields?: never;
             exclude_fields: E;
             schema?: StandardSchemaV1;
+            retries?: RetryConfig;
         },
     ): ApiResult<Omit<ProductImage, E[number]>[]>;
 
     public async getMultiple(
         productId: number,
-        options?: ApiImageQueryBase & { schema?: StandardSchemaV1 },
+        options?: ApiImageQueryBase & { schema?: StandardSchemaV1; retries?: RetryConfig },
     ): ApiResult<ProductImage[]>;
 
     public async getMultiple(
@@ -160,6 +161,7 @@ export default class ProductImages {
             include_fields?: readonly BaseProductImageField[];
             exclude_fields?: readonly BaseProductImageField[];
             schema?: StandardSchemaV1;
+            retries?: RetryConfig;
         },
     ): ApiResult<ProductImage[]> {
         const idValidOrError = validatePositiveIntegers({ productId });
@@ -183,6 +185,7 @@ export default class ProductImages {
             limit,
             queryOptions?.page,
             schema,
+            options?.retries,
         );
     }
 
@@ -204,19 +207,29 @@ export default class ProductImages {
     public async getOne<I extends readonly BaseProductImageField[]>(
         productId: number,
         imageId: number,
-        options: { include_fields: I; exclude_fields?: never; schema?: StandardSchemaV1 },
+        options: {
+            include_fields: I;
+            exclude_fields?: never;
+            schema?: StandardSchemaV1;
+            retries?: RetryConfig;
+        },
     ): ApiResult<Pick<ProductImage, 'id' | I[number]>>;
 
     public async getOne<E extends readonly BaseProductImageField[]>(
         productId: number,
         imageId: number,
-        options: { include_fields?: never; exclude_fields: E; schema?: StandardSchemaV1 },
+        options: {
+            include_fields?: never;
+            exclude_fields: E;
+            schema?: StandardSchemaV1;
+            retries?: RetryConfig;
+        },
     ): ApiResult<Omit<ProductImage, E[number]>>;
 
     public async getOne(
         productId: number,
         imageId: number,
-        options?: { schema?: StandardSchemaV1 },
+        options?: { schema?: StandardSchemaV1; retries?: RetryConfig },
     ): ApiResult<ProductImage>;
 
     public async getOne(
@@ -226,6 +239,7 @@ export default class ProductImages {
             include_fields?: readonly BaseProductImageField[];
             exclude_fields?: readonly BaseProductImageField[];
             schema?: StandardSchemaV1;
+            retries?: RetryConfig;
         },
     ): ApiResult<ProductImage> {
         const idsValidOrErrorMsg = validatePositiveIntegers({ imageId, productId });
@@ -238,7 +252,7 @@ export default class ProductImages {
         const querySuffix = buildQueryString(queryOptions);
         const url = `${this.apiUrl}/${productId}/images/${imageId}${querySuffix}`;
 
-        return await fetchOne<ProductImage>(url, this.accessToken, schema);
+        return await fetchOne<ProductImage>(url, this.accessToken, schema, options?.retries);
     }
 
     /* ------------------------------- UPDATE IMAGE ------------------------------ */
@@ -256,7 +270,7 @@ export default class ProductImages {
         productId: number,
         imageId: number,
         imageData: ProductImageUpdatePayload,
-        options?: { schema?: StandardSchemaV1 },
+        options?: { schema?: StandardSchemaV1; retries?: RetryConfig },
     ): ApiResult<ProductImage> {
         const idsValidOrErrorMsg = validatePositiveIntegers({ imageId, productId });
 
@@ -297,10 +311,17 @@ export default class ProductImages {
                 this.accessToken,
                 formData,
                 options?.schema,
+                options?.retries,
             );
         }
 
-        return await updateResource(url, this.accessToken, imageData, options?.schema);
+        return await updateResource(
+            url,
+            this.accessToken,
+            imageData,
+            options?.schema,
+            options?.retries,
+        );
     }
 
     /* ------------------------------- DELETE IMAGE ------------------------------ */
@@ -309,9 +330,15 @@ export default class ProductImages {
      *
      * @param productId ID of the product the image belongs to.
      * @param imageId ID of the image to delete.
+     * @param options Optional parameters for the request.
+     * @param options.retries - Optional retry configuration to automatically retry the request on transient errors.
      * @returns {ApiResult<null>} An empty result on success or an error result.
      */
-    public async remove(productId: number, imageId: number): ApiResult<null> {
+    public async remove(
+        productId: number,
+        imageId: number,
+        options?: { retries?: RetryConfig },
+    ): ApiResult<null> {
         const idsValidOrErrorMsg = validatePositiveIntegers({ imageId, productId });
 
         if (idsValidOrErrorMsg !== true) {
@@ -324,7 +351,7 @@ export default class ProductImages {
 
         const url = `${this.apiUrl}/${productId}/images/${imageId}`;
 
-        return await deleteResource(url, this.accessToken);
+        return await deleteResource(url, this.accessToken, options?.retries);
     }
 
     /* -------------------------------------------------------------------------- */

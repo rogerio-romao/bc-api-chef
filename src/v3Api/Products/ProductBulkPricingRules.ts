@@ -9,7 +9,7 @@ import {
     validatePositiveIntegers,
 } from '@/v3Api/utils';
 
-import type { ApiResult, BcApiChefOptions, StandardSchemaV1 } from '@/types/api-types';
+import type { ApiResult, RetryConfig, StandardSchemaV1 } from '@/types/api-types';
 import type {
     NoIdProductBulkPricingRule,
     ProductBulkPricingRule,
@@ -31,24 +31,16 @@ import type {
 export default class ProductBulkPricingRules {
     private accessToken: string;
     private apiUrl: string;
-    private options: Required<BcApiChefOptions>;
 
     /**
      * Creates an instance of the ProductBulkPricingRules class.
      *
      * @param accessToken - The BigCommerce API access token to use for requests.
-     * @param apiUrl - The base URL for product-related API endpoints, which should be provided by the parent Products class.
-     * @param options - Optional configuration for API requests, such as retry behavior.
-     * @param options.retries Number of times to retry a failed HTTP request before surfacing the error. Forwarded to the underlying `tchef` HTTP client. Defaults to `0` (no retries).
-     * @todo Forward `this.options.retries` to every `tchef()` call in this class.
+     * @param apiUrl - The base URL for product-related API endpoints.
      */
-    constructor(accessToken: string, apiUrl: string, options: BcApiChefOptions = {}) {
+    constructor(accessToken: string, apiUrl: string) {
         this.accessToken = accessToken;
         this.apiUrl = apiUrl;
-        this.options = {
-            retries: 0,
-            ...options,
-        };
     }
 
     /* -------------------------------------------------------------------------- */
@@ -67,7 +59,7 @@ export default class ProductBulkPricingRules {
     public async create(
         productId: number,
         ruleData: NoIdProductBulkPricingRule,
-        options?: { schema?: StandardSchemaV1 },
+        options?: { schema?: StandardSchemaV1; retries?: RetryConfig },
     ): ApiResult<ProductBulkPricingRule> {
         const idsValidOrErrorMsg = validatePositiveIntegers({ productId });
 
@@ -91,7 +83,13 @@ export default class ProductBulkPricingRules {
 
         const url = `${this.apiUrl}/${productId}/bulk-pricing-rules`;
 
-        return await createResource(url, this.accessToken, ruleData, options?.schema);
+        return await createResource(
+            url,
+            this.accessToken,
+            ruleData,
+            options?.schema,
+            options?.retries,
+        );
     }
     /**
      * Retrieves multiple bulk pricing rules for a product, with optional pagination and field selection. You can use `page` and `limit` query parameters for pagination.
@@ -117,6 +115,7 @@ export default class ProductBulkPricingRules {
             page?: number;
             limit?: number;
             schema?: StandardSchemaV1;
+            retries?: RetryConfig;
         },
     ): ApiResult<Pick<ProductBulkPricingRule, 'id' | I[number]>[]>;
 
@@ -128,6 +127,7 @@ export default class ProductBulkPricingRules {
             page?: number;
             limit?: number;
             schema?: StandardSchemaV1;
+            retries?: RetryConfig;
         },
     ): ApiResult<Omit<ProductBulkPricingRule, E[number]>[]>;
 
@@ -137,6 +137,7 @@ export default class ProductBulkPricingRules {
             page?: number;
             limit?: number;
             schema?: StandardSchemaV1;
+            retries?: RetryConfig;
         },
     ): ApiResult<ProductBulkPricingRule[]>;
 
@@ -148,6 +149,7 @@ export default class ProductBulkPricingRules {
             page?: number;
             limit?: number;
             schema?: StandardSchemaV1;
+            retries?: RetryConfig;
         },
     ): ApiResult<ProductBulkPricingRule[]> {
         const idsValidOrErrorMsg = validatePositiveIntegers({ productId });
@@ -171,6 +173,7 @@ export default class ProductBulkPricingRules {
             limit,
             queryOptions.page,
             schema,
+            options?.retries,
         );
     }
 
@@ -196,6 +199,7 @@ export default class ProductBulkPricingRules {
             include_fields?: I;
             exclude_fields?: never;
             schema?: StandardSchemaV1;
+            retries?: RetryConfig;
         },
     ): ApiResult<Pick<ProductBulkPricingRule, 'id' | I[number]>>;
 
@@ -206,6 +210,7 @@ export default class ProductBulkPricingRules {
             include_fields?: never;
             exclude_fields?: E;
             schema?: StandardSchemaV1;
+            retries?: RetryConfig;
         },
     ): ApiResult<Omit<ProductBulkPricingRule, E[number]>>;
 
@@ -216,6 +221,7 @@ export default class ProductBulkPricingRules {
             include_fields?: readonly ProductBulkPricingRuleField[];
             exclude_fields?: readonly ProductBulkPricingRuleField[];
             schema?: StandardSchemaV1;
+            retries?: RetryConfig;
         },
     ): ApiResult<ProductBulkPricingRule> {
         const idsValidOrErrorMsg = validatePositiveIntegers({ productId, ruleId });
@@ -232,7 +238,12 @@ export default class ProductBulkPricingRules {
         const querySuffix = buildQueryString(queryOptions);
         const url = `${this.apiUrl}/${productId}/bulk-pricing-rules/${ruleId}${querySuffix}`;
 
-        return await fetchOne<ProductBulkPricingRule>(url, this.accessToken, schema);
+        return await fetchOne<ProductBulkPricingRule>(
+            url,
+            this.accessToken,
+            schema,
+            options?.retries,
+        );
     }
 
     /* ---------------------- UPDATE PRODUCT BULK PRICING RULE --------------------- */
@@ -244,13 +255,14 @@ export default class ProductBulkPricingRules {
      * @param ruleData - The data to update for the bulk pricing rule. All fields are optional.
      * @param options - Optional. Pass `schema` to validate the returned data against a Standard Schema.
      * @param options.schema - A Standard Schema to validate the API response against. If validation fails, the method will return a 422 error with details about the validation failure.
+     * @param options.retries - Optional retry configuration to automatically retry the request on transient errors.
      * @returns {ApiResult<ProductBulkPricingRule>} The updated bulk pricing rule, or an error if validation fails or the API request fails.
      */
     public async update(
         productId: number,
         ruleId: number,
         ruleData: Partial<NoIdProductBulkPricingRule>,
-        options?: { schema?: StandardSchemaV1 },
+        options?: { schema?: StandardSchemaV1; retries?: RetryConfig },
     ): ApiResult<ProductBulkPricingRule> {
         const idsValidOrErrorMsg = validatePositiveIntegers({ productId, ruleId });
 
@@ -274,7 +286,13 @@ export default class ProductBulkPricingRules {
 
         const url = `${this.apiUrl}/${productId}/bulk-pricing-rules/${ruleId}`;
 
-        return await updateResource(url, this.accessToken, ruleData, options?.schema);
+        return await updateResource(
+            url,
+            this.accessToken,
+            ruleData,
+            options?.schema,
+            options?.retries,
+        );
     }
 
     /* ---------------------- DELETE PRODUCT BULK PRICING RULE --------------------- */
@@ -283,9 +301,15 @@ export default class ProductBulkPricingRules {
      *
      * @param productId - The ID of the product the bulk pricing rule belongs to.
      * @param ruleId - The ID of the bulk pricing rule to delete.
+     * @param options - Optional parameters.
+     * @param options.retries - Optional retry configuration to automatically retry the request on transient errors.
      * @returns {ApiResult<null>} An empty result if deletion is successful, or an error if validation fails or the API request fails.
      */
-    public async remove(productId: number, ruleId: number): ApiResult<null> {
+    public async remove(
+        productId: number,
+        ruleId: number,
+        options?: { retries?: RetryConfig },
+    ): ApiResult<null> {
         const idsValidOrErrorMsg = validatePositiveIntegers({ productId, ruleId });
 
         if (idsValidOrErrorMsg !== true) {
@@ -298,7 +322,7 @@ export default class ProductBulkPricingRules {
 
         const url = `${this.apiUrl}/${productId}/bulk-pricing-rules/${ruleId}`;
 
-        return await deleteResource(url, this.accessToken);
+        return await deleteResource(url, this.accessToken, options?.retries);
     }
 
     /* -------------------------------------------------------------------------- */

@@ -29,11 +29,7 @@ describe('ProductsV3 class', () => {
 
     beforeEach(() => {
         mockTchef.mockReset();
-        products = new ProductsV3(
-            'https://api.bigcommerce.com/stores/test-hash/v3/',
-            'test-token',
-            {},
-        );
+        products = new ProductsV3('https://api.bigcommerce.com/stores/test-hash/v3/', 'test-token');
     });
 
     describe('get product', () => {
@@ -1018,6 +1014,22 @@ describe('ProductsV3 class', () => {
             assertErr(result);
             expect(result.statusCode).toBe(404);
             expect(result.error).toBe('Not Found');
+        });
+    });
+
+    describe('retries forwarding', () => {
+        it('passes retries and retryDelayMs to the underlying HTTP call', async () => {
+            mockTchef.mockResolvedValue({
+                data: { data: { id: 42, name: 'Widget' } },
+                ok: true,
+            });
+
+            await products.getOne(42, { retries: { repeat: 2, retryDelay: 0 } });
+
+            const opts = getCallOptions(mockTchef, 0);
+
+            expect(opts.retries).toBe(2);
+            expect(opts.retryDelayMs).toBe(0);
         });
     });
 });

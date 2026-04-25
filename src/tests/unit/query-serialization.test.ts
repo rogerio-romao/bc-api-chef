@@ -14,7 +14,7 @@ describe('query param serialization', () => {
     beforeEach(() => {
         mockTchef.mockReset();
         mockTchef.mockResolvedValue(makePageResponse());
-        products = new ProductsV3('https://api.bigcommerce.com/stores/test/v3/', 'test-token', {});
+        products = new ProductsV3('https://api.bigcommerce.com/stores/test/v3/', 'test-token');
     });
 
     describe('number array params', () => {

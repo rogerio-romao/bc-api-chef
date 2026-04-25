@@ -4,7 +4,7 @@ import { DEFAULT_START_PAGE, PER_PAGE_DEFAULT, PER_PAGE_MAX, PER_PAGE_MIN } from
 
 import type { TchefResult } from 'tchef';
 
-import type { BcRequestResponseMeta, StandardSchemaV1 } from '@/types/api-types';
+import type { BcRequestResponseMeta, RetryConfig, StandardSchemaV1 } from '@/types/api-types';
 
 const PAGINATION_PARAMS = new Set(['page', 'limit']);
 
@@ -38,18 +38,22 @@ async function runSchemaValidation(
  * @param url - Fully-built request URL.
  * @param accessToken - BigCommerce API access token.
  * @param schema - Optional Standard Schema-compliant schema to validate the unwrapped response data at runtime.
+ * @param retryConfig - Optional retry configuration forwarded to tchef.
  * @returns {Promise<TchefResult<T>>} The resource or an error result.
  */
 export async function fetchOne<T>(
     url: string,
     accessToken: string,
     schema?: StandardSchemaV1,
+    retryConfig?: RetryConfig,
 ): Promise<TchefResult<T>> {
     const response = await tchef(url, {
         headers: {
             Accept: 'application/json',
             'X-Auth-Token': accessToken,
         },
+        retries: retryConfig?.repeat,
+        retryDelayMs: retryConfig?.retryDelay,
     });
 
     if (!response.ok) {
@@ -76,14 +80,17 @@ export async function fetchOne<T>(
  * @param limit - Page size (should already be clamped by the caller).
  * @param singlePage - When provided, only that page is fetched and returned.
  * @param schema - Optional Standard Schema-compliant schema to validate each item. Short-circuits on the first failure.
+ * @param retryConfig - Optional retry configuration forwarded to tchef.
  * @returns {Promise<TchefResult<T[]>>} The collected rows or an error result.
  */
+// oxlint-disable-next-line max-params
 export async function fetchPaginated<T>(
     baseUrl: string,
     accessToken: string,
     limit: number,
     singlePage?: number,
     schema?: StandardSchemaV1,
+    retryConfig?: RetryConfig,
 ): Promise<TchefResult<T[]>> {
     const results: T[] = [];
 
@@ -100,6 +107,8 @@ export async function fetchPaginated<T>(
                 Accept: 'application/json',
                 'X-Auth-Token': accessToken,
             },
+            retries: retryConfig?.repeat,
+            retryDelayMs: retryConfig?.retryDelay,
         });
 
         if (!response.ok) {
@@ -135,9 +144,14 @@ export async function fetchPaginated<T>(
  * Sends a `DELETE` request to the specified URL.
  * @param url - Fully-built request URL.
  * @param accessToken - BigCommerce API access token.
+ * @param retryConfig - Optional retry configuration forwarded to tchef.
  * @returns {Promise<TchefResult<null>>} An empty success result or an error result.
  */
-export async function deleteResource(url: string, accessToken: string): Promise<TchefResult<null>> {
+export async function deleteResource(
+    url: string,
+    accessToken: string,
+    retryConfig?: RetryConfig,
+): Promise<TchefResult<null>> {
     const response = await tchef(url, {
         headers: {
             Accept: 'application/json',
@@ -145,6 +159,8 @@ export async function deleteResource(url: string, accessToken: string): Promise<
         },
         method: 'DELETE',
         responseFormat: 'text',
+        retries: retryConfig?.repeat,
+        retryDelayMs: retryConfig?.retryDelay,
     });
 
     if (!response.ok) {
@@ -161,6 +177,7 @@ export async function deleteResource(url: string, accessToken: string): Promise<
  * @param accessToken - BigCommerce API access token.
  * @param payload - Request body to serialize as JSON.
  * @param schema - Optional Standard Schema-compliant schema to validate the unwrapped response data at runtime.
+ * @param retryConfig - Optional retry configuration forwarded to tchef.
  * @returns {Promise<TchefResult<T>>} The created resource or an error result.
  */
 export async function createResource<T, P>(
@@ -168,6 +185,7 @@ export async function createResource<T, P>(
     accessToken: string,
     payload: P,
     schema?: StandardSchemaV1,
+    retryConfig?: RetryConfig,
 ): Promise<TchefResult<T>> {
     const response = await tchef(url, {
         body: JSON.stringify(payload),
@@ -177,6 +195,8 @@ export async function createResource<T, P>(
             'X-Auth-Token': accessToken,
         },
         method: 'POST',
+        retries: retryConfig?.repeat,
+        retryDelayMs: retryConfig?.retryDelay,
     });
 
     if (!response.ok) {
@@ -203,6 +223,7 @@ export async function createResource<T, P>(
  * @param accessToken - BigCommerce API access token.
  * @param formData - The `FormData` body to send.
  * @param schema - Optional Standard Schema-compliant schema to validate the unwrapped response data at runtime.
+ * @param retryConfig - Optional retry configuration forwarded to tchef.
  * @returns {Promise<TchefResult<T>>} The created resource or an error result.
  */
 export async function createResourceMultipart<T>(
@@ -210,6 +231,7 @@ export async function createResourceMultipart<T>(
     accessToken: string,
     formData: FormData,
     schema?: StandardSchemaV1,
+    retryConfig?: RetryConfig,
 ): Promise<TchefResult<T>> {
     const response = await tchef(url, {
         body: formData,
@@ -218,6 +240,8 @@ export async function createResourceMultipart<T>(
             'X-Auth-Token': accessToken,
         },
         method: 'POST',
+        retries: retryConfig?.repeat,
+        retryDelayMs: retryConfig?.retryDelay,
     });
 
     if (!response.ok) {
@@ -243,6 +267,7 @@ export async function createResourceMultipart<T>(
  * @param accessToken - BigCommerce API access token.
  * @param payload - Request body to serialize as JSON.
  * @param schema - Optional Standard Schema-compliant schema to validate the unwrapped response data at runtime.
+ * @param retryConfig - Optional retry configuration forwarded to tchef.
  * @returns {Promise<TchefResult<T>>} The updated resource or an error result.
  */
 export async function updateResource<T, P>(
@@ -250,6 +275,7 @@ export async function updateResource<T, P>(
     accessToken: string,
     payload: P,
     schema?: StandardSchemaV1,
+    retryConfig?: RetryConfig,
 ): Promise<TchefResult<T>> {
     const response = await tchef(url, {
         body: JSON.stringify(payload),
@@ -259,6 +285,8 @@ export async function updateResource<T, P>(
             'X-Auth-Token': accessToken,
         },
         method: 'PUT',
+        retries: retryConfig?.repeat,
+        retryDelayMs: retryConfig?.retryDelay,
     });
 
     if (!response.ok) {
@@ -285,6 +313,7 @@ export async function updateResource<T, P>(
  * @param accessToken - BigCommerce API access token.
  * @param formData - The `FormData` body to send.
  * @param schema - Optional Standard Schema-compliant schema to validate the unwrapped response data at runtime.
+ * @param retryConfig - Optional retry configuration forwarded to tchef.
  * @returns {Promise<TchefResult<T>>} The updated resource or an error result.
  */
 export async function updateResourceMultipart<T>(
@@ -292,6 +321,7 @@ export async function updateResourceMultipart<T>(
     accessToken: string,
     formData: FormData,
     schema?: StandardSchemaV1,
+    retryConfig?: RetryConfig,
 ): Promise<TchefResult<T>> {
     const response = await tchef(url, {
         body: formData,
@@ -300,6 +330,8 @@ export async function updateResourceMultipart<T>(
             'X-Auth-Token': accessToken,
         },
         method: 'PUT',
+        retries: retryConfig?.repeat,
+        retryDelayMs: retryConfig?.retryDelay,
     });
 
     if (!response.ok) {

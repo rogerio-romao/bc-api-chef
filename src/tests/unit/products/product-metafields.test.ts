@@ -48,7 +48,7 @@ describe('ProductMetafields class', () => {
 
     beforeEach(() => {
         mockTchef.mockReset();
-        metafields = new ProductMetafields('test-token', BASE_URL, {});
+        metafields = new ProductMetafields('test-token', BASE_URL);
     });
 
     describe('get one metafield', () => {
@@ -839,6 +839,19 @@ describe('ProductMetafields class', () => {
 
             assertErr(result);
             expect(result.statusCode).toBe(404);
+        });
+    });
+
+    describe('retries forwarding', () => {
+        it('passes retries and retryDelayMs to the underlying HTTP call', async () => {
+            mockTchef.mockResolvedValue(mockMetafieldEnvelope);
+
+            await metafields.getOne(42, 99, { retries: { repeat: 2, retryDelay: 0 } });
+
+            const opts = getCallOptions(mockTchef, 0);
+
+            expect(opts.retries).toBe(2);
+            expect(opts.retryDelayMs).toBe(0);
         });
     });
 });

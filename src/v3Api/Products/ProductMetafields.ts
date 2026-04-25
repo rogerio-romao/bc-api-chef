@@ -9,7 +9,7 @@ import {
     validatePositiveIntegers,
 } from '@/v3Api/utils.ts';
 
-import type { ApiResult, BcApiChefOptions, StandardSchemaV1 } from '@/types/api-types';
+import type { ApiResult, RetryConfig, StandardSchemaV1 } from '@/types/api-types';
 import type {
     ApiMetafieldQueryBase,
     BaseMetafieldField,
@@ -32,23 +32,14 @@ import type {
 export default class ProductMetafields {
     private accessToken: string;
     private apiUrl: string;
-    private options: Required<BcApiChefOptions>;
 
     /**
      * @param accessToken BigCommerce API access token, sent as `X-Auth-Token` on every request.
      * @param apiUrl Base metafields API URL, already scoped to `catalog/products/{productId}/metafields`.
-     * @param options Shared client options propagated from `BcApiChef`.
-     * `retries` is reserved for retry support in downstream HTTP calls.
-     * @param options.retries Number of times to retry a failed HTTP request before surfacing the error. Forwarded to the underlying `tchef` HTTP client. Defaults to `0` (no retries).
-     * @todo Forward `this.options.retries` to every `tchef()` call in this class.
      */
-    constructor(accessToken: string, apiUrl: string, options: BcApiChefOptions = {}) {
+    constructor(accessToken: string, apiUrl: string) {
         this.accessToken = accessToken;
         this.apiUrl = apiUrl;
-        this.options = {
-            retries: 0,
-            ...options,
-        };
     }
 
     /* -------------------------------------------------------------------------- */
@@ -67,7 +58,7 @@ export default class ProductMetafields {
     public async create(
         productId: number,
         metafieldData: CreateMetafieldPayload,
-        options?: { schema?: StandardSchemaV1 },
+        options?: { schema?: StandardSchemaV1; retries?: RetryConfig },
     ): ApiResult<ProductMetafield> {
         const idValidOrError = validatePositiveIntegers({ productId });
 
@@ -87,7 +78,13 @@ export default class ProductMetafields {
 
         const url = `${this.apiUrl}/${productId}/metafields`;
 
-        return await createResource(url, this.accessToken, metafieldData, options?.schema);
+        return await createResource(
+            url,
+            this.accessToken,
+            metafieldData,
+            options?.schema,
+            options?.retries,
+        );
     }
 
     /* ----------------------------- GET METAFIELDS ----------------------------- */
@@ -109,6 +106,7 @@ export default class ProductMetafields {
             include_fields: I;
             exclude_fields?: never;
             schema?: StandardSchemaV1;
+            retries?: RetryConfig;
         },
     ): ApiResult<Pick<ProductMetafield, 'id' | I[number]>[]>;
 
@@ -118,12 +116,13 @@ export default class ProductMetafields {
             include_fields?: never;
             exclude_fields: E;
             schema?: StandardSchemaV1;
+            retries?: RetryConfig;
         },
     ): ApiResult<Omit<ProductMetafield, E[number]>[]>;
 
     public async getMultiple(
         productId: number,
-        options?: ApiMetafieldQueryBase & { schema?: StandardSchemaV1 },
+        options?: ApiMetafieldQueryBase & { schema?: StandardSchemaV1; retries?: RetryConfig },
     ): ApiResult<ProductMetafield[]>;
 
     public async getMultiple(
@@ -132,6 +131,7 @@ export default class ProductMetafields {
             include_fields?: readonly BaseMetafieldField[];
             exclude_fields?: readonly BaseMetafieldField[];
             schema?: StandardSchemaV1;
+            retries?: RetryConfig;
         },
     ): ApiResult<ProductMetafield[]> {
         const idValidOrErrorMsg = validatePositiveIntegers({ productId });
@@ -151,6 +151,7 @@ export default class ProductMetafields {
             limit,
             queryOptions?.page,
             schema,
+            options?.retries,
         );
     }
 
@@ -172,19 +173,29 @@ export default class ProductMetafields {
     public async getOne(
         productId: number,
         metafieldId: number,
-        options?: { schema?: StandardSchemaV1 },
+        options?: { schema?: StandardSchemaV1; retries?: RetryConfig },
     ): ApiResult<ProductMetafield>;
 
     public async getOne<I extends readonly BaseMetafieldField[]>(
         productId: number,
         metafieldId: number,
-        options: { include_fields: I; exclude_fields?: never; schema?: StandardSchemaV1 },
+        options: {
+            include_fields: I;
+            exclude_fields?: never;
+            schema?: StandardSchemaV1;
+            retries?: RetryConfig;
+        },
     ): ApiResult<Pick<ProductMetafield, 'id' | I[number]>>;
 
     public async getOne<E extends readonly BaseMetafieldField[]>(
         productId: number,
         metafieldId: number,
-        options: { include_fields?: never; exclude_fields: E; schema?: StandardSchemaV1 },
+        options: {
+            include_fields?: never;
+            exclude_fields: E;
+            schema?: StandardSchemaV1;
+            retries?: RetryConfig;
+        },
     ): ApiResult<Omit<ProductMetafield, E[number]>>;
 
     public async getOne(
@@ -194,6 +205,7 @@ export default class ProductMetafields {
             include_fields?: readonly BaseMetafieldField[];
             exclude_fields?: readonly BaseMetafieldField[];
             schema?: StandardSchemaV1;
+            retries?: RetryConfig;
         },
     ): ApiResult<ProductMetafield> {
         const idsValidOrErrorMsg = validatePositiveIntegers({ metafieldId, productId });
@@ -206,7 +218,7 @@ export default class ProductMetafields {
         const querySuffix = buildQueryString(queryOptions);
         const url = `${this.apiUrl}/${productId}/metafields/${metafieldId}${querySuffix}`;
 
-        return await fetchOne<ProductMetafield>(url, this.accessToken, schema);
+        return await fetchOne<ProductMetafield>(url, this.accessToken, schema, options?.retries);
     }
 
     /* ----------------------------- UPDATE METAFIELD ---------------------------- */
@@ -217,13 +229,14 @@ export default class ProductMetafields {
      * @param metafieldData Metafield data to update.
      * @param options Optional parameters for the request.
      * @param options.schema - A Standard Schema to validate the API response against. If validation fails, the method will return a 422 error with details about the validation failure.
+     * @param options.retries - Optional retry configuration to automatically retry the request on transient errors.
      * @returns {ApiResult<ProductMetafield>} The updated metafield or an error result.
      */
     public async update(
         productId: number,
         metafieldId: number,
         metafieldData: Partial<CreateMetafieldPayload>,
-        options?: { schema?: StandardSchemaV1 },
+        options?: { schema?: StandardSchemaV1; retries?: RetryConfig },
     ): ApiResult<ProductMetafield> {
         const idsValidOrErrorMsg = validatePositiveIntegers({ metafieldId, productId });
 
@@ -243,16 +256,28 @@ export default class ProductMetafields {
 
         const url = `${this.apiUrl}/${productId}/metafields/${metafieldId}`;
 
-        return await updateResource(url, this.accessToken, metafieldData, options?.schema);
+        return await updateResource(
+            url,
+            this.accessToken,
+            metafieldData,
+            options?.schema,
+            options?.retries,
+        );
     }
 
     /**
      * Deletes a metafield by product and metafield ID.
      * @param productId Product ID.
      * @param metafieldId Metafield ID.
+     * @param options Optional parameters for the request.
+     * @param options.retries - Optional retry configuration to automatically retry the request on transient errors.
      * @returns {ApiResult<null>} `null` on success or an error result.
      */
-    public async remove(productId: number, metafieldId: number): ApiResult<null> {
+    public async remove(
+        productId: number,
+        metafieldId: number,
+        options?: { retries?: RetryConfig },
+    ): ApiResult<null> {
         const idsValidOrErrorMsg = validatePositiveIntegers({ metafieldId, productId });
 
         if (idsValidOrErrorMsg !== true) {
@@ -265,7 +290,7 @@ export default class ProductMetafields {
 
         const url = `${this.apiUrl}/${productId}/metafields/${metafieldId}`;
 
-        return await deleteResource(url, this.accessToken);
+        return await deleteResource(url, this.accessToken, options?.retries);
     }
 
     /* -------------------------------------------------------------------------- */
