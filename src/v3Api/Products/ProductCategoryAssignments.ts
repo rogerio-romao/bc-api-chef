@@ -3,7 +3,7 @@ import {
     clampPerPageLimits,
     deleteResource,
     fetchPaginated,
-    updateResource,
+    updateResourceEmptyResponse,
 } from '@/v3Api/utils';
 
 import type { ApiResult, RetryConfig, StandardSchemaV1 } from '@/types/api-types';
@@ -15,7 +15,7 @@ import type { ProductCategoryAssignment } from '@/types/product-category-assignm
  * All methods return a {@link ApiResult}, which is either `{ data: T; ok: true; }` on success or `{ error: string; ok: false; statusCode: number }` on failure.
  *
  * Public methods:
- * - {@link create} to create or update product category assignments in bulk.
+ * - {@link upsert} to create or update product category assignments in bulk.
  * - {@link getMultiple} to retrieve multiple product category assignments with optional filtering and pagination.
  * - {@link remove} to delete product category assignments based on specified filters.
  */
@@ -41,26 +41,23 @@ export default class ProductCategoryAssignments {
     /**
      * Creates or updates product category assignments in bulk. This method will add new category assignments and update existing ones based on the provided data. It uses the PUT method, which means that if a category assignment with the same product_id and category_id already exists, it will be updated with the new data. If it does not exist, it will be created.
      * @param categoryAssignmentData - An array of product category assignment objects to create or update. Each object must include `product_id` and `category_id`.
-     * @param options - Optional parameters for the request, including schema and retry configuration.
-     * @param options.schema - A Standard Schema to validate the API response against. If validation fails for any item, the method will return a 422 error with details about the validation failure.
+     * @param options - Optional parameters for the request, including retry configuration.
      * @param options.retries - Configuration for retrying the request in case of transient errors.
-     * @returns {ApiResult<ProductCategoryAssignment[]>} An array of the created or updated product category assignments, or an error if validation fails or the API request fails.
+     * @returns {ApiResult<null>} Null if the upsert was successful, or an error if the API request fails.
      */
-    public async create(
+    public async upsert(
         categoryAssignmentData: ProductCategoryAssignment[],
         options?: {
-            schema?: StandardSchemaV1;
             retries?: RetryConfig;
         },
-    ): ApiResult<ProductCategoryAssignment[]> {
+    ): ApiResult<null> {
         const url = `${this.apiUrl}/category-assignments`;
 
-        // This endpoint uses PUT for bulk upsert operations
-        return await updateResource(
+        // This endpoint uses PUT for bulk upsert operations and returns 204 No Content
+        return await updateResourceEmptyResponse(
             url,
             this.accessToken,
             categoryAssignmentData,
-            options?.schema,
             options?.retries,
         );
     }
