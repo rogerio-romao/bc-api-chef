@@ -1,5 +1,22 @@
 export interface RetryConfig {
+    /**
+     * Number of **additional** retries after the initial attempt.
+     * Total network calls = `repeat + 1`.
+     * Must be a positive integer; `0` disables retries (single attempt).
+     */
     repeat: number;
+    /**
+     * Delay strategy between retries.
+     *
+     * - **`number`** — fixed delay in **milliseconds** (e.g. `500` waits 500 ms before each retry).
+     *   Values ≤ 0 are treated as no delay.
+     * - **`'exponential'`** — exponential back-off computed by tchef as `2000 × 2^(attempt + 1)` ms:
+     *   - 1st retry: 4 000 ms
+     *   - 2nd retry: 8 000 ms
+     *   - 3rd retry: 16 000 ms … (no built-in cap)
+     *
+     * Omitting this field uses the tchef default of **100 ms** fixed delay.
+     */
     retryDelay?: number | 'exponential';
 }
 
