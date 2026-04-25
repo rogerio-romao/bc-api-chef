@@ -50,7 +50,7 @@ describe('ProductImages class', () => {
 
     beforeEach(() => {
         mockTchef.mockReset();
-        images = new ProductImages('test-token', BASE_URL, {});
+        images = new ProductImages('test-token', BASE_URL);
     });
 
     afterEach(() => {
@@ -874,6 +874,22 @@ describe('ProductImages class', () => {
                 assertErr(result);
                 expect(result.statusCode).toBe(404);
             });
+        });
+    });
+
+    describe('retries forwarding', () => {
+        it('passes retries and retryDelayMs to the underlying HTTP call', async () => {
+            mockTchef.mockResolvedValue({
+                data: { data: mockImage },
+                ok: true,
+            });
+
+            await images.getOne(42, 55, { retries: { repeat: 3, retryDelay: 0 } });
+
+            const opts = getCallOptions(mockTchef, 0);
+
+            expect(opts.retries).toBe(3);
+            expect(opts.retryDelayMs).toBe(0);
         });
     });
 });

@@ -1,5 +1,6 @@
-export interface BcApiChefOptions {
-    retries?: number;
+export interface RetryConfig {
+    repeat: number;
+    retryDelay?: number | 'exponential';
 }
 
 export interface StandardSchemaIssue {

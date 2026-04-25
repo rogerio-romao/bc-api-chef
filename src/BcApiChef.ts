@@ -1,7 +1,5 @@
 import V3Api from './v3Api/V3Api.ts';
 
-import type { BcApiChefOptions } from '@/types/api-types';
-
 const BC_API_BASE_URL = 'https://api.bigcommerce.com/stores';
 
 /**
@@ -13,21 +11,19 @@ const BC_API_BASE_URL = 'https://api.bigcommerce.com/stores';
  * ```ts
  * import { BcApiChef } from 'bc-api-chef';
  *
- * const bc = new BcApiChef(storeHash, accessToken, { retries: 3 });
- * const result = await bc.v3().products().getAllProducts();
+ * const bc = new BcApiChef(storeHash, accessToken);
+ * const result = await bc.v3().products().getOne(42);
  * if (result.ok) {
  *   console.log(result.data);
  * }
  * ```
  * Currently exposes the V3 API namespace via {@link BcApiChef.v3}. Each call
- * to `.v3()` returns a fresh `V3Api` instance that shares the same access
- * token, base URL, and options.
+ * to `.v3()` returns a fresh `V3Api` instance bound to the same access token
+ * and base URL.
  */
 export default class BcApiChef {
     private accessToken: string;
     private baseUrl: string;
-    /** The `Required` here makes typescript happy without having to check for undefined values upstream constantly, but the values are still optional at runtime */
-    private options: Required<BcApiChefOptions>;
 
     /**
      * Creates a new `BcApiChef` client bound to a specific BigCommerce store.
@@ -37,20 +33,10 @@ export default class BcApiChef {
      * `https://api.bigcommerce.com/stores/{store_hash}`).
      * @param accessToken - BigCommerce API access token, sent as the `X-Auth-Token`
      * header on every request.
-     * @param options     - Optional client-wide behaviour toggles. All fields default
-     * to a safe value so existing callers are unaffected.
-     * @param options.retries  - Number of times to retry a failed HTTP request before
-     * surfacing the error. Forwarded to the underlying `tchef` HTTP client.
-     * Defaults to `0` (no retries).
-     * @todo `options.retries` is not yet forwarded to `tchef()` calls in `ProductsV3`.
      */
-    constructor(storeHash: string, accessToken: string, options: BcApiChefOptions = {}) {
+    constructor(storeHash: string, accessToken: string) {
         this.accessToken = accessToken;
         this.baseUrl = `${BC_API_BASE_URL}/${storeHash}`;
-        this.options = {
-            retries: 0,
-            ...options,
-        };
     }
 
     /**
@@ -60,6 +46,6 @@ export default class BcApiChef {
      * @returns {V3Api} A new `V3Api` instance bound to this client configuration.
      */
     public v3(): V3Api {
-        return new V3Api(this.baseUrl, this.accessToken, this.options);
+        return new V3Api(this.baseUrl, this.accessToken);
     }
 }

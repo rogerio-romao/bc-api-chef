@@ -14,7 +14,7 @@ import ProductCustomFields from './ProductCustomFields';
 import ProductImages from './ProductImages';
 import ProductMetafields from './ProductMetafields';
 
-import type { ApiResult, BcApiChefOptions, StandardSchemaV1 } from '@/types/api-types';
+import type { ApiResult, RetryConfig, StandardSchemaV1 } from '@/types/api-types';
 import type {
     ApiGetProductQueryBase,
     ApiProductQuery,
@@ -50,28 +50,16 @@ import type {
 export default class ProductsV3 {
     private accessToken: string;
     private apiUrl: string;
-    /** The `Required` here makes typescript happy without having to check for undefined values upstream constantly, but the values are still optional at runtime */
-    private options: Required<BcApiChefOptions>;
     private readonly productsApiPath = 'catalog/products';
 
     /**
      * @param baseUrlWithVersion - Store base URL including the `/v3` version segment.
      * @param accessToken - BigCommerce API access token, sent as `X-Auth-Token`
      * on every request.
-     * @param options - Shared client options propagated from `BcApiChef`.
-     * `retries` is reserved for retry support in downstream HTTP calls.
-     * @param options.retries  - Number of times to retry a failed HTTP request before
-     * surfacing the error. Forwarded to the underlying `tchef` HTTP client.
-     * Defaults to `0` (no retries).
-     * @todo Forward `this.options.retries` to every `tchef()` call in this class.
      */
-    constructor(baseUrlWithVersion: string, accessToken: string, options: BcApiChefOptions = {}) {
+    constructor(baseUrlWithVersion: string, accessToken: string) {
         this.accessToken = accessToken;
         this.apiUrl = `${baseUrlWithVersion}/${this.productsApiPath}`;
-        this.options = {
-            retries: 0,
-            ...options,
-        };
     }
 
     /* -------------------------------------------------------------------------- */
@@ -92,17 +80,21 @@ export default class ProductsV3 {
      */
     public async create<F extends readonly NoIdProductField[]>(
         productData: CreateProductPayload,
-        options: { include_fields: F; schema?: StandardSchemaV1 },
+        options: { include_fields: F; schema?: StandardSchemaV1; retries?: RetryConfig },
     ): ApiResult<CreateProductReturnType<F>>;
 
     public async create(
         productData: CreateProductPayload,
-        options?: { schema?: StandardSchemaV1 },
+        options?: { schema?: StandardSchemaV1; retries?: RetryConfig },
     ): ApiResult<BaseProduct>;
 
     public async create(
         productData: CreateProductPayload,
-        options?: { include_fields?: readonly NoIdProductField[]; schema?: StandardSchemaV1 },
+        options?: {
+            include_fields?: readonly NoIdProductField[];
+            schema?: StandardSchemaV1;
+            retries?: RetryConfig;
+        },
     ): ApiResult<BaseProduct> {
         const validationError = this.validateCreateProductPayload(productData);
 
@@ -115,7 +107,7 @@ export default class ProductsV3 {
         const querySuffix = buildQueryString(queryOptions);
         const url = `${this.apiUrl}${querySuffix}`;
 
-        return await createResource(url, this.accessToken, productData, schema);
+        return await createResource(url, this.accessToken, productData, schema, options?.retries);
     }
 
     /* ------------------------------ GET PRODUCTS ------------------------------ */
@@ -143,6 +135,7 @@ export default class ProductsV3 {
             include_fields: F;
             exclude_fields?: never;
             schema?: StandardSchemaV1;
+            retries?: RetryConfig;
         },
     ): ApiResult<ProductWithFields<F, T>[]>;
 
@@ -155,6 +148,7 @@ export default class ProductsV3 {
             include_fields?: never;
             exclude_fields: E;
             schema?: StandardSchemaV1;
+            retries?: RetryConfig;
         },
     ): ApiResult<ProductWithoutFields<E, T>[]>;
 
@@ -162,6 +156,7 @@ export default class ProductsV3 {
         options?: ApiProductQueryBase & {
             includes?: T & ProductIncludes;
             schema?: StandardSchemaV1;
+            retries?: RetryConfig;
         },
     ): ApiResult<(BaseProduct & IncludeExpansion<T>)[]>;
 
@@ -171,6 +166,7 @@ export default class ProductsV3 {
             include_fields?: readonly NoIdProductField[];
             exclude_fields?: readonly NoIdProductField[];
             schema?: StandardSchemaV1;
+            retries?: RetryConfig;
         },
     ): ApiResult<BaseProduct[]> {
         const { includes, schema, ...query } = options ?? {};
@@ -184,6 +180,7 @@ export default class ProductsV3 {
             clampPerPageLimits(query?.limit),
             query?.page,
             schema,
+            options?.retries,
         );
     }
 
@@ -212,6 +209,7 @@ export default class ProductsV3 {
             include_fields: F;
             exclude_fields?: never;
             schema?: StandardSchemaV1;
+            retries?: RetryConfig;
         },
     ): ApiResult<ProductWithFields<F, T>>;
 
@@ -225,6 +223,7 @@ export default class ProductsV3 {
             include_fields?: never;
             exclude_fields: E;
             schema?: StandardSchemaV1;
+            retries?: RetryConfig;
         },
     ): ApiResult<ProductWithoutFields<E, T>>;
 
@@ -233,6 +232,7 @@ export default class ProductsV3 {
         options?: ApiGetProductQueryBase & {
             includes?: T & ProductIncludes;
             schema?: StandardSchemaV1;
+            retries?: RetryConfig;
         },
     ): ApiResult<BaseProduct & IncludeExpansion<T>>;
 
@@ -243,6 +243,7 @@ export default class ProductsV3 {
             include_fields?: readonly NoIdProductField[];
             exclude_fields?: readonly NoIdProductField[];
             schema?: StandardSchemaV1;
+            retries?: RetryConfig;
         },
     ): ApiResult<BaseProduct> {
         const idValidOrErrorMsg = validatePositiveIntegers({ productId });
@@ -256,7 +257,7 @@ export default class ProductsV3 {
         const querySuffix = buildQueryString(query as ApiProductQuery, { include: includesString });
         const url = `${this.apiUrl}/${productId}${querySuffix}`;
 
-        return await fetchOne<FullProduct>(url, this.accessToken, schema);
+        return await fetchOne<FullProduct>(url, this.accessToken, schema, options?.retries);
     }
 
     /* ------------------------------ UPDATE PRODUCT ------------------------------ */
@@ -283,6 +284,7 @@ export default class ProductsV3 {
             includes?: T & ProductIncludes;
             include_fields: F;
             schema?: StandardSchemaV1;
+            retries?: RetryConfig;
         },
     ): ApiResult<ProductWithFields<F, T>>;
 
@@ -292,6 +294,7 @@ export default class ProductsV3 {
         options?: {
             includes?: T & ProductIncludes;
             schema?: StandardSchemaV1;
+            retries?: RetryConfig;
         },
     ): ApiResult<BaseProduct & IncludeExpansion<T>>;
 
@@ -302,6 +305,7 @@ export default class ProductsV3 {
             includes?: ProductIncludes;
             include_fields?: readonly NoIdProductField[];
             schema?: StandardSchemaV1;
+            retries?: RetryConfig;
         },
     ): ApiResult<BaseProduct> {
         const idValidOrErrorMsg = validatePositiveIntegers({ productId });
@@ -321,16 +325,18 @@ export default class ProductsV3 {
         const querySuffix = buildQueryString(query as ApiProductQuery, { include: includesString });
         const url = `${this.apiUrl}/${productId}${querySuffix}`;
 
-        return await updateResource(url, this.accessToken, payload, schema);
+        return await updateResource(url, this.accessToken, payload, schema, options?.retries);
     }
 
     /* ------------------------------ DELETE PRODUCT ------------------------------ */
     /**
      * Deletes a product by ID.
      * @param productId Product ID.
+     * @param options Optional parameters.
+     * @param options.retries - Optional retry configuration to automatically retry the request on transient errors.
      * @returns {ApiResult<null>} `null` on success or an error result.
      */
-    public async remove(productId: number): ApiResult<null> {
+    public async remove(productId: number, options?: { retries?: RetryConfig }): ApiResult<null> {
         const idValidOrErrorMsg = validatePositiveIntegers({ productId });
 
         if (idValidOrErrorMsg !== true) {
@@ -339,7 +345,7 @@ export default class ProductsV3 {
 
         const url = `${this.apiUrl}/${productId}`;
 
-        return await deleteResource(url, this.accessToken);
+        return await deleteResource(url, this.accessToken, options?.retries);
     }
 
     /* -------------------------------------------------------------------------- */
@@ -351,7 +357,7 @@ export default class ProductsV3 {
      * @returns {ProductBulkPricingRules} An instance of the ProductBulkPricingRules class.
      */
     public bulkPricingRules(): ProductBulkPricingRules {
-        return new ProductBulkPricingRules(this.accessToken, this.apiUrl, this.options);
+        return new ProductBulkPricingRules(this.accessToken, this.apiUrl);
     }
 
     /**
@@ -359,7 +365,7 @@ export default class ProductsV3 {
      * @returns {ProductCustomFields} An instance of the ProductCustomFields class.
      */
     public customFields(): ProductCustomFields {
-        return new ProductCustomFields(this.accessToken, this.apiUrl, this.options);
+        return new ProductCustomFields(this.accessToken, this.apiUrl);
     }
 
     /**
@@ -367,7 +373,7 @@ export default class ProductsV3 {
      * @returns {ProductImages} An instance of the ProductImages class.
      */
     public images(): ProductImages {
-        return new ProductImages(this.accessToken, this.apiUrl, this.options);
+        return new ProductImages(this.accessToken, this.apiUrl);
     }
 
     /**
@@ -375,7 +381,7 @@ export default class ProductsV3 {
      * @returns {ProductMetafields} An instance of the ProductMetafields class.
      */
     public metafields(): ProductMetafields {
-        return new ProductMetafields(this.accessToken, this.apiUrl, this.options);
+        return new ProductMetafields(this.accessToken, this.apiUrl);
     }
 
     /* -------------------------------------------------------------------------- */

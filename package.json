@@ -1,6 +1,6 @@
 {
     "name": "bc-api-chef",
-    "version": "0.0.3",
+    "version": "0.0.4",
     "description": "Node application to serve the BigCommerce API",
     "license": "ISC",
     "author": "Rogerio Romao",

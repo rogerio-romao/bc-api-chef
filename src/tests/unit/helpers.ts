@@ -13,6 +13,8 @@ interface MockTchefCallOptions {
     headers?: Record<string, string>;
     method?: string;
     responseFormat?: string;
+    retries?: number;
+    retryDelayMs?: number | 'exponential';
 }
 
 interface MockPageResponse {

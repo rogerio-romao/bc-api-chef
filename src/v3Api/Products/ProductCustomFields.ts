@@ -9,7 +9,7 @@ import {
     validatePositiveIntegers,
 } from '@/v3Api/utils.ts';
 
-import type { ApiResult, BcApiChefOptions, StandardSchemaV1 } from '@/types/api-types';
+import type { ApiResult, RetryConfig, StandardSchemaV1 } from '@/types/api-types';
 import type {
     NoIdProductCustomField,
     ProductCustomField,
@@ -33,24 +33,16 @@ import type {
 export default class ProductCustomFields {
     private accessToken: string;
     private apiUrl: string;
-    private options: Required<BcApiChefOptions>;
 
     /**
      * Creates an instance of the ProductCustomFields class.
      *
      * @param accessToken - The access token for authenticating API requests.
-     * @param apiUrl - The base URL for the product custom fields API endpoints, typically in the format `${baseUrlWithVersion}/products`.
-     * @param options - Optional configuration options for the API client, such as retry settings.
-     * @param options.retries Number of times to retry a failed HTTP request before surfacing the error. Forwarded to the underlying `tchef` HTTP client. Defaults to `0` (no retries).
-     * @todo Forward `this.options.retries` to every `tchef()` call in this class.
+     * @param apiUrl - The base URL for the product custom fields API endpoints.
      */
-    constructor(accessToken: string, apiUrl: string, options: BcApiChefOptions = {}) {
+    constructor(accessToken: string, apiUrl: string) {
         this.accessToken = accessToken;
         this.apiUrl = apiUrl;
-        this.options = {
-            retries: 0,
-            ...options,
-        };
     }
 
     /* -------------------------------------------------------------------------- */
@@ -70,7 +62,7 @@ export default class ProductCustomFields {
     public async create(
         productId: number,
         customFieldData: NoIdProductCustomField,
-        options?: { schema?: StandardSchemaV1 },
+        options?: { schema?: StandardSchemaV1; retries?: RetryConfig },
     ): ApiResult<ProductCustomField> {
         const idsValidOrErrorMsg = validatePositiveIntegers({ productId });
 
@@ -94,7 +86,13 @@ export default class ProductCustomFields {
 
         const url = `${this.apiUrl}/${productId}/custom-fields`;
 
-        return await createResource(url, this.accessToken, customFieldData, options?.schema);
+        return await createResource(
+            url,
+            this.accessToken,
+            customFieldData,
+            options?.schema,
+            options?.retries,
+        );
     }
 
     /* ------------------------ GET PRODUCT CUSTOM FIELDS ----------------------- */
@@ -121,6 +119,7 @@ export default class ProductCustomFields {
             page?: number;
             limit?: number;
             schema?: StandardSchemaV1;
+            retries?: RetryConfig;
         },
     ): ApiResult<Pick<ProductCustomField, 'id' | I[number]>[]>;
 
@@ -132,6 +131,7 @@ export default class ProductCustomFields {
             page?: number;
             limit?: number;
             schema?: StandardSchemaV1;
+            retries?: RetryConfig;
         },
     ): ApiResult<Omit<ProductCustomField, E[number]>[]>;
 
@@ -141,6 +141,7 @@ export default class ProductCustomFields {
             page?: number;
             limit?: number;
             schema?: StandardSchemaV1;
+            retries?: RetryConfig;
         },
     ): ApiResult<ProductCustomField[]>;
 
@@ -152,6 +153,7 @@ export default class ProductCustomFields {
             page?: number;
             limit?: number;
             schema?: StandardSchemaV1;
+            retries?: RetryConfig;
         },
     ): ApiResult<ProductCustomField[]> {
         const idsValidOrErrorMsg = validatePositiveIntegers({ productId });
@@ -175,6 +177,7 @@ export default class ProductCustomFields {
             limit,
             queryOptions?.page,
             schema,
+            options?.retries,
         );
     }
 
@@ -200,6 +203,7 @@ export default class ProductCustomFields {
             include_fields: I;
             exclude_fields?: never;
             schema?: StandardSchemaV1;
+            retries?: RetryConfig;
         },
     ): ApiResult<Pick<ProductCustomField, 'id' | I[number]>>;
 
@@ -210,8 +214,15 @@ export default class ProductCustomFields {
             include_fields?: never;
             exclude_fields: E;
             schema?: StandardSchemaV1;
+            retries?: RetryConfig;
         },
     ): ApiResult<Omit<ProductCustomField, E[number]>>;
+
+    public async getOne(
+        productId: number,
+        customFieldId: number,
+        options?: { schema?: StandardSchemaV1; retries?: RetryConfig },
+    ): ApiResult<ProductCustomField>;
 
     public async getOne(
         productId: number,
@@ -220,6 +231,7 @@ export default class ProductCustomFields {
             include_fields?: readonly ProductCustomFieldField[];
             exclude_fields?: readonly ProductCustomFieldField[];
             schema?: StandardSchemaV1;
+            retries?: RetryConfig;
         },
     ): ApiResult<ProductCustomField> {
         const idsValidOrErrorMsg = validatePositiveIntegers({ customFieldId, productId });
@@ -236,7 +248,7 @@ export default class ProductCustomFields {
         const querySuffix = buildQueryString(queryOptions);
         const url = `${this.apiUrl}/${productId}/custom-fields/${customFieldId}${querySuffix}`;
 
-        return await fetchOne<ProductCustomField>(url, this.accessToken, schema);
+        return await fetchOne<ProductCustomField>(url, this.accessToken, schema, options?.retries);
     }
 
     /* ----------------------- UPDATE PRODUCT CUSTOM FIELD ---------------------- */
@@ -248,13 +260,14 @@ export default class ProductCustomFields {
      * @param customFieldData - The partial custom field data to update.
      * @param options - Optional. Pass `schema` to validate the returned data against a Standard Schema.
      * @param options.schema - A Standard Schema to validate the API response against. If validation fails, the method will return a 422 error with details about the validation failure.
+     * @param options.retries - Optional retry configuration to automatically retry the request on transient errors.
      * @returns {ApiResult<ProductCustomField>} The result of the update operation.
      */
     public async update(
         productId: number,
         customFieldId: number,
         customFieldData: Partial<NoIdProductCustomField>,
-        options?: { schema?: StandardSchemaV1 },
+        options?: { schema?: StandardSchemaV1; retries?: RetryConfig },
     ): ApiResult<ProductCustomField> {
         const idsValidOrErrorMsg = validatePositiveIntegers({ customFieldId, productId });
 
@@ -278,7 +291,13 @@ export default class ProductCustomFields {
 
         const url = `${this.apiUrl}/${productId}/custom-fields/${customFieldId}`;
 
-        return await updateResource(url, this.accessToken, customFieldData, options?.schema);
+        return await updateResource(
+            url,
+            this.accessToken,
+            customFieldData,
+            options?.schema,
+            options?.retries,
+        );
     }
 
     /* ----------------------- DELETE PRODUCT CUSTOM FIELD ---------------------- */
@@ -287,9 +306,15 @@ export default class ProductCustomFields {
      *
      * @param productId - The ID of the product.
      * @param customFieldId - The ID of the custom field to remove.
+     * @param options - Optional parameters for the request.
+     * @param options.retries - Optional retry configuration to automatically retry the request on transient errors.
      * @returns {ApiResult<null>} The result of the remove operation.
      */
-    public async remove(productId: number, customFieldId: number): ApiResult<null> {
+    public async remove(
+        productId: number,
+        customFieldId: number,
+        options?: { retries?: RetryConfig },
+    ): ApiResult<null> {
         const idsValidOrErrorMsg = validatePositiveIntegers({ customFieldId, productId });
 
         if (idsValidOrErrorMsg !== true) {
@@ -302,7 +327,7 @@ export default class ProductCustomFields {
 
         const url = `${this.apiUrl}/${productId}/custom-fields/${customFieldId}`;
 
-        return await deleteResource(url, this.accessToken);
+        return await deleteResource(url, this.accessToken, options?.retries);
     }
 
     /* -------------------------------------------------------------------------- */
