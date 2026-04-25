@@ -141,6 +141,41 @@ export async function fetchPaginated<T>(
 }
 
 /**
+ * Sends a JSON `PUT` request where the server returns no response body (e.g. 204 No Content).
+ * Uses `responseFormat: 'text'` to avoid JSON parse errors on empty responses.
+ * @param url - Fully-built request URL.
+ * @param accessToken - BigCommerce API access token.
+ * @param payload - The request payload to serialize as JSON.
+ * @param retryConfig - Optional retry configuration forwarded to tchef.
+ * @returns {Promise<TchefResult<null>>} An empty success result or an error result.
+ */
+export async function updateResourceEmptyResponse<P>(
+    url: string,
+    accessToken: string,
+    payload: P,
+    retryConfig?: RetryConfig,
+): Promise<TchefResult<null>> {
+    const response = await tchef(url, {
+        body: JSON.stringify(payload),
+        headers: {
+            Accept: 'application/json',
+            'Content-Type': 'application/json',
+            'X-Auth-Token': accessToken,
+        },
+        method: 'PUT',
+        responseFormat: 'text',
+        retries: retryConfig?.repeat,
+        retryDelayMs: retryConfig?.retryDelay,
+    });
+
+    if (!response.ok) {
+        return response;
+    }
+
+    return { data: null, ok: true };
+}
+
+/**
  * Sends a `DELETE` request to the specified URL.
  * @param url - Fully-built request URL.
  * @param accessToken - BigCommerce API access token.
