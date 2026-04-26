@@ -11,6 +11,7 @@ import {
 
 import ProductBulkPricingRules from './ProductBulkPricingRules';
 import ProductCategoryAssignments from './ProductCategoryAssignments';
+import ProductChannelAssignments from './ProductChannelAssignments';
 import ProductCustomFields from './ProductCustomFields';
 import ProductImages from './ProductImages';
 import ProductMetafields from './ProductMetafields';
@@ -371,6 +372,14 @@ export default class ProductsV3 {
      */
     public categoryAssignments(): ProductCategoryAssignments {
         return new ProductCategoryAssignments(this.accessToken, this.apiUrl);
+    }
+
+    /**
+     * Returns an instance of the {@link ProductChannelAssignments} class to manage product channel assignments, which are accessed via the `/catalog/products/channel-assignments` endpoint.
+     * @returns {ProductChannelAssignments} An instance of the ProductChannelAssignments class.
+     */
+    public channelAssignments(): ProductChannelAssignments {
+        return new ProductChannelAssignments(this.accessToken, this.apiUrl);
     }
 
     /**
